@@ -133,10 +133,26 @@ enum MarkdownFormatter {
                 let marker = fence[1]
                 index += 1
                 var body: [String] = []
-                while index < lines.count && !lines[index].trimmingCharacters(in: .whitespaces).hasPrefix(marker) { body.append(lines[index]); index += 1 }
+                let closing = "^ {0,3}" + String(marker.prefix(1)) + "{" + String(marker.count) + ",}[ \t]*$"
+                while index < lines.count && matches(closing, lines[index]) == nil { body.append(lines[index]); index += 1 }
                 if index < lines.count { index += 1 }
                 blocks.append(Block(kind: .code, text: body.joined(separator: "\n")))
                 continue
+            }
+            // Indented code starts a block; a nested list marker remains a list item.
+            let followsList: Bool
+            if let last = blocks.last, case .list = last.kind { followsList = true } else { followsList = false }
+            let nestedItem = followsList && matches("^\\s*(?:[-*+]|[0-9]+[.)]) +", line) != nil
+            if let codeLine = matches("^(?: {4}|\\t)(.*)$", line), !nestedItem {
+                var body = [codeLine[1]]; index += 1
+                while index < lines.count {
+                    if let next = matches("^(?: {4}|\\t)(.*)$", lines[index]) { body.append(next[1]) }
+                    else if lines[index].trimmingCharacters(in: .whitespaces).isEmpty { body.append("") }
+                    else { break }
+                    index += 1
+                }
+                while body.last == "" { body.removeLast() }
+                blocks.append(Block(kind: .code, text: body.joined(separator: "\n"))); continue
             }
             if let heading = matches("^ {0,3}(#{1,6}) +(.+?)(?: +#+)?$", line) {
                 blocks.append(Block(kind: .heading(heading[1].count), text: heading[2])); index += 1; continue
