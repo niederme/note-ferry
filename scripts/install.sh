@@ -11,4 +11,4 @@ if [[ -e "$DEST" ]]; then
 fi
 ditto "build/Summary Notes.app" "$DEST"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$DEST"
-printf 'Installed %s\nLaunch Summary Notes from Spotlight or Raycast after copying a transcript.\n' "$DEST"
+printf 'Installed %s\nOpen Summary Notes from Spotlight or Raycast, paste a transcript, and choose Summarize.\n' "$DEST"

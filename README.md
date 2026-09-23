@@ -2,7 +2,7 @@
 
 # Summary Notes
 
-**Copy a transcript. Launch the app. Paste readable notes into Apple Notes.**
+**Paste a transcript. Summarize it. Copy readable notes into Apple Notes.**
 
 Summary Notes is a small native macOS app that turns a raw call transcript into a detailed, scannable summary and puts the result on your clipboard as rich text. It accepts plain text or Markdown copied from Nook, Granola, or another transcription app.
 
@@ -14,11 +14,13 @@ You choose where to paste. Summary Notes never creates or edits an Apple Note.
 
 ## How it works
 
-1. **Copy** the full transcript.
-2. **Launch Summary Notes** from Spotlight, Raycast, or Applications. Summarization starts automatically.
-3. Wait for **Ready to paste**, then press **⌘V** in Apple Notes.
+1. **Copy** the full transcript and open Summary Notes from Spotlight, Raycast, or Applications.
+2. **Paste** it into the window and choose **Summarize**.
+3. When the summary is copied automatically, press **⌘V** in Apple Notes.
 
-The app shows progress while Codex processes the transcript, then displays a formatted preview. Use normal Paste, not Paste and Match Style, which removes formatting.
+The app shows progress while Codex processes the transcript, then displays a formatted preview. **Copy summary** is the primary action for copying the result again. Use normal Paste, not Paste and Match Style, which removes formatting.
+
+You can leave the app open. It does not monitor the clipboard or start summarizing when you open or return to its window. A model request starts only when you choose **Summarize**.
 
 ## What you get
 
@@ -93,12 +95,12 @@ Summary Notes uses the CLI’s default model with medium reasoning effort. It de
 | --- | --- |
 | Summary succeeds | Rich text replaces the original clipboard and appears in the preview. |
 | You copy something while it runs | Your newer clipboard stays intact. Use **Copy summary** when ready. |
-| Request fails or is cancelled | The clipboard stays intact. **Retry transcript** uses the original source. |
-| You choose **Restore transcript** | The original clipboard contents and formats return, provided the clipboard has not changed since the summary was copied. |
+| Request fails or is cancelled | Your transcript stays in the window for editing or retrying with **Summarize**. The clipboard stays intact. |
+| You choose **Restore clipboard** | The clipboard contents and formats from when you clicked Summarize return, provided the clipboard has not changed since the summary was copied. |
 | You close the window | Processing continues. Reopen the app to see the result. |
 | You quit the app | Processing is cancelled and the in-memory preview and backup are discarded. |
 
-To process another transcript, copy it and launch the app again, choose **Summarize clipboard**, or use **Summary Notes → Summarize Clipboard** (**⌘N**).
+To process another transcript, select all the text in the window (**⌘A**) and paste the new source (**⌘V**), then choose **Summarize**. Alternatively, use **Clear** or **Summary Notes → Clear** (**⌘N**) to empty the window first. Clear leaves the clipboard alone. Pasting over a result switches the window back to editable transcript input; it does not immediately run the model or update the clipboard.
 
 Inputs must contain at least 100 characters and no more than 400,000 UTF-8 bytes. Larger inputs are rejected rather than silently truncated. Requests time out after ten minutes.
 
