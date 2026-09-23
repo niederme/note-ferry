@@ -1,0 +1,9 @@
+{
+  "title": "Launch planning",
+  "subtitle": "A synthetic formatting test, not a real meeting",
+  "takeaways": [{"label":"Scope","text":"Ship the smaller release first. Keep José’s café and the 🧭 symbol intact."}],
+  "actions": [{"label":"Maya","text":"Send the draft on Friday. This was an explicit commitment."}],
+  "sections": [{"heading":"Release scope","items":[{"label":"Decision","text":"Focus on the core workflow. The optional dashboard was discussed but deferred."},{"label":"Evidence","text":"Feedback was qualitative; no measured improvement was claimed."}]},{"heading":"Partner feedback","items":[{"label":"Unresolved","text":"A partner requested a timeline. No delivery date was promised."}]}],
+  "openQuestions":[{"label":"Timing","text":"When should the team revisit the dashboard?"}],
+  "uncertainties":[]
+}

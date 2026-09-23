@@ -1,0 +1,19 @@
+{
+  "type": "object", "additionalProperties": false,
+  "required": ["title", "subtitle", "takeaways", "actions", "sections", "openQuestions", "uncertainties"],
+  "properties": {
+    "title": {"type": "string"}, "subtitle": {"type": "string"},
+    "takeaways": {"type": "array", "items": {"$ref": "#/$defs/item"}},
+    "actions": {"type": "array", "items": {"$ref": "#/$defs/item"}},
+    "sections": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false, "required": ["heading", "items"],
+      "properties": {"heading": {"type": "string"}, "items": {"type": "array", "items": {"$ref": "#/$defs/item"}}}
+    }},
+    "openQuestions": {"type": "array", "items": {"$ref": "#/$defs/item"}},
+    "uncertainties": {"type": "array", "items": {"$ref": "#/$defs/item"}}
+  },
+  "$defs": {"item": {
+    "type": "object", "additionalProperties": false, "required": ["label", "text"],
+    "properties": {"label": {"type": "string"}, "text": {"type": "string"}}
+  }}
+}
