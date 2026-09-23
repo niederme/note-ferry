@@ -4,13 +4,23 @@
 
 **Paste a transcript. Summarize it. Copy readable notes into Apple Notes.**
 
-Summary Notes is a small native macOS app that turns a raw call transcript into a detailed, scannable summary and puts the result on your clipboard as rich text. It accepts plain text or Markdown copied from Nook, Granola, or another transcription app.
+Summary Notes is a small native macOS app that turns a raw call transcript into a detailed, scannable summary and puts the result on your clipboard as rich text. It accepts plain text or Markdown copied from [Nook](https://www.common-tools.co/nook), [Granola](https://www.granola.ai/), or another transcription app.
 
 You choose where to paste. Summary Notes never creates or edits an Apple Note.
 
 <img src="docs/images/app.jpg" width="760" alt="Summary Notes showing a fictional website launch meeting, with spaced bullet points, key takeaways, action items, and a Copy summary button">
 
 *A sample summary with takeaways, action items, and formatting ready for Apple Notes.*
+
+## Why Summary Notes?
+
+You may already have a way to record and transcribe calls, and prefer to keep your finished notes in Apple Notes. Summary Notes handles the step in between: turn the full transcript into detailed topic notes and action items, then copy them with bold headings, native bullets, and enough space to read comfortably after pasting.
+
+The original workflow was recording with Nook, sometimes using Granola, and copying transcripts into an AI chat to summarize them. Getting the detail and Apple Notes formatting right took extra work. This app makes that repeatable without writing to your notes or keeping another meeting library.
+
+[Nook](https://www.common-tools.co/nook) records and transcribes meetings on your Mac and already produces local summaries and Markdown files. You can keep using it for capture and bring its full transcript here when you want another summary formatted for Apple Notes. [Granola](https://www.granola.ai/) combines meeting transcription, enhanced notes, and calendar features. If its workflow already fits, you may not need an extra app; Summary Notes is useful when you want this particular output in Apple Notes or use transcripts from several tools.
+
+Summary Notes is free and open source, with no separate app subscription. **Version 1.0 still requires Codex access and uses its allowance.** It sends transcript text to OpenAI, including transcripts captured locally by Nook. Apple Intelligence support is [planned](ROADMAP.md), so the complete workflow is not yet on-device.
 
 ## Download
 
