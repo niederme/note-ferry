@@ -3,7 +3,15 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 APP="$PWD/build/Summary Notes.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" .build/module-cache
-xcrun swiftc -swift-version 5 -O -module-cache-path "$PWD/.build/module-cache" -framework AppKit Sources/Core.swift Sources/main.swift -o "$APP/Contents/MacOS/SummaryNotes"
+read -r -a architectures <<< "${BUILD_ARCHS:-$(uname -m)}"
+binaries=()
+for architecture in "${architectures[@]}"; do
+    case "$architecture" in arm64|x86_64) ;; *) printf 'Unsupported architecture: %s\n' "$architecture" >&2; exit 1 ;; esac
+    binary="$PWD/.build/SummaryNotes-$architecture"
+    xcrun swiftc -swift-version 5 -O -target "$architecture-apple-macos14.0" -module-cache-path "$PWD/.build/module-cache" -framework AppKit Sources/Core.swift Sources/main.swift -o "$binary"
+    binaries+=("$binary")
+done
+xcrun lipo -create "${binaries[@]}" -output "$APP/Contents/MacOS/SummaryNotes"
 cp Resources/SummaryPrompt.txt Resources/Summary.schema.json "$APP/Contents/Resources/"
 cp LICENSE "$APP/Contents/Resources/LICENSE"
 xcrun swift -module-cache-path "$PWD/.build/module-cache" scripts/Icon.swift "$PWD/.build/AppIcon.iconset"
@@ -25,5 +33,10 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>NSHumanReadableCopyright</key><string>Copyright © 2026 John Niedermeyer. MIT License.</string>
 </dict></plist>
 PLIST
-codesign --force --sign - "$APP"
+if [[ "${SIGNING_IDENTITY:--}" == "-" ]]; then
+    codesign --force --sign - "$APP"
+else
+    codesign --force --options runtime --timestamp --sign "$SIGNING_IDENTITY" "$APP"
+fi
+codesign --verify --strict "$APP"
 printf 'Built %s\n' "$APP"

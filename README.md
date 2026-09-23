@@ -47,11 +47,19 @@ Headings and labels are bold. Bullets use native list metadata rather than decor
 ## Requirements
 
 - **macOS:** the app targets macOS 14 or later; testing so far has been on macOS 27. Older supported versions still need verification.
-- **Build tools:** a recent Xcode or Xcode Command Line Tools installation providing Swift and the macOS SDK.
+- **Build tools (source builds only):** a recent Xcode or Xcode Command Line Tools installation providing Swift and the macOS SDK.
 - **Codex CLI:** a version supporting `exec`, `--ephemeral`, `--ignore-user-config`, and `--output-schema`, signed in with an account that can use Codex.
 - **Internet access** for summarization.
 
 There are no third-party Swift or Python library dependencies. The build uses AppKit and macOS command-line tools. Codex is an external runtime dependency and is not bundled with the app.
+
+## Download
+
+Download **[Summary Notes 1.0](https://github.com/niederme/summary-notes/releases/download/v1.0.0/Summary-Notes-1.0-universal.zip)**, unzip it, and move **Summary Notes.app** to Applications. The download is a universal app for Apple silicon and Intel Macs, signed with Developer ID and notarized by Apple. Xcode is not required to use the download.
+
+Install and sign in to **Codex CLI** before summarizing your first transcript. See the [official Codex setup instructions](https://developers.openai.com/codex/cli/), then run `codex login` in Terminal. The app uses that existing login.
+
+The [release page](https://github.com/niederme/summary-notes/releases/tag/v1.0.0) includes a SHA-256 checksum. macOS 14 and later are targeted; runtime testing so far has been on Apple silicon with macOS 27. Intel and older macOS versions have not been tested on physical machines.
 
 ## Install from source
 
@@ -79,7 +87,7 @@ This installs `~/Applications/Summary Notes.app` and registers it with Launch Se
 
 Spotlight indexing may take a little time. Open the app directly from your home folder’s Applications directory if needed. Raycast may need its application list refreshed. No Service, Shortcut, or keyboard shortcut setup is required.
 
-The build targets your Mac’s architecture and is ad-hoc signed for local use. This repository does not currently provide a notarized download or universal binary.
+Source builds target your Mac’s architecture and are ad-hoc signed for local use. The downloadable release is separately signed and notarized.
 
 ### Codex account and usage
 
@@ -162,6 +170,18 @@ The automated checks cover RTF round trips, native lists, bold headings, soft re
 Clipboard tests use a separate named pasteboard, leaving the regular clipboard alone. They require access to the macOS pasteboard service and may fail in a restrictive execution sandbox.
 
 For manual acceptance, copy the synthetic example and paste it into a note you choose. Check headings, single bullet markers, spacing between items and sections, and native list editing. Destination-app behavior needs visual verification in addition to automated checks.
+
+### Release builds
+
+Build both architectures with a Developer ID Application identity installed in your Keychain:
+
+```sh
+BUILD_ARCHS='arm64 x86_64' \
+  SIGNING_IDENTITY='Developer ID Application: Your Name (TEAMID)' \
+  ./scripts/build.sh
+```
+
+The build explicitly targets macOS 14, enables the hardened runtime for Developer ID signing, requests a secure timestamp, and verifies the signature. Submit a ZIP of the app using `xcrun notarytool` with credentials saved in Keychain. Once Apple accepts it, review the notarization log, staple the ticket to the app with `xcrun stapler`, and verify with both `stapler validate` and `spctl --assess --type execute`. Create the final download ZIP **after** stapling, and generate its SHA-256 checksum. Never commit signing keys or notarization credentials.
 
 ## Contributing
 
