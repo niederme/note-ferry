@@ -19,7 +19,7 @@ if arguments.count == 4 && arguments[1] == "--summarize-file" {
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     var window: NSWindow!
-    let status = NSTextField(labelWithString: "Copy a transcript. Come back with a summary.")
+    let status = NSTextField(labelWithString: "Copy a transcript to get started.")
     let detail = NSTextField(wrappingLabelWithString: "")
     let privacy = NSTextField(wrappingLabelWithString: "Uses your Codex account to process the transcript with OpenAI. Formatting happens on your Mac.")
     let preview = NSTextView()
@@ -108,7 +108,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 let note = try JSONDecoder().decode(Summary.self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))
                 try note.validate()
                 display(note)
-                status.stringValue = "Your summary, with room to breathe."
+                status.stringValue = "Summary preview"
                 detail.stringValue = "Example preview. Copy summary when you’re ready to paste into Apple Notes."
             } catch { showError(error) }
         } else if !arguments.contains("--welcome") { startFromClipboard() }
@@ -168,10 +168,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         runner = worker
         let token = UUID(); jobID = token
         started = Date()
-        status.stringValue = "Making room for the important details…"
+        status.stringValue = "Summarizing transcript…"
         let words = text.split(whereSeparator: \.isWhitespace).count
         detail.stringValue = "Reading \(words.formatted()) words with Codex. Your clipboard stays intact until the summary is ready."
-        preview.string = "Reading the conversation, organizing the topics, and checking the follow-ups.\n\nYou can keep working while this runs. If you copy something else, the summary will wait here."
+        preview.string = "Your summary will appear here when it’s ready.\n\nYou can keep working. If you copy something else, your clipboard won’t be overwritten."
         preview.font = .systemFont(ofSize: 15)
         spinner.isHidden = false; spinner.startAnimation(nil)
         primary.isHidden = true; copyButton.isHidden = true; restoreButton.isHidden = true; cancelButton.isHidden = false

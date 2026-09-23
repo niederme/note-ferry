@@ -1,3 +1,5 @@
+<img src="docs/images/app-icon.png" width="96" height="96" alt="Summary Notes app icon">
+
 # Summary Notes
 
 **Copy a transcript. Launch the app. Paste readable notes into Apple Notes.**
@@ -5,6 +7,10 @@
 Summary Notes is a small native macOS app that turns a raw call transcript into a detailed, scannable summary and puts the result on your clipboard as rich text. It accepts plain text or Markdown copied from Nook, Granola, or another transcription app.
 
 You choose where to paste. Summary Notes never creates or edits an Apple Note.
+
+<img src="docs/images/app.jpg" width="760" alt="Summary Notes showing a fictional website launch meeting, with spaced bullet points, key takeaways, action items, and a Copy summary button">
+
+*A sample summary with takeaways, action items, and formatting ready for Apple Notes.*
 
 ## How it works
 

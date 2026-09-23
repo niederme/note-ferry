@@ -1,0 +1,20 @@
+{
+  "title": "Website launch planning",
+  "subtitle": "Example meeting · September 23, 2026",
+  "takeaways": [
+    {"label": "A focused first release", "text": "The team agreed to launch the refreshed homepage and signup flow first. The resource library will follow once the core experience is live."},
+    {"label": "Quality before the date", "text": "Friday remains the target, provided the mobile review and accessibility checks are complete. The team will make the final call on Thursday."}
+  ],
+  "actions": [
+    {"label": "Maya", "text": "Share the final homepage copy by Wednesday afternoon so design and engineering can finish their review."},
+    {"label": "Alex", "text": "Check the signup flow on mobile and bring any unresolved issues to Thursday’s launch review."}
+  ],
+  "sections": [
+    {"heading": "Release scope", "items": [
+      {"label": "Make the next step clear", "text": "The homepage should explain who the product is for and guide visitors toward signup. The team preferred a shorter page with concrete examples."},
+      {"label": "Keep room for follow-up", "text": "The resource library is useful but does not need to block the first release. Its timeline will be decided after launch feedback is reviewed."}
+    ]}
+  ],
+  "openQuestions": [{"label": "Launch timing", "text": "Will Thursday’s review leave enough time to resolve any remaining mobile issues before Friday?"}],
+  "uncertainties": []
+}
