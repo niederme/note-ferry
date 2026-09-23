@@ -16,8 +16,22 @@ if arguments.count == 4 && arguments[1] == "--summarize-file" {
     } catch { fputs(error.localizedDescription + "\n", stderr); exit(1) }
 }
 
+if arguments.count == 4 && arguments[1] == "--format-file" {
+    do {
+        let source = try String(contentsOfFile: arguments[2], encoding: .utf8)
+        let rendered = try MarkdownFormatter.render(source)
+        let base = URL(fileURLWithPath: arguments[3])
+        try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        try NoteRenderer.rtf(rendered).write(to: base.appendingPathComponent("formatted.rtf"), options: .atomic)
+        try NoteRenderer.plainText(rendered).write(to: base.appendingPathComponent("formatted.txt"), atomically: true, encoding: .utf8)
+        print("Rich text and plain text saved locally. Clipboard untouched. No AI used.")
+        exit(0)
+    } catch { fputs(error.localizedDescription + "\n", stderr); exit(1) }
+}
+
 final class TranscriptTextView: NSTextView {
     var allowsTranscriptPaste = true
+    var placeholder = "Paste text here (⌘V)."
     var prepareForPaste: (() -> Void)?
     override func paste(_ sender: Any?) {
         guard allowsTranscriptPaste else { return }
@@ -33,7 +47,7 @@ final class TranscriptTextView: NSTextView {
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
         if string.isEmpty {
-            ("Paste a transcript here (⌘V)." as NSString).draw(
+            (placeholder as NSString).draw(
                 at: NSPoint(x: textContainerInset.width + 5, y: textContainerInset.height),
                 withAttributes: [.font: NSFont.systemFont(ofSize: 15), .foregroundColor: NSColor.placeholderTextColor])
         }
@@ -42,6 +56,10 @@ final class TranscriptTextView: NSTextView {
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTextViewDelegate {
     enum Mode { case input, processing, result }
+    enum Operation: Int { case format, summarize }
+    let operationPicker = NSSegmentedControl(labels: ["Format only", "Summarize & format"], trackingMode: .selectOne, target: nil, action: nil)
+    var operation: Operation { Operation(rawValue: operationPicker.selectedSegment) ?? .summarize }
+    var resultName: String { operation == .format ? "formatted text" : "summary" }
     var mode: Mode = .input
     var updatingText = false
     var window: NSWindow!
@@ -103,6 +121,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         detail.widthAnchor.constraint(equalTo: headerText.widthAnchor).isActive = true
         progress.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
         progress.textColor = .secondaryLabelColor; progress.isHidden = true
+        operationPicker.selectedSegment = Operation(rawValue: UserDefaults.standard.object(forKey: "operation") as? Int ?? -1)?.rawValue ?? Operation.summarize.rawValue
+        operationPicker.target = self; operationPicker.action = #selector(changeOperation)
+        operationPicker.setAccessibilityLabel("Text operation")
+        root.addArrangedSubview(operationPicker)
         root.addArrangedSubview(progress)
         spinner.style = .bar; spinner.isIndeterminate = true; spinner.isHidden = true
         root.addArrangedSubview(spinner)
@@ -135,11 +157,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         root.addArrangedSubview(buttons)
         for button in [summarizeButton, copyButton, newButton, restoreButton, cancelButton] { button.bezelStyle = .rounded; button.target = self }
         summarizeButton.action = #selector(summarizeInput)
-        summarizeButton.toolTip = "Summarize the transcript in this window."
+
         copyButton.action = #selector(copySummary)
-        copyButton.toolTip = "Copy the formatted summary to your clipboard again."
+        copyButton.toolTip = "Copy the formatted result to your clipboard again."
         newButton.action = #selector(newTranscript)
-        newButton.toolTip = "Clear this window so you can paste another transcript."
+        newButton.toolTip = "Clear this window so you can paste new text."
         restoreButton.action = #selector(restoreClipboard)
         cancelButton.action = #selector(cancel); cancelButton.keyEquivalent = "\u{1b}"
         for view in [header, progress, spinner, scroll, privacy] { view.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56).isActive = true }
@@ -178,7 +200,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     @objc func about() {
         let alert = NSAlert()
         alert.messageText = "Summary Notes"
-        alert.informativeText = "Paste a transcript and choose Summarize. The result is copied automatically for pasting into Apple Notes.\n\nUses your signed-in Codex CLI and account allowance. Source text stays in memory; the model’s temporary result file is removed when processing finishes. Codex session history is disabled.\n\nNo note is created or edited."
+        alert.informativeText = "Format only converts Markdown into rich text on your Mac, preserving the wording. No AI or account is required.\n\nSummarize & format uses your signed-in Codex CLI and account allowance. Source text stays in memory; the model’s temporary result file is removed when processing finishes. Codex session history is disabled.\n\nResults are copied for pasting into Apple Notes. No note is created or edited."
         alert.runModal()
     }
     @objc func newTranscript() {
@@ -192,13 +214,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         showInputControls()
         window?.makeFirstResponder(preview)
     }
+    @objc func changeOperation() {
+        guard mode == .input else { return }
+        UserDefaults.standard.set(operation.rawValue, forKey: "operation")
+        showInputControls()
+    }
     func showInputControls() {
         mode = .input
         preview.isEditable = true; preview.allowsTranscriptPaste = true; preview.needsDisplay = true
-        detail.stringValue = "Detailed summaries from your transcripts, formatted for pasting into Apple Notes."
+        operationPicker.isEnabled = true
+        if operation == .format {
+            detail.stringValue = "Your words, formatted for pasting into Apple Notes."
+            privacy.stringValue = "Formatting happens on your Mac. No AI or account required."
+            preview.placeholder = "Paste Markdown or plain text here (⌘V)."
+            summarizeButton.title = "Format & copy"
+            summarizeButton.toolTip = "Format this text without rewriting it, then copy it to your clipboard."
+        } else {
+            detail.stringValue = "Detailed summaries from your transcripts, formatted for pasting into Apple Notes."
+            privacy.stringValue = "Uses your Codex account to process the transcript with OpenAI. Formatting happens on your Mac."
+            preview.placeholder = "Paste a transcript here (⌘V)."
+            summarizeButton.title = "Summarize & format"
+            summarizeButton.toolTip = "Summarize this transcript with Codex, then format and copy the result."
+        }
         summarizeButton.isHidden = false; summarizeButton.keyEquivalent = "\r"
         summarizeButton.isEnabled = !preview.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         copyButton.isHidden = true; copyButton.keyEquivalent = ""
+        window.defaultButtonCell = summarizeButton.cell as? NSButtonCell
         newButton.isHidden = true; restoreButton.isHidden = true; cancelButton.isHidden = true
     }
     func textDidChange(_ notification: Notification) {
@@ -215,11 +256,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     @objc func summarizeInput() {
         guard runner == nil, mode == .input else { return }
         let text = preview.string
+        if operation == .format {
+            do {
+                let originalClipboard = ClipboardSnapshot(.general)
+                let rendered = try MarkdownFormatter.render(text)
+                snapshot = originalClipboard
+                raw = text; lastWrite = nil
+                displayRich(rendered)
+                copyWhenReady()
+            } catch { showError(error) }
+            return
+        }
         do { try Transcript.validate(text) } catch { showError(error); return }
         snapshot = ClipboardSnapshot(.general)
         raw = text; rich = nil; lastWrite = nil
         let worker = CodexRunner(); runner = worker
         let token = UUID(); jobID = token
+        operationPicker.isEnabled = false
         mode = .processing; preview.isEditable = false; preview.allowsTranscriptPaste = false
         started = Date()
         let words = text.split(whereSeparator: \.isWhitespace).count
@@ -244,16 +297,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
                 switch result {
                 case .success(let note):
                     self.display(note)
-                    do {
-                        let copied = try ClipboardOutput.write(self.rich!, to: .general, expectedChange: self.snapshot?.changeCount)
-                        if copied {
-                            self.lastWrite = NSPasteboard.general.changeCount; self.restoreButton.isHidden = false
-                            self.detail.stringValue = "Your summary is on the clipboard. Paste it into Apple Notes with ⌘V."
-                        } else {
-                            self.detail.stringValue = "Your summary is ready. You copied something else, so choose Copy summary when you’re ready to paste."
-                        }
-                        NSSound(named: "Glass")?.play(); NSApp.requestUserAttention(.informationalRequest)
-                    } catch { self.showError(error) }
+                    self.copyWhenReady()
+                    NSSound(named: "Glass")?.play(); NSApp.requestUserAttention(.informationalRequest)
                 case .failure(let error):
                     self.showInputControls()
                     if error is CancellationError { self.detail.stringValue = "Cancelled. Your transcript is still here and your clipboard is unchanged." }
@@ -263,8 +308,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         }
     }
     func display(_ note: Summary) {
+        operationPicker.selectedSegment = Operation.summarize.rawValue
+        privacy.stringValue = "Uses your Codex account to process the transcript with OpenAI. Formatting happens on your Mac."
+        displayRich(NoteRenderer.render(note))
+    }
+    func copyWhenReady() {
+        guard let rich else { return }
+        do {
+            let copied = try ClipboardOutput.write(rich, to: .general, expectedChange: snapshot?.changeCount)
+            if copied {
+                lastWrite = NSPasteboard.general.changeCount; restoreButton.isHidden = false
+                detail.stringValue = "Your \(resultName) is on the clipboard. Paste it into Apple Notes with ⌘V."
+            } else {
+                detail.stringValue = "Your \(resultName) is ready. Your newer clipboard was kept. Choose \(copyButton.title) when you’re ready."
+            }
+        } catch { showError(error) }
+    }
+    func displayRich(_ rendered: NSAttributedString) {
         preview.isEditable = false
-        rich = NoteRenderer.render(note)
+        rich = rendered
+        operationPicker.isEnabled = false
+        copyButton.title = operation == .format ? "Copy formatted text" : "Copy summary"
         let screen = NSMutableAttributedString(attributedString: rich!)
         screen.addAttribute(.foregroundColor, value: NSColor.textColor, range: NSRange(location: 0, length: screen.length))
         updatingText = true
@@ -276,6 +340,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         mode = .result; preview.isEditable = false; preview.allowsTranscriptPaste = true
         copyButton.isHidden = false; copyButton.keyEquivalent = "\r"
         summarizeButton.isHidden = true; summarizeButton.keyEquivalent = ""
+        window.defaultButtonCell = copyButton.cell as? NSButtonCell
         newButton.isHidden = false
     }
     func showError(_ error: Error) { detail.stringValue = error.localizedDescription }
@@ -285,19 +350,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         do {
             _ = try ClipboardOutput.write(rich, to: .general)
             lastWrite = NSPasteboard.general.changeCount; restoreButton.isHidden = snapshot == nil
-            detail.stringValue = "Your summary is on the clipboard. Paste it into Apple Notes with ⌘V."
+            detail.stringValue = "Your \(resultName) is on the clipboard. Paste it into Apple Notes with ⌘V."
         } catch { showError(error) }
     }
     @objc func restoreClipboard() {
         guard let snapshot else { return }
         guard lastWrite == NSPasteboard.general.changeCount else {
-            detail.stringValue = "Your clipboard has changed since the summary was copied, so it was left alone."
+            detail.stringValue = "Your clipboard has changed since the result was copied, so it was left alone."
             return
         }
         if snapshot.restore(to: .general) {
             lastWrite = nil; restoreButton.isHidden = true
-            detail.stringValue = "Previous clipboard restored. Choose Copy summary to copy the formatted result again."
-        } else { detail.stringValue = "Couldn't restore the clipboard. The summary is still available here." }
+            detail.stringValue = "Previous clipboard restored. Choose \(copyButton.title) to copy the result again."
+        } else { detail.stringValue = "Couldn't restore the clipboard. The result is still available here." }
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         window.makeKeyAndOrderFront(nil)

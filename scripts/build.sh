@@ -8,7 +8,7 @@ binaries=()
 for architecture in "${architectures[@]}"; do
     case "$architecture" in arm64|x86_64) ;; *) printf 'Unsupported architecture: %s\n' "$architecture" >&2; exit 1 ;; esac
     binary="$PWD/.build/SummaryNotes-$architecture"
-    xcrun swiftc -swift-version 5 -O -target "$architecture-apple-macos14.0" -module-cache-path "$PWD/.build/module-cache" -framework AppKit Sources/Core.swift Sources/main.swift -o "$binary"
+    xcrun swiftc -swift-version 5 -O -target "$architecture-apple-macos14.0" -module-cache-path "$PWD/.build/module-cache" -framework AppKit Sources/Core.swift Sources/MarkdownFormatter.swift Sources/main.swift -o "$binary"
     binaries+=("$binary")
 done
 xcrun lipo -create "${binaries[@]}" -output "$APP/Contents/MacOS/SummaryNotes"

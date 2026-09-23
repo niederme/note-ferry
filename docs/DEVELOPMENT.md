@@ -21,7 +21,7 @@ git clone https://github.com/niederme/summary-notes.git
 cd summary-notes
 ```
 
-Make sure Codex CLI is installed and signed in:
+For **Summarize & format**, make sure Codex CLI is installed and signed in. **Format only** does not use Codex:
 
 ```sh
 codex --version
@@ -59,6 +59,7 @@ make install   # Build and install in ~/Applications
 | Path | Purpose |
 | --- | --- |
 | `Sources/main.swift` | AppKit interface and clipboard workflow |
+| `Sources/MarkdownFormatter.swift` | Local Markdown parsing and Notes-friendly rich text |
 | `Sources/Core.swift` | Summary model, renderer, clipboard helpers, and Codex runner |
 | `Resources/SummaryPrompt.txt` | Instructions for detailed, source-faithful summaries |
 | `Resources/Summary.schema.json` | Structured model-output contract |
@@ -77,6 +78,17 @@ open 'build/Summary Notes.app' --args --preview "$PWD/Tests/fixture.json"
 
 This opens a preview without changing your clipboard. **Copy summary** explicitly copies the result.
 
+### Format Markdown without a model or clipboard change
+
+```sh
+'build/Summary Notes.app/Contents/MacOS/SummaryNotes' \
+  --format-file Tests/format-fixture.md "$PWD/local-output/formatted"
+```
+
+This writes `formatted.rtf` and `formatted.txt`. No model is called. Blank input and input over 400,000 UTF-8 bytes are rejected; the transcript minimum length does not apply. These explicit exports persist until you delete them.
+
+The local formatter uses Apple's inline Markdown parser plus block handling for headings, paragraphs, lists, quotes, and fenced code. A standalone bold line becomes a section heading. It recognizes whole-answer chat code fences containing clear Markdown structure, including mislabeled `vbnet` fences. Markdown syntax is removed while the wording is retained. Native tables and downloaded images are outside its scope.
+
 ### Test a real transcript without changing the clipboard
 
 ```sh
@@ -88,7 +100,7 @@ This sends the source to Codex and saves `summary.json`, `summary.rtf`, and `sum
 
 ### Verification
 
-The automated checks cover RTF round trips, native lists, bold headings, soft returns, section spacing, Unicode, plain-text fallback, clipboard conflicts and restoration, input validation, invalid model responses, authentication failures, cancellation, and timeout.
+The automated checks cover local Markdown conversion, inline emphasis and links, ordered and nested lists, literal code, whole-answer fences, short text, RTF round trips, native lists, bold headings, soft returns, section spacing, Unicode, plain-text fallback, clipboard conflicts and restoration, input validation, invalid model responses, authentication failures, cancellation, and timeout.
 
 Clipboard tests use a separate named pasteboard, leaving the regular clipboard alone. They require access to the macOS pasteboard service and may fail in a restrictive execution sandbox.
 

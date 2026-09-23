@@ -97,10 +97,17 @@ enum NoteRenderer {
     static func plainText(_ rich: NSAttributedString) -> String {
         let string = rich.string as NSString
         var result = "", location = 0
+        var counters: [ObjectIdentifier: Int] = [:]
         while location < string.length {
             let range = string.paragraphRange(for: NSRange(location: location, length: 0))
             let paragraph = rich.attribute(.paragraphStyle, at: location, effectiveRange: nil) as? NSParagraphStyle
-            if paragraph?.textLists.isEmpty == false { result += "• " }
+            if let list = paragraph?.textLists.last {
+                let key = ObjectIdentifier(list)
+                let number = counters[key] ?? list.startingItemNumber
+                counters[key] = number + 1
+                result += String(repeating: "  ", count: max(0, (paragraph?.textLists.count ?? 1) - 1))
+                result += list.marker(forItemNumber: number) + " "
+            }
             result += string.substring(with: range)
             location = NSMaxRange(range)
         }

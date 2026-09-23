@@ -22,6 +22,16 @@ The original workflow was recording with Nook, sometimes using Granola, and copy
 
 Summary Notes is free and open source, with no separate app subscription. **Version 1.0 still requires Codex access and uses its allowance.** It sends transcript text to OpenAI, including transcripts captured locally by Nook. Apple Intelligence support is [planned](ROADMAP.md), so the complete workflow is not yet on-device.
 
+## Format existing text (upcoming)
+
+The current source also includes **Format only** for writing you already want to keep: AI replies, your own notes, or any Markdown text. It converts headings, bold and italic text, links, and lists into rich text for Apple Notes, without rewriting or summarizing the words. It runs locally and needs no Codex account or internet connection.
+
+Paste your text, choose **Format only**, then **Format & copy**. Paste into Apple Notes with **⌘V**. **Copy formatted text** copies it again. Choose **Summarize & format** when you want Codex to turn a raw transcript into a summary first. The app remembers your last choice; switching options does not process or send anything.
+
+Both options use spaced native lists, preserve a newer clipboard, and offer **Restore clipboard** after copying. Common Markdown is supported, including numbered and nested lists, quotes, and code blocks. Images are not downloaded and tables are not converted into native Notes tables. Formatting is not a complete Markdown publishing engine.
+
+**This feature is available in source builds and is not included in the 1.0 download below.**
+
 ## Download
 
 **[Download Summary Notes 1.0 for Mac](https://github.com/niederme/summary-notes/releases/download/v1.0.0/Summary-Notes-1.0-universal.zip)**
@@ -32,7 +42,7 @@ Unzip the download and move **Summary Notes.app** to Applications. The app is De
 
 The app targets macOS 14 or later. Testing so far has been on Apple silicon with macOS 27; Intel hardware and older macOS versions still need verification. [Release notes and checksum](https://github.com/niederme/summary-notes/releases/tag/v1.0.0).
 
-## How to use it
+## How to use version 1.0
 
 1. Copy a full transcript from Nook, Granola, or another app.
 2. Open Summary Notes, paste the transcript, and choose **Summarize**.
