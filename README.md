@@ -12,182 +12,59 @@ You choose where to paste. Summary Notes never creates or edits an Apple Note.
 
 *A sample summary with takeaways, action items, and formatting ready for Apple Notes.*
 
-## How it works
-
-1. **Copy** the full transcript and open Summary Notes from Spotlight, Raycast, or Applications.
-2. **Paste** it into the window and choose **Summarize**.
-3. When the summary is copied automatically, press **⌘V** in Apple Notes.
-
-The app shows progress while Codex processes the transcript, then displays a formatted preview. **Copy summary** is the primary action for copying the result again. Use normal Paste, not Paste and Match Style, which removes formatting.
-
-You can leave the app open. It does not monitor the clipboard or start summarizing when you open or return to its window. A model request starts only when you choose **Summarize**.
-
-## What you get
-
-- Key takeaways and clearly separated action items.
-- Detailed topic sections with bold labels and native bullets.
-- Relevant open questions and transcription uncertainties.
-- Real blank lines that do not depend on paragraph-margin styling.
-- A preview, cancellation, retry, and restoration of the original clipboard.
-
-The summary instructions prioritize the actual transcript over any automatic summary included in the export. They address duplicated speech, unreliable speaker labels, conflicting names, and the difference between a suggestion and a commitment. Model output can still contain errors, so review consequential details.
-
-### Spacing for Apple Notes
-
-Rich text that looks well spaced elsewhere can paste densely into Notes. Summary Notes encodes spacing directly into the text:
-
-| Between | Formatting |
-| --- | --- |
-| Bullet items | A soft return inside the preceding item, producing a blank line without an empty bullet |
-| Sections | Two empty paragraphs before the heading |
-| Heading and content | One empty paragraph after the heading |
-
-Headings and labels are bold. Bullets use native list metadata rather than decorative characters. The clipboard also includes a plain-text fallback with equivalent spacing.
-
-## Requirements
-
-- **macOS:** the app targets macOS 14 or later; testing so far has been on macOS 27. Older supported versions still need verification.
-- **Build tools (source builds only):** a recent Xcode or Xcode Command Line Tools installation providing Swift and the macOS SDK.
-- **Codex CLI:** a version supporting `exec`, `--ephemeral`, `--ignore-user-config`, and `--output-schema`, signed in with an account that can use Codex.
-- **Internet access** for summarization.
-
-There are no third-party Swift or Python library dependencies. The build uses AppKit and macOS command-line tools. Codex is an external runtime dependency and is not bundled with the app.
-
 ## Download
 
-Download **[Summary Notes 1.0](https://github.com/niederme/summary-notes/releases/download/v1.0.0/Summary-Notes-1.0-universal.zip)**, unzip it, and move **Summary Notes.app** to Applications. The download is a universal app for Apple silicon and Intel Macs, signed with Developer ID and notarized by Apple. Xcode is not required to use the download.
+**[Download Summary Notes 1.0 for Mac](https://github.com/niederme/summary-notes/releases/download/v1.0.0/Summary-Notes-1.0-universal.zip)**
 
-Install and sign in to **Codex CLI** before summarizing your first transcript. See the [official Codex setup instructions](https://developers.openai.com/codex/cli/), then run `codex login` in Terminal. The app uses that existing login.
+Unzip the download and move **Summary Notes.app** to Applications. The app is Developer ID signed, notarized by Apple, and includes Apple silicon and Intel versions. You do not need Xcode.
 
-The [release page](https://github.com/niederme/summary-notes/releases/tag/v1.0.0) includes a SHA-256 checksum. macOS 14 and later are targeted; runtime testing so far has been on Apple silicon with macOS 27. Intel and older macOS versions have not been tested on physical machines.
+**Version 1.0 requires Codex CLI, a signed-in Codex account, and internet access.** Install Codex using the [official setup instructions](https://developers.openai.com/codex/cli/), then run `codex login` in Terminal. Summary Notes uses that login and your account’s usage allowance. With a ChatGPT login, you do not need a separate API key in this app.
 
-## Install from source
+The app targets macOS 14 or later. Testing so far has been on Apple silicon with macOS 27; Intel hardware and older macOS versions still need verification. [Release notes and checksum](https://github.com/niederme/summary-notes/releases/tag/v1.0.0).
 
-Clone this repository and enter its directory:
+## How to use it
 
-```sh
-git clone https://github.com/niederme/summary-notes.git
-cd summary-notes
-```
+1. Copy a full transcript from Nook, Granola, or another app.
+2. Open Summary Notes, paste the transcript, and choose **Summarize**.
+3. When the summary is ready and copied, paste it into Apple Notes with **⌘V**.
 
-Make sure Codex CLI is installed and signed in:
+Use normal Paste to keep the formatting. **Paste and Match Style** removes it.
 
-```sh
-codex --version
-codex login
-```
+You get key takeaways, action items, and detailed topic sections, with bold headings and spaced bullets. Open questions and unclear transcription details are called out when relevant. Review important details, since AI summaries can contain mistakes.
 
-See the [official Codex documentation](https://developers.openai.com/codex/) for installation and account setup. Then build and install:
+## Working with summaries
 
-```sh
-make install
-```
+- **Copy summary** copies the formatted result again.
+- **Clear** empties the window and leaves your clipboard alone. You can also select all (**⌘A**) and paste another transcript, then choose **Summarize**.
+- If you copy something else while processing, the app preserves your newer clipboard. Your summary waits in the window until you choose **Copy summary**.
+- **Cancel** stops processing. Your transcript remains available to edit or retry.
+- **Restore clipboard**, when available, restores what was on the clipboard when you started, provided you have not copied something else since the summary was copied.
 
-This installs `~/Applications/Summary Notes.app` and registers it with Launch Services. An existing installation is preserved under `~/Applications/Summary Notes backups/` in a dated folder.
+Leave the app open throughout the day if you like. It does not monitor your clipboard or start processing on launch, reopening, or paste. Processing begins only when you choose **Summarize**.
 
-Spotlight indexing may take a little time. Open the app directly from your home folder’s Applications directory if needed. Raycast may need its application list refreshed. No Service, Shortcut, or keyboard shortcut setup is required.
+Closing the window lets processing continue. Quitting cancels it and discards the in-memory transcript, summary, and clipboard backup. The app does not save a transcript library.
 
-Source builds target your Mac’s architecture and are ad-hoc signed for local use. The downloadable release is separately signed and notarized.
+## Privacy
 
-### Codex account and usage
+Summarization sends your transcript to **OpenAI through Codex**. Formatting happens on your Mac. Summary Notes never creates or edits an Apple Note.
 
-The app reuses your Codex CLI login. With a ChatGPT login, you do not need a separate API key in Summary Notes. Requests consume your Codex account allowance and remain subject to its limits and terms.
+The app normally removes its temporary model output when processing finishes; an interrupted shutdown can leave a temporary file behind. Clipboard managers may retain copied content. [Read the data-handling details](docs/PRIVACY.md).
 
-Codex is discovered in `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, or the standard Codex app bundle location. Other installation paths are not currently configurable in the app.
+## Help
 
-Summary Notes uses the CLI’s default model with medium reasoning effort. It deliberately ignores user configuration rather than inheriting custom tools, integrations, or model preferences. Apple Intelligence and other model providers are not implemented.
+If Codex is missing or signed out, install it and run `codex login` in Terminal. If your account reaches a usage limit, wait for it to reset before retrying. Failed or cancelled requests leave your clipboard intact.
 
-## Clipboard behavior and recovery
+Transcripts must contain at least 100 characters and fit within a 400,000-byte limit. Larger transcripts are rejected rather than cut off. Processing times out after ten minutes.
 
-| Situation | What happens |
-| --- | --- |
-| Summary succeeds | Rich text replaces the original clipboard and appears in the preview. |
-| You copy something while it runs | Your newer clipboard stays intact. Use **Copy summary** when ready. |
-| Request fails or is cancelled | Your transcript stays in the window for editing or retrying with **Summarize**. The clipboard stays intact. |
-| You choose **Restore clipboard** | The clipboard contents and formats from when you clicked Summarize return, provided the clipboard has not changed since the summary was copied. |
-| You close the window | Processing continues. Reopen the app to see the result. |
-| You quit the app | Processing is cancelled and the in-memory preview and backup are discarded. |
+[Report a problem](https://github.com/niederme/summary-notes/issues), including your macOS and Codex versions and a small fictional example. Please leave private transcripts and credentials out of reports.
 
-To process another transcript, select all the text in the window (**⌘A**) and paste the new source (**⌘V**), then choose **Summarize**. Alternatively, use **Clear** or **Summary Notes → Clear** (**⌘N**) to empty the window first. Clear leaves the clipboard alone. Pasting over a result switches the window back to editable transcript input; it does not immediately run the model or update the clipboard.
+## What’s next
 
-Inputs must contain at least 100 characters and no more than 400,000 UTF-8 bytes. Larger inputs are rejected rather than silently truncated. Requests time out after ten minutes.
+Planned: Apple Intelligence as the default for eligible Macs without another service configured, Claude support, optional API connections, a preferred provider in Settings, and a provider picker for trying another result. These features are not in 1.0. See the [roadmap](ROADMAP.md) for scope and constraints.
 
-## Privacy and data handling
+## Build or contribute
 
-**Summarization sends the transcript to OpenAI through Codex. It is not an on-device AI workflow.** Rich-text formatting happens locally.
-
-- The app holds the source, preview, and clipboard backup in memory. It has no saved transcript library.
-- The transcript is passed over standard input, not in command-line arguments or a source file.
-- The result is temporarily written into a randomly named directory accessible to the current user. The worker removes that directory when it exits normally. A forced exit, app termination before cleanup finishes, or power loss can leave a temporary result behind.
-- Codex runs with `--ephemeral`, a read-only sandbox, approval prompts disabled, and user configuration ignored. The integration disables shell execution, app connectors, plugins, hooks, memory, browser, computer, image, and multi-agent features. It reuses saved authentication without copying credentials.
-- Ephemeral mode disables normal session rollout persistence. It does not change OpenAI’s service-side data handling or guarantee that the CLI produces no operational metadata. See [Codex non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode).
-- Clipboard managers and system clipboard services may retain or synchronize copied content according to their own settings.
-
-Transcripts are treated as source material to summarize, not as instructions to execute. The app performs no web research or external fact checking.
-
-## Development
-
-```sh
-make build     # Build build/Summary Notes.app
-make test      # Run the automated checks
-make install   # Build and install in ~/Applications
-```
-
-| Path | Purpose |
-| --- | --- |
-| `Sources/main.swift` | AppKit interface and clipboard workflow |
-| `Sources/Core.swift` | Summary model, renderer, clipboard helpers, and Codex runner |
-| `Resources/SummaryPrompt.txt` | Instructions for detailed, source-faithful summaries |
-| `Resources/Summary.schema.json` | Structured model-output contract |
-| `Tests/` | Synthetic fixture and automated checks |
-| `scripts/` | Build, installation, test, and icon-generation tools |
-
-The model supplies structured content. The app owns typography, lists, spacing, and clipboard handling, so these do not depend on how the model formats Markdown.
-
-### Preview without a model call
-
-Quit any running copy of Summary Notes first, then launch the synthetic example:
-
-```sh
-open 'build/Summary Notes.app' --args --preview "$PWD/Tests/fixture.json"
-```
-
-This opens a preview without changing your clipboard. **Copy summary** explicitly copies the result.
-
-### Test a real transcript without changing the clipboard
-
-```sh
-'build/Summary Notes.app/Contents/MacOS/SummaryNotes' \
-  --summarize-file /absolute/path/to/transcript.md "$PWD/local-output/example"
-```
-
-This sends the source to Codex and saves `summary.json`, `summary.rtf`, and `summary.txt` in the chosen folder. These explicit exports persist until you delete them. The suggested `local-output/` directory is excluded from Git.
-
-### Verification
-
-The automated checks cover RTF round trips, native lists, bold headings, soft returns, section spacing, Unicode, plain-text fallback, clipboard conflicts and restoration, input validation, invalid model responses, authentication failures, cancellation, and timeout.
-
-Clipboard tests use a separate named pasteboard, leaving the regular clipboard alone. They require access to the macOS pasteboard service and may fail in a restrictive execution sandbox.
-
-For manual acceptance, copy the synthetic example and paste it into a note you choose. Check headings, single bullet markers, spacing between items and sections, and native list editing. Destination-app behavior needs visual verification in addition to automated checks.
-
-### Release builds
-
-Build both architectures with a Developer ID Application identity installed in your Keychain:
-
-```sh
-BUILD_ARCHS='arm64 x86_64' \
-  SIGNING_IDENTITY='Developer ID Application: Your Name (TEAMID)' \
-  ./scripts/build.sh
-```
-
-The build explicitly targets macOS 14, enables the hardened runtime for Developer ID signing, requests a secure timestamp, and verifies the signature. Submit a ZIP of the app using `xcrun notarytool` with credentials saved in Keychain. Once Apple accepts it, review the notarization log, staple the ticket to the app with `xcrun stapler`, and verify with both `stapler validate` and `spctl --assess --type execute`. Create the final download ZIP **after** stapling, and generate its SHA-256 checksum. Never commit signing keys or notarization credentials.
-
-## Contributing
-
-Bug reports, formatting improvements, and compatibility reports are welcome. Include your macOS and Codex CLI versions and a small synthetic example that reproduces the issue.
-
-Please do not include private transcripts, real meeting summaries, credentials, or screenshots containing personal information in issues or pull requests. Keep generated output in `local-output/` and run `make test` for changes to the renderer, clipboard handling, or backend.
+See the [development guide](docs/DEVELOPMENT.md) for source installation, architecture, tests, and release builds.
 
 ## Author and license
 
