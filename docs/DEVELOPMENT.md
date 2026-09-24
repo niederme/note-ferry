@@ -8,7 +8,7 @@ Build, test, and contribute to Note Ferry. See the [download instructions](../RE
 
 - macOS 14 or later. Runtime testing so far has been on Apple silicon with macOS 27.
 - Xcode with the macOS 26 or later SDK, even when building for macOS 14. The source includes an optional Apple Foundation Models path behind a runtime availability check.
-- Codex CLI supporting `exec`, `--ephemeral`, `--ignore-user-config`, and `--output-schema`, signed in for live summarization.
+- For Codex summaries, a signed-in Codex CLI supporting `exec`, `--ephemeral`, `--ignore-user-config`, and `--output-schema`. Local formatting, Apple Intelligence, and Claude do not require Codex.
 
 The app uses AppKit and bundles Sparkle 2.10 for updates. The build downloads Sparkle on first use and checks its pinned SHA-256. Sparkle’s license is in `Resources/Sparkle.LICENSE` and included in the app. Codex is an external runtime dependency and is not bundled.
 
@@ -21,7 +21,7 @@ git clone https://github.com/niederme/note-ferry.git
 cd note-ferry
 ```
 
-For **Summarize with Codex** (called **Summarize & format** in the 1.1 release), make sure Codex CLI is installed and signed in. **Format only** and **Summarize on Mac** do not use Codex:
+To use **Summarize & format** with Codex selected, make sure Codex CLI is installed and signed in. **Format only**, Apple Intelligence, and Claude do not use Codex:
 
 ```sh
 codex --version
@@ -37,6 +37,10 @@ make install
 This installs `~/Applications/Note Ferry.app` and registers it with Launch Services. An existing Note Ferry installation is preserved under `~/Applications/Note Ferry backups/` in a dated folder.
 
 Spotlight indexing may take a little time. Open the app directly from your home folder’s Applications directory if needed. Raycast may need its application list refreshed. No Service, Shortcut, or keyboard shortcut setup is required.
+
+On first launch, **Choose a summarizer** opens over the main window. Apple Intelligence is the initial default on a new install; if it is unavailable, choose Codex or Claude to summarize. **Done** completes onboarding. The same controls remain available in **Note Ferry → Settings…**, and the picker beside **Summarize & format** changes the provider for the current text without changing your default. **Format only** never calls a model.
+
+For Claude, create an API key in Anthropic Console, copy it, then click **Save key from clipboard** in Settings. The key is saved in Note Ferry’s Keychain item; after a successful save, the app clears that copied key if it is still on the clipboard. Settings shows whether a key is saved and lets you replace or remove it. A saved key is not proof that Anthropic will accept it; the first Claude request asks for confirmation before sending text and the key. Do not put a real API key in source files, issues, or test fixtures.
 
 Source builds target your Mac’s architecture and are ad-hoc signed for local use. The first build downloads the pinned Sparkle distribution. A release download must be separately signed and notarized before publication. Source builds point to the official Note Ferry update feed.
 

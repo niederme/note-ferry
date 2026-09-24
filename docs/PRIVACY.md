@@ -14,7 +14,9 @@ The development build adds Apple Intelligence through Apple's on-device Foundati
 - Clipboard managers and system clipboard services may retain or synchronize copied content according to their own settings.
 
 
-For Claude in the development build, Note Ferry stores your API key in its own macOS Keychain item. When you choose Claude and click **Summarize & format**, the app asks for confirmation on first use, then sends the selected text and the key over HTTPS directly to Anthropic's Messages API. The key is used for authentication and is not placed in the transcript or a temporary file. API usage is billed separately from a Claude subscription. A failed or cancelled request leaves the clipboard unchanged; the app does not automatically retry with another provider.
+For Claude in the development build, you explicitly choose **Save key from clipboard** in Settings. Note Ferry stores the copied API key in its own macOS Keychain item and clears it from the system clipboard after a successful save if the clipboard has not changed in the meantime. Clipboard managers may still retain their own history.
+
+When you choose Claude and click **Summarize & format**, the app asks for confirmation on first use, then sends the selected text and the key over HTTPS directly to Anthropic's Messages API. The key is used for authentication and is not placed in the transcript or a temporary file. API usage is billed separately from a Claude subscription. A failed or cancelled summary request leaves the clipboard unchanged; the app does not automatically retry with another provider.
 
 Apple Intelligence summarization runs on the Mac through Apple's Foundation Models framework. Formatting text runs locally for every provider.
 

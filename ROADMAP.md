@@ -32,12 +32,12 @@ The prototype splits text into roughly 4,000-character portions, makes detailed 
 
 Evaluate invoking the user's unmodified Claude Code installation with their own login. Anthropic currently describes subscription usage for `claude -p` and the Agent SDK, while its integration rules require provider-owned authentication and restrict third-party handling of subscription credentials. Recheck supported usage, applicable terms, and billing before implementation. Direct Anthropic API access remains a distinct integration option. [Subscription usage](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan), [integration and authentication rules](https://code.claude.com/docs/en/legal-and-compliance)
 
-## Implementation sequence
+## Next validation steps
 
-1. Evaluate the Apple Intelligence development build with short and long synthetic transcripts, including attribution and action-item fidelity checks. Keep the local and Codex choices explicit.
-2. Separate provider execution from the shared summary schema, renderer, and clipboard handling. Make errors and progress provider-neutral.
-3. Validate the new Claude API integration with a user-owned key; consider optional direct OpenAI API access separately.
-4. Test Settings and the per-transcript provider picker, then add session-only result comparison.
+1. Evaluate Apple Intelligence summaries with short and long transcripts, checking attribution, action items, and missing detail before considering it release-ready.
+2. Review Claude summaries against their source transcripts, and test key replacement, failure recovery, and the first-use confirmation in the built app.
+3. Test the first-run chooser, Settings, and per-transcript picker on a clean install and on an existing Codex setup.
+4. Add session-only result comparison and consider direct OpenAI API access separately.
 
 All providers should use the same output structure and Apple Notes formatting. Retain explicit user-triggered processing, cancellation, clipboard protection, and the rule that the app never creates or edits notes.
 

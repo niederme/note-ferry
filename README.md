@@ -83,9 +83,15 @@ Transcripts must contain at least 100 characters and fit within a 400,000-byte l
 
 [Report a problem](https://github.com/niederme/note-ferry/issues), including your macOS and Codex versions and a small fictional example. Please leave private transcripts and credentials out of reports.
 
+## In the development build
+
+The source build adds Apple Intelligence, Codex, and Claude as summary choices. On first launch, **Choose a summarizer** asks for a default; Apple Intelligence is preselected for a new user, though on-device summarization requires a compatible, enabled Mac. Change the default later in Settings, or use the picker beside **Summarize & format** for one piece of text. **Format only** stays local and does not use the selected summarizer.
+
+For Claude, copy an API key from Anthropic Console and click **Save key from clipboard** in Settings. The app saves it in this Mac’s Keychain and clears the copied key if it is still on the clipboard after a successful save. The first Claude summary asks you to confirm sending that text and key to Anthropic. API usage is billed separately from a Claude subscription. These features are in the development build, **not the 1.1 download**. See the [development guide](docs/DEVELOPMENT.md) to build it yourself.
+
 ## What’s next
 
-The development build offers Apple Intelligence, Codex, and Claude API as summarizers, with a default in Settings and a per-transcript picker. Apple Intelligence is the initial default on a new install. These choices are not in the 1.1 download yet. Claude requires your own API key and is billed separately from a Claude subscription. See the [roadmap](ROADMAP.md) for future work, including result comparison and possible subscription access.
+The [roadmap](ROADMAP.md) covers evaluation of on-device summary quality, comparing results from different providers, and possible additional connection options. No date is promised for the next release.
 
 ## Build or contribute
 
