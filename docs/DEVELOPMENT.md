@@ -48,6 +48,12 @@ Codex is discovered in `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, or
 
 Note Ferry uses the CLI’s default model with medium reasoning effort. It deliberately ignores user configuration rather than inheriting custom tools, integrations, or model preferences. A source-branch prototype also offers **Summarize on Mac** through Apple Intelligence on supported Macs running macOS 26 or later; it never falls back to Codex without an explicit click. Other model providers are not implemented.
 
+## Build in Xcode
+
+Open [`Note Ferry.xcodeproj`](../Note%20Ferry.xcodeproj), select the **Note Ferry** scheme and **My Mac**, then choose **Product → Build** (**⌘B**). Xcode runs the same tested `scripts/build.sh` used by `make build`; the finished app is `build/Note Ferry.app` in this repository, not in DerivedData. Open that app from Finder to run it. The Xcode scheme is a build target, so **Product → Run** is not configured.
+
+The Xcode project is checked in. [XcodeGen](https://github.com/yonaskolb/XcodeGen) is only needed if you change `project.yml` and want to regenerate the project with `xcodegen generate`.
+
 ## Build and test
 
 ```sh
@@ -85,7 +91,7 @@ This opens a preview without changing your clipboard. **Copy summary** explicitl
 ### Format Markdown without a model or clipboard change
 
 ```sh
-'build/Note Ferry.app/Contents/MacOS/SummaryNotes' \
+'build/Note Ferry.app/Contents/MacOS/Note Ferry' \
   --format-file Tests/format-fixture.md "$PWD/local-output/formatted"
 ```
 
@@ -96,7 +102,7 @@ The local formatter uses Apple's inline Markdown parser plus block handling for 
 ### Test a real transcript without changing the clipboard
 
 ```sh
-'build/Note Ferry.app/Contents/MacOS/SummaryNotes' \
+'build/Note Ferry.app/Contents/MacOS/Note Ferry' \
   --summarize-file /absolute/path/to/transcript.md "$PWD/local-output/example"
 ```
 

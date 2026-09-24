@@ -138,7 +138,7 @@ struct ClipboardSnapshot {
 }
 
 enum ClipboardOutput {
-    static let marker = NSPasteboard.PasteboardType("me.nieder.summary-notes.result")
+    static let marker = NSPasteboard.PasteboardType("me.nieder.note-ferry.result")
     static func write(_ rich: NSAttributedString, to board: NSPasteboard, expectedChange: Int? = nil) throws -> Bool {
         let data = try NoteRenderer.rtf(rich) // Prepare everything before touching the clipboard.
         let item = NSPasteboardItem()
@@ -185,7 +185,7 @@ final class CodexRunner: @unchecked Sendable {
             throw AppError.message("Codex CLI wasn't found. Install Codex CLI and run ‘codex login’ once in Terminal, then try again.")
         }
         let prompt = try String(contentsOf: resources.appendingPathComponent("SummaryPrompt.txt"), encoding: .utf8)
-        let work = FileManager.default.temporaryDirectory.appendingPathComponent("summary-notes-" + UUID().uuidString)
+        let work = FileManager.default.temporaryDirectory.appendingPathComponent("note-ferry-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         defer { try? FileManager.default.removeItem(at: work) }
         let output = work.appendingPathComponent("summary.json")

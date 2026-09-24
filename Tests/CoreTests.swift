@@ -107,15 +107,15 @@ import AppKit
         check(formatCopied && board.string(forType: .string) == fallback && board.data(forType: .rtf) != nil, "Formatted clipboard output missing")
         check(snapshot.restore(to: board), "Formatted output could not restore clipboard")
         let mock = root.appendingPathComponent("Tests/mock-codex.sh")
-        setenv("SN_TEST_MODE", "success", 1)
+        setenv("NF_TEST_MODE", "success", 1)
         let generated = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock)
         check(generated.title == note.title, "Backend did not decode a valid response")
         for mode in ["fail", "malformed", "empty"] {
-            setenv("SN_TEST_MODE", mode, 1)
+            setenv("NF_TEST_MODE", mode, 1)
             rejects({ _ = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock) }, "Invalid response accepted: " + mode)
             check(board.string(forType: .string) == validSource, "Backend failure touched clipboard")
         }
-        setenv("SN_TEST_MODE", "hang", 1)
+        setenv("NF_TEST_MODE", "hang", 1)
         let before = Date()
         rejects({ _ = try CodexRunner(timeout: 0.15).run(transcript: validSource, resources: resources, executable: mock) }, "Timeout not enforced")
         check(Date().timeIntervalSince(before) < 4, "Timeout did not terminate process promptly")
@@ -126,7 +126,7 @@ import AppKit
         let alreadyCancelled = CodexRunner(); alreadyCancelled.cancel()
         do { _ = try alreadyCancelled.run(transcript: validSource, resources: resources, executable: mock); fatalError("Pre-start cancellation ignored") }
         catch is CancellationError { checks += 1 }
-        unsetenv("SN_TEST_MODE")
+        unsetenv("NF_TEST_MODE")
         print("Passed \(checks) checks: RTF/native lists, spacing, Unicode, clipboard race/restore, validation, failures, timeout, cancellation.")
     }
 }

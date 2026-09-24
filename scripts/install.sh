@@ -11,4 +11,4 @@ if [[ -e "$DEST" ]]; then
 fi
 ditto "build/Note Ferry.app" "$DEST"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$DEST"
-printf 'Installed %s\nOpen Note Ferry from Spotlight or Raycast, paste your text, and choose Format only or Summarize & format.\n' "$DEST"
+printf 'Installed %s\nOpen Note Ferry from Spotlight or Raycast, paste your text, and choose Format only, Summarize on Mac, or Summarize with Codex.\n' "$DEST"

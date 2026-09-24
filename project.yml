@@ -1,0 +1,28 @@
+name: Note Ferry
+options:
+  deploymentTarget:
+    macOS: '14.0'
+  createIntermediateGroups: true
+fileGroups:
+  - Sources
+  - Resources
+  - Tests
+  - scripts
+  - docs
+  - README.md
+  - ROADMAP.md
+  - Makefile
+aggregateTargets:
+  Note Ferry:
+    settings:
+      base:
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+    buildScripts:
+      - name: Build Note Ferry
+        script: '"${PROJECT_DIR}/scripts/build.sh"'
+        basedOnDependencyAnalysis: false
+schemes:
+  Note Ferry:
+    build:
+      targets:
+        Note Ferry: all
