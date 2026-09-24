@@ -190,9 +190,27 @@ enum LocalSummarizer {
         }
     }
 
-    private static func unique(_ items: [NoteItem]) -> [NoteItem] {
-        var seen = Set<String>()
-        return items.filter { seen.insert(($0.label + " " + $0.text).lowercased()).inserted }
+    static func unique(_ items: [NoteItem]) -> [NoteItem] {
+        var result: [NoteItem] = []
+        for item in items {
+            let words = significantWords(item.text)
+            let duplicate = result.contains { earlier in
+                let prior = significantWords(earlier.text)
+                let shared = words.intersection(prior).count
+                let total = words.union(prior).count
+                let similarText = total > 0 && shared >= 3 && Double(shared) / Double(total) >= 0.65
+                let sameLabel = item.label.localizedCaseInsensitiveCompare(earlier.label) == .orderedSame
+                return (sameLabel && similarText) ||
+                    (item.label == earlier.label && item.text == earlier.text)
+            }
+            if !duplicate { result.append(item) }
+        }
+        return result
+    }
+
+    private static func significantWords(_ text: String) -> Set<String> {
+        let ignored: Set<String> = ["a", "an", "and", "at", "be", "by", "for", "from", "if", "in", "is", "it", "of", "on", "or", "the", "to", "was", "were", "with"]
+        return Set(text.lowercased().split { !$0.isLetter && !$0.isNumber }.map(String.init)).subtracting(ignored)
     }
 }
 
