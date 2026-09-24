@@ -15,8 +15,8 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "8110E24B88160FB22BB84377"
-               BuildableName = "Note Ferry"
+               BlueprintIdentifier = "0B8BF1E3D8B2224929F47F61"
+               BuildableName = "Note Ferry.app"
                BlueprintName = "Note Ferry"
                ReferencedContainer = "container:Note Ferry.xcodeproj">
             </BuildableReference>
@@ -32,8 +32,8 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "8110E24B88160FB22BB84377"
-            BuildableName = "Note Ferry"
+            BlueprintIdentifier = "0B8BF1E3D8B2224929F47F61"
+            BuildableName = "Note Ferry.app"
             BlueprintName = "Note Ferry"
             ReferencedContainer = "container:Note Ferry.xcodeproj">
          </BuildableReference>
@@ -51,15 +51,18 @@
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
-      <MacroExpansion>
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "8110E24B88160FB22BB84377"
-            BuildableName = "Note Ferry"
+            BlueprintIdentifier = "0B8BF1E3D8B2224929F47F61"
+            BuildableName = "Note Ferry.app"
             BlueprintName = "Note Ferry"
             ReferencedContainer = "container:Note Ferry.xcodeproj">
          </BuildableReference>
-      </MacroExpansion>
+      </BuildableProductRunnable>
+      <CommandLineArguments>
+      </CommandLineArguments>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -67,15 +70,16 @@
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
       debugDocumentVersioning = "YES">
-      <MacroExpansion>
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "8110E24B88160FB22BB84377"
-            BuildableName = "Note Ferry"
+            BlueprintIdentifier = "0B8BF1E3D8B2224929F47F61"
+            BuildableName = "Note Ferry.app"
             BlueprintName = "Note Ferry"
             ReferencedContainer = "container:Note Ferry.xcodeproj">
          </BuildableReference>
-      </MacroExpansion>
+      </BuildableProductRunnable>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">

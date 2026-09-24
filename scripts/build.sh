@@ -21,28 +21,7 @@ cp Resources/Sparkle.LICENSE "$APP/Contents/Resources/Sparkle.LICENSE"
 ditto "$SPARKLE_ROOT/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
 xcrun swift -module-cache-path "$PWD/.build/module-cache" scripts/Icon.swift "$PWD/.build/AppIcon.iconset"
 iconutil -c icns .build/AppIcon.iconset -o "$APP/Contents/Resources/AppIcon.icns"
-# Preserve the original bundle ID so installed copies and Sparkle updates stay continuous.
-cat > "$APP/Contents/Info.plist" <<'PLIST'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-<key>CFBundleName</key><string>Note Ferry</string>
-<key>CFBundleDisplayName</key><string>Note Ferry</string>
-<key>CFBundleIdentifier</key><string>me.nieder.summary-notes</string>
-<key>CFBundleExecutable</key><string>Note Ferry</string>
-<key>CFBundleIconFile</key><string>AppIcon</string>
-<key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleVersion</key><string>3</string>
-<key>CFBundleShortVersionString</key><string>1.1</string>
-<key>SUFeedURL</key><string>https://raw.githubusercontent.com/niederme/note-ferry/main/appcast.xml</string>
-<key>SUPublicEDKey</key><string>jk/qFiY8Sq8W1xua3ngXYGMbHjKkGuUCXVMQECxi68o=</string>
-<key>SUVerifyUpdateBeforeExtraction</key><true/>
-<key>SURequireSignedFeed</key><true/>
-<key>LSMinimumSystemVersion</key><string>14.0</string>
-<key>NSHighResolutionCapable</key><true/>
-<key>NSHumanReadableCopyright</key><string>Copyright © 2026 John Niedermeyer. MIT License.</string>
-</dict></plist>
-PLIST
+cp Resources/Info.plist "$APP/Contents/Info.plist"
 SIGNING_IDENTITY="${SIGNING_IDENTITY:--}"
 FRAMEWORK="$APP/Contents/Frameworks/Sparkle.framework"
 SIGN_ARGS=(--force --sign "$SIGNING_IDENTITY")

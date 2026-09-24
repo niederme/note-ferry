@@ -50,9 +50,14 @@ Note Ferry uses the CLI’s default model with medium reasoning effort. It delib
 
 ## Build in Xcode
 
-Open [`Note Ferry.xcodeproj`](../Note%20Ferry.xcodeproj), select the **Note Ferry** scheme and **My Mac**, then choose **Product → Build** (**⌘B**). Xcode runs the same tested `scripts/build.sh` used by `make build`; the finished app is `build/Note Ferry.app` in this repository, not in DerivedData. Open that app from Finder to run it. The Xcode scheme is a build target, so **Product → Run** is not configured.
+Open [`Note Ferry.xcodeproj`](../Note%20Ferry.xcodeproj), select the **Note Ferry** scheme and **My Mac**, then press **⌘R** to build and run the app. **⌘B** builds without opening it. This is a normal Xcode app target; its Debug product is in Xcode’s DerivedData and does not replace the app in `~/Applications`. The first build downloads the pinned Sparkle framework.
 
-The Xcode project is checked in. [XcodeGen](https://github.com/yonaskolb/XcodeGen) is only needed if you change `project.yml` and want to regenerate the project with `xcodegen generate`.
+The Xcode project is checked in. [XcodeGen](https://github.com/yonaskolb/XcodeGen) is only needed if you change `project.yml` and want to regenerate the project with `xcodegen generate`. The command-line release build and the Xcode target share `Resources/Info.plist`, source files, and bundled resources. The vector icon source is `Resources/AppIcon.svg`; when it changes, regenerate the checked-in `Resources/AppIcon.icns` for Xcode with:
+
+```sh
+xcrun swift scripts/Icon.swift .build/AppIcon.iconset
+iconutil -c icns .build/AppIcon.iconset -o Resources/AppIcon.icns
+```
 
 ## Build and test
 
@@ -71,6 +76,8 @@ make install   # Build and install in ~/Applications
 | `Resources/SummaryPrompt.txt` | Instructions for detailed, source-faithful summaries |
 | `Resources/Summary.schema.json` | Structured model-output contract |
 | `Resources/AppIcon.svg` | Approved vector icon, with outlined lettering |
+| `Resources/AppIcon.icns` | Generated icon bundled by Xcode |
+| `Resources/Info.plist` | Shared bundle identity and update settings |
 | `Resources/Sparkle.LICENSE` | License for the bundled updater |
 | `scripts/fetch-sparkle.sh` | Fetch and verify the pinned Sparkle distribution |
 | `Tests/` | Synthetic fixture and automated checks |

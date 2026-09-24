@@ -6,28 +6,43 @@
 	objectVersion = 77;
 	objects = {
 
-/* Begin PBXAggregateTarget section */
-		8110E24B88160FB22BB84377 /* Note Ferry */ = {
-			isa = PBXAggregateTarget;
-			buildConfigurationList = C89F80EBA083102DCC9D8665 /* Build configuration list for PBXAggregateTarget "Note Ferry" */;
-			buildPhases = (
-				EF1422C521B312E9C957914D /* Build Note Ferry */,
+/* Begin PBXBuildFile section */
+		16C791B689A232E47398D396 /* Sparkle.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = CB95A0AFA2462E178E3ECD02 /* Sparkle.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		21A40A696E4C0A9686A3B448 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A2AD86BB78EE511ED2B5E66F /* AppIcon.icns */; };
+		22FE43DBB805BF6BEB09C61F /* Summary.schema.json in Resources */ = {isa = PBXBuildFile; fileRef = 1BA92E188E7F7B21219FA9B4 /* Summary.schema.json */; };
+		6D67FE4B4DD607CB998A446A /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 5C3A95E6E8D554E0A3DD1904 /* LICENSE */; };
+		8A021F19CDDAE3FE887B6021 /* MarkdownFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D9D9E5AE8004927DA995386 /* MarkdownFormatter.swift */; };
+		B2BABFAC3992A84FC7681E71 /* Core.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99AEB9F31C0DB7834DF5EEDB /* Core.swift */; };
+		BB7665FCF77647BAF45EEA75 /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CB95A0AFA2462E178E3ECD02 /* Sparkle.framework */; };
+		BD377A239D9DF28C02CCFF2D /* SummaryPrompt.txt in Resources */ = {isa = PBXBuildFile; fileRef = 7E28FFB786781A82528C4282 /* SummaryPrompt.txt */; };
+		D18C6FA2CC0B56D9848148F3 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43688D7348230BD3C1EF3745 /* main.swift */; };
+		DA38A5D445647A08B2A13B3B /* LocalSummarizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0C64FEA22A29A3AA80DD17F /* LocalSummarizer.swift */; };
+		F9EA68AEF4AC2029CC5069F8 /* Sparkle.LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = B71B5DB84DE7FAB0ABF49FBE /* Sparkle.LICENSE */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		9BF3C46F5E66D46544241F8F /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				16C791B689A232E47398D396 /* Sparkle.framework in Embed Frameworks */,
 			);
-			dependencies = (
-			);
-			name = "Note Ferry";
-			packageProductDependencies = (
-			);
-			productName = "Note Ferry";
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
 		};
-/* End PBXAggregateTarget section */
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		0BC740F27D9249CF7831543F /* ROADMAP.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = ROADMAP.md; sourceTree = "<group>"; };
 		1BA92E188E7F7B21219FA9B4 /* Summary.schema.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Summary.schema.json; sourceTree = "<group>"; };
 		3D9D9E5AE8004927DA995386 /* MarkdownFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownFormatter.swift; sourceTree = "<group>"; };
 		43688D7348230BD3C1EF3745 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		4410C731E0887634F0BEDA7A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		480F5558076A0775930235BA /* DEVELOPMENT.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = DEVELOPMENT.md; sourceTree = "<group>"; };
+		52A773EB776E049D1135774D /* Note Ferry.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Note Ferry.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		5C3A95E6E8D554E0A3DD1904 /* LICENSE */ = {isa = PBXFileReference; path = LICENSE; sourceTree = "<group>"; };
 		5F273306BBD44099826F60AA /* AppIcon.svg */ = {isa = PBXFileReference; path = AppIcon.svg; sourceTree = "<group>"; };
 		5F73106FF5C8B2C7A625FAB3 /* format-fixture.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "format-fixture.md"; sourceTree = "<group>"; };
 		6AD332E092CD2FE053CB19B5 /* fetch-sparkle.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "fetch-sparkle.sh"; sourceTree = "<group>"; };
@@ -38,6 +53,7 @@
 		99AEB9F31C0DB7834DF5EEDB /* Core.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Core.swift; sourceTree = "<group>"; };
 		9F4B9ABA2C5AF54894A10888 /* mock-codex.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "mock-codex.sh"; sourceTree = "<group>"; };
 		A0C64FEA22A29A3AA80DD17F /* LocalSummarizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalSummarizer.swift; sourceTree = "<group>"; };
+		A2AD86BB78EE511ED2B5E66F /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		B1BD9684F06E243508BFDF32 /* Makefile */ = {isa = PBXFileReference; path = Makefile; sourceTree = "<group>"; };
 		B360DFD0944443B0BFF76F4A /* app-icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "app-icon.png"; sourceTree = "<group>"; };
 		B407FBE4A93AAD0E284F559B /* app.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = app.jpg; sourceTree = "<group>"; };
@@ -45,17 +61,38 @@
 		BBB7A072E2DF95001BDE9D94 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		BF9F1CB9F61CDDB461108D68 /* PRIVACY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = PRIVACY.md; sourceTree = "<group>"; };
 		C1B12BCECA7F526EB2DCAA4D /* install.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = install.sh; sourceTree = "<group>"; };
+		CB95A0AFA2462E178E3ECD02 /* Sparkle.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Sparkle.framework; path = .build/sparkle/2.10.0/Sparkle.framework; sourceTree = "<group>"; };
 		DB53A0A606A7A3248AF34BC6 /* fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = fixture.json; sourceTree = "<group>"; };
 		DBDD592F29FFC028E1BC1554 /* CoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreTests.swift; sourceTree = "<group>"; };
 		E36D88D9B94D6AEB64DA880E /* test.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = test.sh; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFrameworksBuildPhase section */
+		D5CB0C1EFF02E425F8DAB6D2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				BB7665FCF77647BAF45EEA75 /* Sparkle.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
 /* Begin PBXGroup section */
 		1D203D20B47C4408E6D03EFF /* Products */ = {
 			isa = PBXGroup;
 			children = (
+				52A773EB776E049D1135774D /* Note Ferry.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		20EFBDF066BD48FF1A3B9146 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				CB95A0AFA2462E178E3ECD02 /* Sparkle.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		35E5F46DF562D15ABDB529B2 /* images */ = {
@@ -70,7 +107,9 @@
 		503D6940F44C6B2855BA9E7F /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				A2AD86BB78EE511ED2B5E66F /* AppIcon.icns */,
 				5F273306BBD44099826F60AA /* AppIcon.svg */,
+				4410C731E0887634F0BEDA7A /* Info.plist */,
 				B71B5DB84DE7FAB0ABF49FBE /* Sparkle.LICENSE */,
 				1BA92E188E7F7B21219FA9B4 /* Summary.schema.json */,
 				7E28FFB786781A82528C4282 /* SummaryPrompt.txt */,
@@ -115,6 +154,7 @@
 		E45ACE80FFBAF02D6BDAF9F5 = {
 			isa = PBXGroup;
 			children = (
+				5C3A95E6E8D554E0A3DD1904 /* LICENSE */,
 				B1BD9684F06E243508BFDF32 /* Makefile */,
 				BBB7A072E2DF95001BDE9D94 /* README.md */,
 				0BC740F27D9249CF7831543F /* ROADMAP.md */,
@@ -123,6 +163,7 @@
 				5758D5A767637FF445690DAF /* scripts */,
 				6419EA8649DC7D573F71F8ED /* Sources */,
 				E83F019547E823AE46430341 /* Tests */,
+				20EFBDF066BD48FF1A3B9146 /* Frameworks */,
 				1D203D20B47C4408E6D03EFF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -140,6 +181,30 @@
 		};
 /* End PBXGroup section */
 
+/* Begin PBXNativeTarget section */
+		0B8BF1E3D8B2224929F47F61 /* Note Ferry */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C89F80EBA083102DCC9D8665 /* Build configuration list for PBXNativeTarget "Note Ferry" */;
+			buildPhases = (
+				551932BA394FA204272E181D /* Fetch Sparkle */,
+				67D7F386B0E9C5EA4BDB948A /* Sources */,
+				04CBBFB53142C6C3A2653A74 /* Resources */,
+				D5CB0C1EFF02E425F8DAB6D2 /* Frameworks */,
+				9BF3C46F5E66D46544241F8F /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Note Ferry";
+			packageProductDependencies = (
+			);
+			productName = "Note Ferry";
+			productReference = 52A773EB776E049D1135774D /* Note Ferry.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
 /* Begin PBXProject section */
 		E831DF0DA2A8B16751C8ABCF /* Project object */ = {
 			isa = PBXProject;
@@ -147,6 +212,9 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					0B8BF1E3D8B2224929F47F61 = {
+						ProvisioningStyle = Manual;
+					};
 				};
 			};
 			buildConfigurationList = EFD2290158F8D00B0916E124 /* Build configuration list for PBXProject "Note Ferry" */;
@@ -163,13 +231,28 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				8110E24B88160FB22BB84377 /* Note Ferry */,
+				0B8BF1E3D8B2224929F47F61 /* Note Ferry */,
 			);
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		04CBBFB53142C6C3A2653A74 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				21A40A696E4C0A9686A3B448 /* AppIcon.icns in Resources */,
+				6D67FE4B4DD607CB998A446A /* LICENSE in Resources */,
+				F9EA68AEF4AC2029CC5069F8 /* Sparkle.LICENSE in Resources */,
+				22FE43DBB805BF6BEB09C61F /* Summary.schema.json in Resources */,
+				BD377A239D9DF28C02CCFF2D /* SummaryPrompt.txt in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXShellScriptBuildPhase section */
-		EF1422C521B312E9C957914D /* Build Note Ferry */ = {
+		551932BA394FA204272E181D /* Fetch Sparkle */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -179,29 +262,75 @@
 			);
 			inputPaths = (
 			);
-			name = "Build Note Ferry";
+			name = "Fetch Sparkle";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PROJECT_DIR}/scripts/build.sh\"";
+			shellScript = "\"${PROJECT_DIR}/scripts/fetch-sparkle.sh\"";
 		};
 /* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		67D7F386B0E9C5EA4BDB948A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B2BABFAC3992A84FC7681E71 /* Core.swift in Sources */,
+				DA38A5D445647A08B2A13B3B /* LocalSummarizer.swift in Sources */,
+				8A021F19CDDAE3FE887B6021 /* MarkdownFormatter.swift in Sources */,
+				D18C6FA2CC0B56D9848148F3 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
 		BD3C31264AEE4E67AE765257 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".build/sparkle/2.10.0\"",
+				);
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "me.nieder.summary-notes";
+				PRODUCT_NAME = "Note Ferry";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
 		C5E53B59F1677474E7FB734F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\".build/sparkle/2.10.0\"",
+				);
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = "me.nieder.summary-notes";
+				PRODUCT_NAME = "Note Ferry";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
@@ -254,6 +383,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
@@ -316,6 +446,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -325,7 +456,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		C89F80EBA083102DCC9D8665 /* Build configuration list for PBXAggregateTarget "Note Ferry" */ = {
+		C89F80EBA083102DCC9D8665 /* Build configuration list for PBXNativeTarget "Note Ferry" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				BD3C31264AEE4E67AE765257 /* Debug */,

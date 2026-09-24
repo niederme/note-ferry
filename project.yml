@@ -4,25 +4,54 @@ options:
     macOS: '14.0'
   createIntermediateGroups: true
 fileGroups:
-  - Sources
-  - Resources
+  - Resources/AppIcon.svg
+  - Resources/Info.plist
   - Tests
   - scripts
   - docs
   - README.md
   - ROADMAP.md
   - Makefile
-aggregateTargets:
+targets:
   Note Ferry:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+      - path: Resources/SummaryPrompt.txt
+        buildPhase: resources
+      - path: Resources/Summary.schema.json
+        buildPhase: resources
+      - path: Resources/Sparkle.LICENSE
+        buildPhase: resources
+      - path: Resources/AppIcon.icns
+        buildPhase: resources
+      - path: LICENSE
+        buildPhase: resources
+    dependencies:
+      - framework: .build/sparkle/2.10.0/Sparkle.framework
+        embed: true
+        codeSign: true
     settings:
       base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.nieder.summary-notes
+        PRODUCT_NAME: Note Ferry
+        INFOPLIST_FILE: Resources/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        SWIFT_VERSION: '5.0'
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: '-'
+        ENABLE_HARDENED_RUNTIME: NO
         ENABLE_USER_SCRIPT_SANDBOXING: NO
-    buildScripts:
-      - name: Build Note Ferry
-        script: '"${PROJECT_DIR}/scripts/build.sh"'
+        LD_RUNPATH_SEARCH_PATHS: '$(inherited) @executable_path/../Frameworks'
+    preBuildScripts:
+      - name: Fetch Sparkle
+        script: '"${PROJECT_DIR}/scripts/fetch-sparkle.sh"'
         basedOnDependencyAnalysis: false
 schemes:
   Note Ferry:
     build:
       targets:
         Note Ferry: all
+    run:
+      config: Debug

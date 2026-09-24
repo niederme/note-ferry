@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleName</key><string>Note Ferry</string>
+<key>CFBundleDisplayName</key><string>Note Ferry</string>
+<!-- Preserve the original bundle ID for installed copies and Sparkle updates. -->
+<key>CFBundleIdentifier</key><string>me.nieder.summary-notes</string>
+<key>CFBundleExecutable</key><string>Note Ferry</string>
+<key>CFBundleIconFile</key><string>AppIcon</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleVersion</key><string>3</string>
+<key>CFBundleShortVersionString</key><string>1.1</string>
+<key>SUFeedURL</key><string>https://raw.githubusercontent.com/niederme/note-ferry/main/appcast.xml</string>
+<key>SUPublicEDKey</key><string>jk/qFiY8Sq8W1xua3ngXYGMbHjKkGuUCXVMQECxi68o=</string>
+<key>SUVerifyUpdateBeforeExtraction</key><true/>
+<key>SURequireSignedFeed</key><true/>
+<key>LSMinimumSystemVersion</key><string>14.0</string>
+<key>NSHighResolutionCapable</key><true/>
+<key>NSHumanReadableCopyright</key><string>Copyright © 2026 John Niedermeyer. MIT License.</string>
+</dict></plist>
