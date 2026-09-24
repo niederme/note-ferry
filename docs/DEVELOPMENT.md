@@ -7,8 +7,8 @@ Build, test, and contribute to Note Ferry. See the [download instructions](../RE
 ## Requirements
 
 - macOS 14 or later. Runtime testing so far has been on Apple silicon with macOS 27.
-- A recent Xcode or Xcode Command Line Tools installation providing Swift and the macOS SDK.
-- Codex CLI supporting `exec`, `--ephemeral`, `--ignore-user-config`, and `--output-schema`, signed in for live summarization.
+- Xcode with the macOS 26 or later SDK, even when building for macOS 14. The source includes an optional Apple Foundation Models path behind a runtime availability check.
+- For Codex summaries, a signed-in Codex CLI supporting `exec`, `--ephemeral`, `--ignore-user-config`, and `--output-schema`. Local formatting, Apple Intelligence, and Claude do not require Codex.
 
 The app uses AppKit and bundles Sparkle 2.10 for updates. The build downloads Sparkle on first use and checks its pinned SHA-256. Sparkle’s license is in `Resources/Sparkle.LICENSE` and included in the app. Codex is an external runtime dependency and is not bundled.
 
@@ -21,7 +21,7 @@ git clone https://github.com/niederme/note-ferry.git
 cd note-ferry
 ```
 
-For **Summarize & format**, make sure Codex CLI is installed and signed in. **Format only** does not use Codex:
+To use **Summarize & format** with Codex selected, make sure Codex CLI is installed and signed in. **Format only**, Apple Intelligence, and Claude do not use Codex:
 
 ```sh
 codex --version
@@ -38,6 +38,10 @@ This installs `~/Applications/Note Ferry.app` and registers it with Launch Servi
 
 Spotlight indexing may take a little time. Open the app directly from your home folder’s Applications directory if needed. Raycast may need its application list refreshed. No Service, Shortcut, or keyboard shortcut setup is required.
 
+On first launch, **Choose a summarizer** opens over the main window. Apple Intelligence is the initial default on a new install; if it is unavailable, choose Codex or Claude to summarize. **Done** completes onboarding. The same controls remain available in **Note Ferry → Settings…**, and the picker beside **Summarize & format** changes the provider for the current text without changing your default. **Format only** never calls a model.
+
+For Claude, create an API key in Anthropic Console, copy it, then click **Save key from clipboard** in Settings. The key is saved in Note Ferry’s Keychain item; after a successful save, the app clears that copied key if it is still on the clipboard. Settings shows whether a key is saved and lets you replace or remove it. A saved key is not proof that Anthropic will accept it; the first Claude request asks for confirmation before sending text and the key. Do not put a real API key in source files, issues, or test fixtures.
+
 Source builds target your Mac’s architecture and are ad-hoc signed for local use. The first build downloads the pinned Sparkle distribution. A release download must be separately signed and notarized before publication. Source builds point to the official Note Ferry update feed.
 
 ### Codex account and usage
@@ -46,7 +50,18 @@ The app reuses your Codex CLI login. With a ChatGPT login, you do not need a sep
 
 Codex is discovered in `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, or the standard Codex app bundle location. Other installation paths are not currently configurable in the app.
 
-Note Ferry uses the CLI’s default model with medium reasoning effort. It deliberately ignores user configuration rather than inheriting custom tools, integrations, or model preferences. Apple Intelligence and other model providers are not implemented.
+Note Ferry uses the CLI’s default model with medium reasoning effort. It deliberately ignores user configuration rather than inheriting custom tools, integrations, or model preferences. The development build also offers on-device Apple Intelligence on supported Macs running macOS 26 or later, plus Claude through a separately billed Anthropic API key stored in the app's Keychain item. A first-run chooser, Settings default, and per-transcript picker select the provider. No provider silently falls back to another.
+
+## Build in Xcode
+
+Open [`Note Ferry.xcodeproj`](../Note%20Ferry.xcodeproj), select the **Note Ferry** scheme and **My Mac**, then press **⌘R** to build and run the app. **⌘B** builds without opening it. This is a normal Xcode app target; its Debug product is in Xcode’s DerivedData and does not replace the app in `~/Applications`. The first build downloads the pinned Sparkle framework.
+
+The Xcode project is checked in. [XcodeGen](https://github.com/yonaskolb/XcodeGen) is only needed if you change `project.yml` and want to regenerate the project with `xcodegen generate`. The command-line release build and the Xcode target share `Resources/Info.plist`, source files, and bundled resources. The vector icon source is `Resources/AppIcon.svg`; when it changes, regenerate the checked-in `Resources/AppIcon.icns` for Xcode with:
+
+```sh
+xcrun swift scripts/Icon.swift .build/AppIcon.iconset
+iconutil -c icns .build/AppIcon.iconset -o Resources/AppIcon.icns
+```
 
 ## Build and test
 
@@ -61,15 +76,21 @@ make install   # Build and install in ~/Applications
 | `Sources/main.swift` | AppKit interface and clipboard workflow |
 | `Sources/MarkdownFormatter.swift` | Local Markdown parsing and Notes-friendly rich text |
 | `Sources/Core.swift` | Summary model, renderer, clipboard helpers, and Codex runner |
+| `Sources/LocalSummarizer.swift` | On-device Apple Intelligence summarizer and text chunking |
+| `Sources/ClaudeRunner.swift` | Anthropic Messages API request, response validation, and cancellation |
+| `Sources/ProviderSettings.swift` | Default provider and Claude API key in macOS Keychain |
+| `Sources/SettingsWindow.swift` | First-run provider chooser and Settings |
 | `Resources/SummaryPrompt.txt` | Instructions for detailed, source-faithful summaries |
 | `Resources/Summary.schema.json` | Structured model-output contract |
 | `Resources/AppIcon.svg` | Approved vector icon, with outlined lettering |
+| `Resources/AppIcon.icns` | Generated icon bundled by Xcode |
+| `Resources/Info.plist` | Shared bundle identity and update settings |
 | `Resources/Sparkle.LICENSE` | License for the bundled updater |
 | `scripts/fetch-sparkle.sh` | Fetch and verify the pinned Sparkle distribution |
 | `Tests/` | Synthetic fixture and automated checks |
 | `scripts/` | Build, installation, test, and icon-generation tools |
 
-The model supplies structured content. The app owns typography, lists, spacing, and clipboard handling, so these do not depend on how the model formats Markdown.
+The model supplies structured content. The app owns typography, lists, spacing, and clipboard handling, so these do not depend on how the model formats Markdown. The local prototype accepts up to 100 KB, uses fresh sessions for roughly 4,000-character portions, and consolidates takeaways separately. It can take longer and may be less detailed than Codex. Model availability depends on macOS, hardware, Apple Intelligence settings, and model readiness.
 
 ### Preview without a model call
 
@@ -84,7 +105,7 @@ This opens a preview without changing your clipboard. **Copy summary** explicitl
 ### Format Markdown without a model or clipboard change
 
 ```sh
-'build/Note Ferry.app/Contents/MacOS/SummaryNotes' \
+'build/Note Ferry.app/Contents/MacOS/Note Ferry' \
   --format-file Tests/format-fixture.md "$PWD/local-output/formatted"
 ```
 
@@ -95,7 +116,7 @@ The local formatter uses Apple's inline Markdown parser plus block handling for 
 ### Test a real transcript without changing the clipboard
 
 ```sh
-'build/Note Ferry.app/Contents/MacOS/SummaryNotes' \
+'build/Note Ferry.app/Contents/MacOS/Note Ferry' \
   --summarize-file /absolute/path/to/transcript.md "$PWD/local-output/example"
 ```
 

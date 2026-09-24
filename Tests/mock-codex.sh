@@ -5,7 +5,7 @@ while [[ $# -gt 0 ]]; do
     if [[ "$1" == "--output-last-message" ]]; then DEST="$2"; shift 2; else shift; fi
 done
 cat >/dev/null
-case "${SN_TEST_MODE:-success}" in
+case "${NF_TEST_MODE:-success}" in
     fail) echo 'authentication failed: 401' >&2; exit 1 ;;
     malformed) printf '{"title":' > "$DEST" ;;
     empty) printf '{}' > "$DEST" ;;

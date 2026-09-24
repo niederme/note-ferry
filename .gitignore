@@ -3,3 +3,5 @@
 build/
 local-output/
 .claude/
+xcuserdata/
+*.xcuserstate

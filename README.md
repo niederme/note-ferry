@@ -20,7 +20,7 @@ The original workflow was recording with Nook, sometimes using Granola, and copy
 
 [Nook](https://www.common-tools.co/nook) records and transcribes meetings on your Mac and already produces local summaries and Markdown files. You can keep using it for capture and bring its full transcript here when you want another summary formatted for Apple Notes. [Granola](https://www.granola.ai/) combines meeting transcription, enhanced notes, and calendar features. Note Ferry is useful when you want this particular output in Apple Notes or use transcripts from several tools.
 
-Note Ferry is free and open source, with no separate app subscription. **Summarize & format requires a signed-in Codex account and uses its allowance.** It sends transcript text to OpenAI, including transcripts captured locally by Nook. **Format only** runs on your Mac without an account. Apple Intelligence summarization is [planned](ROADMAP.md).
+Note Ferry is free and open source, with no separate app subscription. In the current 1.1 download, **Summarize & format requires a signed-in Codex account and uses its allowance.** It sends transcript text to OpenAI, including transcripts captured locally by Nook. **Format only** runs on your Mac without an account. An optional [on-device summary mode](ROADMAP.md) is in development and is not in the 1.1 download.
 
 ## Format existing text
 
@@ -83,9 +83,15 @@ Transcripts must contain at least 100 characters and fit within a 400,000-byte l
 
 [Report a problem](https://github.com/niederme/note-ferry/issues), including your macOS and Codex versions and a small fictional example. Please leave private transcripts and credentials out of reports.
 
+## In the development build
+
+The source build adds Apple Intelligence, Codex, and Claude as summary choices. On first launch, **Choose a summarizer** asks for a default; Apple Intelligence is preselected for a new user, though on-device summarization requires a compatible, enabled Mac. Change the default later in Settings, or use the picker beside **Summarize & format** for one piece of text. **Format only** stays local and does not use the selected summarizer.
+
+For Claude, copy an API key from Anthropic Console and click **Save key from clipboard** in Settings. The app saves it in this Mac’s Keychain and clears the copied key if it is still on the clipboard after a successful save. The first Claude summary asks you to confirm sending that text and key to Anthropic. API usage is billed separately from a Claude subscription. These features are in the development build, **not the 1.1 download**. See the [development guide](docs/DEVELOPMENT.md) to build it yourself.
+
 ## What’s next
 
-Planned: Apple Intelligence as the default for eligible Macs without another service configured, Claude support, optional API connections, a preferred provider in Settings, and a provider picker for trying another result. See the [roadmap](ROADMAP.md) for scope and constraints.
+The [roadmap](ROADMAP.md) covers evaluation of on-device summary quality, comparing results from different providers, and possible additional connection options. No date is promised for the next release.
 
 ## Build or contribute
 

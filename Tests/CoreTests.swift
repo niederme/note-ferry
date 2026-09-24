@@ -1,5 +1,35 @@
 import AppKit
 
+final class MockClaudeURLProtocol: URLProtocol {
+    static var status = 200
+    static var payload = Data()
+    static var observedRequest: URLRequest?
+    static var observedBody = Data()
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        Self.observedRequest = request
+        if Self.status == -1 { return } // No response until cancelled or timed out.
+        Self.observedBody = request.httpBody ?? Data()
+        if Self.observedBody.isEmpty, let stream = request.httpBodyStream {
+            stream.open()
+            defer { stream.close() }
+            var buffer = [UInt8](repeating: 0, count: 4096)
+            while true {
+                let count = stream.read(&buffer, maxLength: buffer.count)
+                if count <= 0 { break }
+                Self.observedBody.append(contentsOf: buffer.prefix(count))
+            }
+        }
+        let response = HTTPURLResponse(url: request.url!, statusCode: Self.status, httpVersion: "HTTP/1.1", headerFields: nil)!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Self.payload)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+    override func stopLoading() {}
+}
+
 @main struct CoreTests {
     static var checks = 0
     static func check(_ condition: @autoclosure () -> Bool, _ message: String) {
@@ -11,6 +41,21 @@ import AppKit
     }
     static func main() throws {
         let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        let preferencesSuite = "me.nieder.note-ferry.tests.\(UUID().uuidString)"
+        let preferences = UserDefaults(suiteName: preferencesSuite)!
+        defer { preferences.removePersistentDomain(forName: preferencesSuite) }
+        let providerSettings = ProviderSettings(defaults: preferences, bundleIdentifier: preferencesSuite)
+        check(providerSettings.defaultProvider == .apple, "New installs did not start with Apple Intelligence selected")
+        check(!providerSettings.hasCompletedOnboarding, "New installs skipped provider onboarding")
+        providerSettings.defaultProvider = .codex
+        providerSettings.hasCompletedOnboarding = true
+        let restoredSettings = ProviderSettings(defaults: preferences, bundleIdentifier: preferencesSuite)
+        check(restoredSettings.defaultProvider == .codex && restoredSettings.hasCompletedOnboarding,
+              "Provider choice and onboarding state did not persist")
+        rejects({ try providerSettings.saveClaudeAPIKey("not-a-claude-api-key") },
+                "Non-API clipboard text was accepted as a Claude key")
+        let hasTestKey = try providerSettings.hasClaudeAPIKey()
+        check(!hasTestKey, "A fresh test Keychain unexpectedly has a Claude key")
         let resources = root.appendingPathComponent("Resources")
         let fixture = try Data(contentsOf: root.appendingPathComponent("Tests/fixture.json"))
         let note = try JSONDecoder().decode(Summary.self, from: fixture)
@@ -75,6 +120,21 @@ import AppKit
         rejects({ _ = try MarkdownFormatter.render(String(repeating: "é", count: 200_001)) }, "Oversized formatting input accepted")
         let validSource = String(repeating: "Alex: Discuss the project. Sam: I will send the proposal on Friday.\n", count: 10)
         try Transcript.validate(validSource)
+        let chunkSource = "First decision and rationale.\nSecond decision with a longer explanation.\nThird decision and follow-up."
+        let chunks = TextChunker.split(chunkSource, maxCharacters: 35)
+        check(chunks.count > 1 && chunks.allSatisfy { $0.count <= 35 }, "Long text was not split within the model budget")
+        check(chunks.joined(separator: " ").split(whereSeparator: \.isWhitespace).map(String.init)
+              == chunkSource.split(whereSeparator: \.isWhitespace).map(String.init), "Chunking dropped or reordered source words")
+        let unbroken = String(repeating: "x", count: 90)
+        check(TextChunker.split(unbroken, maxCharacters: 25).joined() == unbroken, "Long unbroken source was truncated")
+        let tinyTailSource = String(repeating: "A ", count: 1_990) + "Maya: I will send it Friday."
+        let balanced = TextChunker.split(tinyTailSource, maxCharacters: 4_000)
+        check(balanced.count == 2 && balanced.allSatisfy { $0.count >= 800 && $0.count <= 4_000 }, "Tiny final model chunk was not balanced")
+        check(balanced.joined(separator: " ").split(whereSeparator: \.isWhitespace).map(String.init)
+              == tinyTailSource.split(whereSeparator: \.isWhitespace).map(String.init), "Rebalancing lost source words")
+        let turnSource = String(repeating: "A ", count: 18) + "\nMaya: I will send the prototype Friday."
+        let turns = TextChunker.split(turnSource, maxCharacters: 50)
+        check(turns.count == 2 && turns[1].hasPrefix("Maya:"), "Chunker split a speaker turn")
         let board = NSPasteboard.withUniqueName()
         defer { board.releaseGlobally() }
         board.setString(validSource, forType: .string)
@@ -92,15 +152,15 @@ import AppKit
         check(formatCopied && board.string(forType: .string) == fallback && board.data(forType: .rtf) != nil, "Formatted clipboard output missing")
         check(snapshot.restore(to: board), "Formatted output could not restore clipboard")
         let mock = root.appendingPathComponent("Tests/mock-codex.sh")
-        setenv("SN_TEST_MODE", "success", 1)
+        setenv("NF_TEST_MODE", "success", 1)
         let generated = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock)
         check(generated.title == note.title, "Backend did not decode a valid response")
         for mode in ["fail", "malformed", "empty"] {
-            setenv("SN_TEST_MODE", mode, 1)
+            setenv("NF_TEST_MODE", mode, 1)
             rejects({ _ = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock) }, "Invalid response accepted: " + mode)
             check(board.string(forType: .string) == validSource, "Backend failure touched clipboard")
         }
-        setenv("SN_TEST_MODE", "hang", 1)
+        setenv("NF_TEST_MODE", "hang", 1)
         let before = Date()
         rejects({ _ = try CodexRunner(timeout: 0.15).run(transcript: validSource, resources: resources, executable: mock) }, "Timeout not enforced")
         check(Date().timeIntervalSince(before) < 4, "Timeout did not terminate process promptly")
@@ -111,7 +171,80 @@ import AppKit
         let alreadyCancelled = CodexRunner(); alreadyCancelled.cancel()
         do { _ = try alreadyCancelled.run(transcript: validSource, resources: resources, executable: mock); fatalError("Pre-start cancellation ignored") }
         catch is CancellationError { checks += 1 }
-        unsetenv("SN_TEST_MODE")
+        // Claude tests use URLProtocol, so no request reaches Anthropic.
+        let claudeConfiguration = URLSessionConfiguration.ephemeral
+        claudeConfiguration.protocolClasses = [MockClaudeURLProtocol.self]
+        let claudeSession = URLSession(configuration: claudeConfiguration)
+        let fixtureText = String(decoding: fixture, as: UTF8.self)
+        func envelope(_ text: String, stop: String = "end_turn") -> Data {
+            try! JSONSerialization.data(withJSONObject: [
+                "content": [["type": "text", "text": text]],
+                "stop_reason": stop
+            ])
+        }
+        MockClaudeURLProtocol.status = 200
+        MockClaudeURLProtocol.payload = envelope(fixtureText)
+        let claudeResult = try ClaudeRunner(session: claudeSession, timeout: 2)
+            .run(transcript: validSource, resources: resources, apiKey: "test-key")
+        check(claudeResult.title == note.title, "Claude response did not decode")
+        let claudeRequest = MockClaudeURLProtocol.observedRequest!
+        check(claudeRequest.url?.absoluteString == "https://api.anthropic.com/v1/messages"
+              && claudeRequest.httpMethod == "POST", "Claude request used the wrong endpoint")
+        check(claudeRequest.value(forHTTPHeaderField: "x-api-key") == "test-key"
+              && claudeRequest.value(forHTTPHeaderField: "anthropic-version") == "2023-06-01",
+              "Claude authentication or version headers are wrong")
+        check(!MockClaudeURLProtocol.observedBody.isEmpty, "Claude request had no body")
+        let claudeBody = try JSONSerialization.jsonObject(with: MockClaudeURLProtocol.observedBody) as! [String: Any]
+        let messages = claudeBody["messages"] as! [[String: String]]
+        let output = claudeBody["output_config"] as! [String: Any]
+        check(claudeBody["model"] as? String == "claude-sonnet-4-6"
+              && messages[0]["content"]?.contains(validSource) == true
+              && output["format"] != nil, "Claude request lost the source or schema")
+        MockClaudeURLProtocol.status = 401
+        do {
+            _ = try ClaudeRunner(session: claudeSession, timeout: 2)
+                .run(transcript: validSource, resources: resources, apiKey: "test-key")
+            fatalError("Claude accepted an invalid API key response")
+        } catch {
+            check(error.localizedDescription.contains("401"), "Invalid key error did not identify HTTP 401")
+        }
+        MockClaudeURLProtocol.status = 403
+        do {
+            _ = try ClaudeRunner(session: claudeSession, timeout: 2)
+                .run(transcript: validSource, resources: resources, apiKey: "test-key")
+            fatalError("Claude accepted a key with insufficient permission")
+        } catch {
+            check(error.localizedDescription.contains("403"), "Permission error did not identify HTTP 403")
+        }
+        MockClaudeURLProtocol.status = 200
+        MockClaudeURLProtocol.payload = envelope("not-json")
+        rejects({ _ = try ClaudeRunner(session: claudeSession, timeout: 2)
+            .run(transcript: validSource, resources: resources, apiKey: "test-key") },
+            "Claude accepted malformed content")
+        MockClaudeURLProtocol.payload = envelope(fixtureText, stop: "max_tokens")
+        rejects({ _ = try ClaudeRunner(session: claudeSession, timeout: 2)
+            .run(transcript: validSource, resources: resources, apiKey: "test-key") },
+            "Claude accepted truncated content")
+        MockClaudeURLProtocol.status = -1
+        let slowClaude = ClaudeRunner(session: claudeSession, timeout: 0.1)
+        let claudeStarted = Date()
+        rejects({ _ = try slowClaude.run(transcript: validSource, resources: resources, apiKey: "test-key") },
+                "Claude did not enforce its request timeout")
+        check(Date().timeIntervalSince(claudeStarted) < 2, "Claude timeout took too long")
+        let runningClaude = ClaudeRunner(session: claudeSession, timeout: 2)
+        DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) { runningClaude.cancel() }
+        do {
+            _ = try runningClaude.run(transcript: validSource, resources: resources, apiKey: "test-key")
+            fatalError("Claude running cancellation was ignored")
+        } catch is CancellationError { checks += 1 }
+        let cancelledClaude = ClaudeRunner(session: claudeSession, timeout: 2)
+        cancelledClaude.cancel()
+        do {
+            _ = try cancelledClaude.run(transcript: validSource, resources: resources, apiKey: "test-key")
+            fatalError("Claude pre-start cancellation was ignored")
+        } catch is CancellationError { checks += 1 }
+        check(board.string(forType: .string) == validSource, "Claude failure touched clipboard")
+        unsetenv("NF_TEST_MODE")
         print("Passed \(checks) checks: RTF/native lists, spacing, Unicode, clipboard race/restore, validation, failures, timeout, cancellation.")
     }
 }
