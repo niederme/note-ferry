@@ -62,7 +62,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     var mode: Mode = .input
     var updatingText = false
     var window: NSWindow!
-    let heading = NSTextField(labelWithString: "Summary Notes")
+    var aboutWindow: NSWindow?
+    let heading = NSTextField(labelWithString: "Note Ferry")
     let detail = NSTextField(wrappingLabelWithString: "")
     let privacy = NSTextField(wrappingLabelWithString: "Uses your Codex account to process the transcript with OpenAI. Formatting happens on your Mac.")
     let preview = TranscriptTextView(usingTextLayoutManager: true)
@@ -90,7 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     func applicationDidFinishLaunching(_ notification: Notification) {
         makeMenu()
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 790), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = "Summary Notes"
+        window.title = "Note Ferry"
         window.minSize = NSSize(width: 620, height: 560)
         window.delegate = self
         window.isReleasedWhenClosed = false
@@ -109,7 +110,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             NSApp.applicationIconImage = icon.image
         }
         icon.imageScaling = .scaleProportionallyUpOrDown
-        icon.setAccessibilityLabel("Summary Notes app icon")
+        icon.setAccessibilityLabel("Note Ferry app icon")
         icon.widthAnchor.constraint(equalToConstant: 52).isActive = true
         icon.heightAnchor.constraint(equalToConstant: 52).isActive = true
         let header = NSStackView(views: [icon, headerText])
@@ -175,7 +176,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
                 let note = try JSONDecoder().decode(Summary.self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))
                 try note.validate()
                 display(note)
-                detail.stringValue = "Detailed summaries from your transcripts, formatted for pasting into Apple Notes."
+                detail.stringValue = "Your text, formatted for pasting into Apple Notes."
             } catch { showError(error) }
         }
         // Opening, reopening, and clipboard changes never start a model request.
@@ -184,11 +185,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     func makeMenu() {
         let menu = NSMenu(), appItem = NSMenuItem(), appMenu = NSMenu()
         menu.addItem(appItem)
-        appMenu.addItem(withTitle: "About Summary Notes", action: #selector(about), keyEquivalent: "").target = self
+        appMenu.addItem(withTitle: "About Note Ferry", action: #selector(about), keyEquivalent: "").target = self
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Clear", action: #selector(newTranscript), keyEquivalent: "n").target = self
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Quit Summary Notes", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "Quit Note Ferry", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         let editItem = NSMenuItem(title: "Edit", action: nil, keyEquivalent: ""), editMenu = NSMenu(title: "Edit")
         editMenu.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
@@ -200,10 +201,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         editItem.submenu = editMenu; menu.addItem(editItem); NSApp.mainMenu = menu
     }
     @objc func about() {
-        let alert = NSAlert()
-        alert.messageText = "Summary Notes"
-        alert.informativeText = "Format only converts Markdown into rich text on your Mac, preserving the wording. No AI or account is required.\n\nSummarize & format uses your signed-in Codex CLI and account allowance. Source text stays in memory; the model’s temporary result file is removed when processing finishes. Codex session history is disabled.\n\nResults are copied for pasting into Apple Notes. No note is created or edited."
-        alert.runModal()
+        if let aboutWindow {
+            aboutWindow.makeKeyAndOrderFront(nil)
+            return
+        }
+        let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 440, height: 475),
+                             styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        panel.title = "About Note Ferry"
+        panel.isReleasedWhenClosed = false
+        let icon = NSImageView(image: NSApp.applicationIconImage)
+        icon.imageScaling = .scaleProportionallyUpOrDown
+        icon.setAccessibilityLabel("Note Ferry app icon")
+        icon.widthAnchor.constraint(equalToConstant: 128).isActive = true
+        icon.heightAnchor.constraint(equalToConstant: 128).isActive = true
+        let name = NSTextField(labelWithString: "Note Ferry")
+        name.font = .systemFont(ofSize: 24, weight: .semibold)
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
+        let versionLabel = NSTextField(labelWithString: "Version \(version) (\(build))")
+        versionLabel.font = .systemFont(ofSize: 12)
+        versionLabel.textColor = .secondaryLabelColor
+        let description = NSTextField(wrappingLabelWithString: "Your text, formatted for pasting into Apple Notes.\n\nFormat Markdown on your Mac, or summarize a transcript using your Codex account. Copy the result and paste it where you want it.")
+        description.font = .systemFont(ofSize: 13)
+        description.alignment = .center
+        description.widthAnchor.constraint(equalToConstant: 344).isActive = true
+        let credit = NSTextField(labelWithString: "Made by John Niedermeyer · MIT License")
+        credit.font = .systemFont(ofSize: 11)
+        credit.textColor = .secondaryLabelColor
+        let website = NSButton(title: "View on GitHub", target: self, action: #selector(openWebsite))
+        website.bezelStyle = .rounded
+        let stack = NSStackView(views: [icon, name, versionLabel, description, website, credit])
+        stack.orientation = .vertical
+        stack.alignment = .centerX
+        stack.spacing = 14
+        stack.setCustomSpacing(4, after: name)
+        stack.setCustomSpacing(22, after: versionLabel)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        panel.contentView!.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.centerXAnchor.constraint(equalTo: panel.contentView!.centerXAnchor),
+            stack.topAnchor.constraint(equalTo: panel.contentView!.topAnchor, constant: 24),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: panel.contentView!.bottomAnchor, constant: -24)
+        ])
+        aboutWindow = panel
+        panel.center()
+        panel.makeKeyAndOrderFront(nil)
+    }
+    @objc func openWebsite() {
+        NSWorkspace.shared.open(URL(string: "https://github.com/niederme/note-ferry")!)
     }
     @objc func newTranscript() {
         guard runner == nil else { return }

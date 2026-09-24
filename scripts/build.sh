@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-APP="$PWD/build/Summary Notes.app"
+APP="$PWD/build/Note Ferry.app"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources" .build/module-cache
 read -r -a architectures <<< "${BUILD_ARCHS:-$(uname -m)}"
 binaries=()
@@ -20,13 +20,13 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-<key>CFBundleName</key><string>Summary Notes</string>
-<key>CFBundleDisplayName</key><string>Summary Notes</string>
+<key>CFBundleName</key><string>Note Ferry</string>
+<key>CFBundleDisplayName</key><string>Note Ferry</string>
 <key>CFBundleIdentifier</key><string>me.nieder.summary-notes</string>
 <key>CFBundleExecutable</key><string>SummaryNotes</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleVersion</key><string>1</string>
+<key>CFBundleVersion</key><string>2</string>
 <key>CFBundleShortVersionString</key><string>1.0</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>NSHighResolutionCapable</key><true/>

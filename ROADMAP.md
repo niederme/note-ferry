@@ -1,8 +1,8 @@
 # Roadmap
 
-[Back to Summary Notes](README.md) · [Development guide](docs/DEVELOPMENT.md)
+[Back to Note Ferry](README.md) · [Development guide](docs/DEVELOPMENT.md)
 
-Version 1.0 is released and uses Codex CLI only. Everything below is planned, with no promised release dates. Keep the core workflow simple: paste a transcript, choose Summarize, and paste formatted notes into Apple Notes.
+The upcoming Note Ferry 1.0 uses Codex CLI for **Summarize & format** and has local **Format only**. Everything below is planned, with no promised release dates. Keep the core workflow simple: paste text, choose Format only or Summarize & format, and paste into Apple Notes.
 
 ## More ways to summarize
 
@@ -24,7 +24,7 @@ Subscription access and API billing must be clearly distinguished. A subscriptio
 
 ## Apple Intelligence feasibility
 
-The on-device option is a fallback for compatible, enabled Macs, not a universal fallback for every Mac supported by Summary Notes. Apple's Foundation Models framework starts with macOS 26 and requires an Apple Intelligence-compatible device with Apple Intelligence enabled. Check actual model availability, language support, and download readiness at runtime. Keep Codex and API options usable on older supported Macs. [Apple's framework requirements](https://www.apple.com/ca/newsroom/2025/09/apples-foundation-models-framework-unlocks-new-intelligent-app-experiences/)
+The on-device option is a fallback for compatible, enabled Macs, not a universal fallback for every Mac supported by Note Ferry. Apple's Foundation Models framework starts with macOS 26 and requires an Apple Intelligence-compatible device with Apple Intelligence enabled. Check actual model availability, language support, and download readiness at runtime. Keep Codex and API options usable on older supported Macs. [Apple's framework requirements](https://www.apple.com/ca/newsroom/2025/09/apples-foundation-models-framework-unlocks-new-intelligent-app-experiences/)
 
 Long call transcripts need a dedicated evaluation. Apple's documented on-device context limit is small enough that full transcripts may require chunking and a consolidation pass. Measure preservation of names, speaker attribution, decisions, commitments, and uncertainty across chunks before shipping it as a default. Recheck limits against the SDK and model being targeted. Do not silently truncate a transcript or imply parity with cloud models. [Apple's context-window guidance](https://developer.apple.com/documentation/technotes/tn3193-managing-the-on-device-foundation-model-s-context-window)
 

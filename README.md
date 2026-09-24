@@ -1,72 +1,73 @@
-<img src="docs/images/app-icon.png" width="96" height="96" alt="Summary Notes app icon">
+<img src="docs/images/app-icon.png" width="96" height="96" alt="Note Ferry app icon">
 
-# Summary Notes
+# Note Ferry
 
-**Paste a transcript. Summarize it. Copy readable notes into Apple Notes.**
+**Turn your text into notes worth keeping (with a summary if you want one).**
 
-Summary Notes is a small native macOS app that turns a raw call transcript into a detailed, scannable summary and puts the result on your clipboard as rich text. It accepts plain text or Markdown copied from [Nook](https://www.common-tools.co/nook), [Granola](https://www.granola.ai/), or another transcription app.
+Note Ferry is a small native macOS app that formats text for Apple Notes and puts the result on your clipboard as rich text. Bring an AI reply, your own writing, or any plain text or Markdown you want to keep. For longer material, such as a meeting transcript from [Nook](https://www.common-tools.co/nook) or [Granola](https://www.granola.ai/), you can create a detailed, scannable summary first.
 
-You choose where to paste. Summary Notes never creates or edits an Apple Note.
+You choose where to paste. Note Ferry never creates or edits an Apple Note.
 
-<img src="docs/images/app.jpg" width="760" alt="Summary Notes showing a fictional website launch meeting, with spaced bullet points, key takeaways, action items, and a Copy summary button">
+<img src="docs/images/app.jpg" width="760" alt="Note Ferry showing a fictional website launch meeting, with spaced bullet points, key takeaways, action items, and a Copy summary button">
 
 *A sample summary with takeaways, action items, and formatting ready for Apple Notes.*
 
-## Why Summary Notes?
+## Why Note Ferry?
 
-You may already have a way to record and transcribe calls, and prefer to keep your finished notes in Apple Notes. Summary Notes handles the step in between: turn the full transcript into detailed topic notes and action items, then copy them with bold headings, native bullets, and enough space to read comfortably after pasting.
+You may already have a way to record and transcribe calls, and prefer to keep your finished notes in Apple Notes. Note Ferry handles the step in between: turn the full transcript into detailed topic notes and action items, then copy them with bold headings, native bullets, and enough space to read comfortably after pasting. It can also format existing Markdown without changing its wording.
 
 The original workflow was recording with Nook, sometimes using Granola, and copying transcripts into an AI chat to summarize them. Getting the detail and Apple Notes formatting right took extra work. This app makes that repeatable without writing to your notes or keeping another meeting library.
 
-[Nook](https://www.common-tools.co/nook) records and transcribes meetings on your Mac and already produces local summaries and Markdown files. You can keep using it for capture and bring its full transcript here when you want another summary formatted for Apple Notes. [Granola](https://www.granola.ai/) combines meeting transcription, enhanced notes, and calendar features. If its workflow already fits, you may not need an extra app; Summary Notes is useful when you want this particular output in Apple Notes or use transcripts from several tools.
+[Nook](https://www.common-tools.co/nook) records and transcribes meetings on your Mac and already produces local summaries and Markdown files. You can keep using it for capture and bring its full transcript here when you want another summary formatted for Apple Notes. [Granola](https://www.granola.ai/) combines meeting transcription, enhanced notes, and calendar features. Note Ferry is useful when you want this particular output in Apple Notes or use transcripts from several tools.
 
-Summary Notes is free and open source, with no separate app subscription. **Version 1.0 still requires Codex access and uses its allowance.** It sends transcript text to OpenAI, including transcripts captured locally by Nook. Apple Intelligence support is [planned](ROADMAP.md), so the complete workflow is not yet on-device.
+Note Ferry is free and open source, with no separate app subscription. **Summarize & format requires a signed-in Codex account and uses its allowance.** It sends transcript text to OpenAI, including transcripts captured locally by Nook. **Format only** runs on your Mac without an account. Apple Intelligence summarization is [planned](ROADMAP.md).
 
-## Format existing text (upcoming)
+## Format existing text
 
-The current source also includes **Format only** for writing you already want to keep: AI replies, your own notes, or any Markdown text. It converts headings, bold and italic text, links, and lists into rich text for Apple Notes, without rewriting or summarizing the words. It runs locally and needs no Codex account or internet connection.
+**Format only** is for writing you already want to keep: AI replies, your own notes, or any Markdown text. It converts headings, bold and italic text, links, and lists into rich text for Apple Notes, without rewriting or summarizing the words. It runs locally and needs no account or internet connection.
 
 Paste your text and click **Format only**. Paste into Apple Notes with **⌘V**. **Copy formatted text** copies it again. Choose **Summarize & format** when you want Codex to turn a raw transcript into a summary first. Both actions sit below the text area, with **Clear** separated on the right. Nothing is processed or sent until you click one.
 
 Both options use spaced native lists, preserve a newer clipboard, and offer **Restore clipboard** after copying. Common Markdown is supported, including numbered and nested lists, quotes, and code blocks. Images are not downloaded and tables are not converted into native Notes tables. Formatting is not a complete Markdown publishing engine.
 
-**This feature is available in source builds and is not included in the 1.0 download below.**
-
 ## Download
 
-**[Download Summary Notes 1.0 for Mac](https://github.com/niederme/summary-notes/releases/download/v1.0.0/Summary-Notes-1.0-universal.zip)**
+Download Note Ferry 1.0 (build 2), signed with Developer ID and notarized by Apple:
 
-Unzip the download and move **Summary Notes.app** to Applications. The app is Developer ID signed, notarized by Apple, and includes Apple silicon and Intel versions. You do not need Xcode.
+**[Download Note Ferry 1.0 for Mac](https://github.com/niederme/note-ferry/releases/download/v1.0.0/Note-Ferry-1.0-universal.zip)**
 
-**Version 1.0 requires Codex CLI, a signed-in Codex account, and internet access.** Install Codex using the [official setup instructions](https://developers.openai.com/codex/cli/), then run `codex login` in Terminal. Summary Notes uses that login and your account’s usage allowance. With a ChatGPT login, you do not need a separate API key in this app.
+Unzip the download and move **Note Ferry.app** to Applications. The universal app includes both Apple silicon and Intel versions. You do not need Xcode.
 
-The app targets macOS 14 or later. Testing so far has been on Apple silicon with macOS 27; Intel hardware and older macOS versions still need verification. [Release notes and checksum](https://github.com/niederme/summary-notes/releases/tag/v1.0.0).
+**Summarize & format requires Codex CLI, a signed-in Codex account, and internet access.** Install Codex using the [official setup instructions](https://developers.openai.com/codex/cli/), then run `codex login` in Terminal. Note Ferry uses that login and your account’s usage allowance. With a ChatGPT login, you do not need a separate API key in this app. **Format only** needs neither Codex nor an account.
 
-## How to use version 1.0
+Requires macOS 14 or later. Runtime testing has been on Apple silicon with macOS 27; Intel hardware and older macOS versions have not been tested. See the [release notes and checksum](https://github.com/niederme/note-ferry/releases/tag/v1.0.0).
 
-1. Copy a full transcript from Nook, Granola, or another app.
-2. Open Summary Notes, paste the transcript, and choose **Summarize**.
-3. When the summary is ready and copied, paste it into Apple Notes with **⌘V**.
+## How to use Note Ferry
+
+1. Copy the text you want to keep, such as an AI reply, your own notes, or a meeting transcript.
+2. Open Note Ferry, paste the text, and choose **Summarize & format** for a Codex summary or **Format only** to preserve the wording.
+3. When the result is ready and copied, paste it into Apple Notes with **⌘V**.
 
 Use normal Paste to keep the formatting. **Paste and Match Style** removes it.
 
-You get key takeaways, action items, and detailed topic sections, with bold headings and spaced bullets. Open questions and unclear transcription details are called out when relevant. Review important details, since AI summaries can contain mistakes.
+Summaries include key takeaways, action items, and detailed topic sections, with bold headings and spaced bullets. Open questions and unclear transcription details are called out when relevant. Review important details, since AI summaries can contain mistakes. **Format only** preserves the original wording and formats the structure already present in your text.
 
 ## Working with summaries
 
 - **Copy summary** copies the formatted result again.
-- **Clear** empties the window and leaves your clipboard alone. You can also select all (**⌘A**) and paste another transcript, then choose **Summarize**.
+- **Copy formatted text** copies a locally formatted result again.
+- **Clear** empties the window and leaves your clipboard alone. You can also select all (**⌘A**) and paste another text selection.
 - If you copy something else while processing, the app preserves your newer clipboard. Your summary waits in the window until you choose **Copy summary**.
 - **Cancel** stops processing. Your transcript remains available to edit or retry.
 - **Restore clipboard**, when available, restores what was on the clipboard when you started, provided you have not copied something else since the summary was copied.
 
-Leave the app open throughout the day if you like. It does not monitor your clipboard or start processing on launch, reopening, or paste. Processing begins only when you choose **Summarize**.
+Leave the app open throughout the day if you like. It does not monitor your clipboard or start processing on launch, reopening, or paste. Processing begins only when you choose **Format only** or **Summarize & format**.
 
 Closing the window lets processing continue. Quitting cancels it and discards the in-memory transcript, summary, and clipboard backup. The app does not save a transcript library.
 
 ## Privacy
 
-Summarization sends your transcript to **OpenAI through Codex**. Formatting happens on your Mac. Summary Notes never creates or edits an Apple Note.
+Summarization sends your transcript to **OpenAI through Codex**. Formatting happens on your Mac. Note Ferry never creates or edits an Apple Note.
 
 The app normally removes its temporary model output when processing finishes; an interrupted shutdown can leave a temporary file behind. Clipboard managers may retain copied content. [Read the data-handling details](docs/PRIVACY.md).
 
@@ -76,11 +77,11 @@ If Codex is missing or signed out, install it and run `codex login` in Terminal.
 
 Transcripts must contain at least 100 characters and fit within a 400,000-byte limit. Larger transcripts are rejected rather than cut off. Processing times out after ten minutes.
 
-[Report a problem](https://github.com/niederme/summary-notes/issues), including your macOS and Codex versions and a small fictional example. Please leave private transcripts and credentials out of reports.
+[Report a problem](https://github.com/niederme/note-ferry/issues), including your macOS and Codex versions and a small fictional example. Please leave private transcripts and credentials out of reports.
 
 ## What’s next
 
-Planned: Apple Intelligence as the default for eligible Macs without another service configured, Claude support, optional API connections, a preferred provider in Settings, and a provider picker for trying another result. These features are not in 1.0. See the [roadmap](ROADMAP.md) for scope and constraints.
+Planned: Apple Intelligence as the default for eligible Macs without another service configured, Claude support, optional API connections, a preferred provider in Settings, and a provider picker for trying another result. See the [roadmap](ROADMAP.md) for scope and constraints.
 
 ## Build or contribute
 

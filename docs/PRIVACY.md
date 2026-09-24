@@ -1,10 +1,10 @@
 # Privacy and data handling
 
-[Back to Summary Notes](../README.md)
+[Back to Note Ferry](../README.md)
 
 **Summarization sends the transcript to OpenAI through Codex. It is not an on-device AI workflow.** Rich-text formatting happens locally.
 
-**Format only**, available in the current source but not the 1.0 release, runs entirely on your Mac. It does not call Codex, load linked pages or images, or require an account. The Codex details below apply only to **Summarize & format**.
+**Format only** runs entirely on your Mac. It does not call Codex, load linked pages or images, or require an account. The Codex details below apply only to **Summarize & format**.
 
 - The app holds the source, preview, and clipboard backup in memory. It has no saved transcript library.
 - The transcript is passed over standard input, not in command-line arguments or a source file.

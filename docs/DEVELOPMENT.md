@@ -1,8 +1,8 @@
 # Development
 
-[Back to Summary Notes](../README.md) · [Roadmap](../ROADMAP.md)
+[Back to Note Ferry](../README.md) · [Roadmap](../ROADMAP.md)
 
-Build, test, and contribute to Summary Notes. For the ready-to-use app, see the [download instructions](../README.md#download).
+Build, test, and contribute to Note Ferry. See the [download instructions](../README.md#download) for release availability.
 
 ## Requirements
 
@@ -17,8 +17,8 @@ There are no third-party Swift or Python library dependencies. The app uses AppK
 Clone this repository and enter its directory:
 
 ```sh
-git clone https://github.com/niederme/summary-notes.git
-cd summary-notes
+git clone https://github.com/niederme/note-ferry.git
+cd note-ferry
 ```
 
 For **Summarize & format**, make sure Codex CLI is installed and signed in. **Format only** does not use Codex:
@@ -34,24 +34,24 @@ See the [official Codex documentation](https://developers.openai.com/codex/) for
 make install
 ```
 
-This installs `~/Applications/Summary Notes.app` and registers it with Launch Services. An existing installation is preserved under `~/Applications/Summary Notes backups/` in a dated folder.
+This installs `~/Applications/Note Ferry.app` and registers it with Launch Services. An existing Note Ferry installation is preserved under `~/Applications/Note Ferry backups/` in a dated folder.
 
 Spotlight indexing may take a little time. Open the app directly from your home folder’s Applications directory if needed. Raycast may need its application list refreshed. No Service, Shortcut, or keyboard shortcut setup is required.
 
-Source builds target your Mac’s architecture and are ad-hoc signed for local use. The downloadable release is separately signed and notarized.
+Source builds target your Mac’s architecture and are ad-hoc signed for local use. A release download must be separately signed and notarized before publication.
 
 ### Codex account and usage
 
-The app reuses your Codex CLI login. With a ChatGPT login, you do not need a separate API key in Summary Notes. Requests consume your Codex account allowance and remain subject to its limits and terms.
+The app reuses your Codex CLI login. With a ChatGPT login, you do not need a separate API key in Note Ferry. Requests consume your Codex account allowance and remain subject to its limits and terms.
 
 Codex is discovered in `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, or the standard Codex app bundle location. Other installation paths are not currently configurable in the app.
 
-Summary Notes uses the CLI’s default model with medium reasoning effort. It deliberately ignores user configuration rather than inheriting custom tools, integrations, or model preferences. Apple Intelligence and other model providers are not implemented.
+Note Ferry uses the CLI’s default model with medium reasoning effort. It deliberately ignores user configuration rather than inheriting custom tools, integrations, or model preferences. Apple Intelligence and other model providers are not implemented.
 
 ## Build and test
 
 ```sh
-make build     # Build build/Summary Notes.app
+make build     # Build build/Note Ferry.app
 make test      # Run the automated checks
 make install   # Build and install in ~/Applications
 ```
@@ -63,6 +63,7 @@ make install   # Build and install in ~/Applications
 | `Sources/Core.swift` | Summary model, renderer, clipboard helpers, and Codex runner |
 | `Resources/SummaryPrompt.txt` | Instructions for detailed, source-faithful summaries |
 | `Resources/Summary.schema.json` | Structured model-output contract |
+| `Resources/AppIcon.svg` | Approved vector icon, with outlined lettering |
 | `Tests/` | Synthetic fixture and automated checks |
 | `scripts/` | Build, installation, test, and icon-generation tools |
 
@@ -70,10 +71,10 @@ The model supplies structured content. The app owns typography, lists, spacing, 
 
 ### Preview without a model call
 
-Quit any running copy of Summary Notes first, then launch the synthetic example:
+Quit any running copy of Note Ferry first, then launch the synthetic example:
 
 ```sh
-open 'build/Summary Notes.app' --args --preview "$PWD/Tests/fixture.json"
+open 'build/Note Ferry.app' --args --preview "$PWD/Tests/fixture.json"
 ```
 
 This opens a preview without changing your clipboard. **Copy summary** explicitly copies the result.
@@ -81,7 +82,7 @@ This opens a preview without changing your clipboard. **Copy summary** explicitl
 ### Format Markdown without a model or clipboard change
 
 ```sh
-'build/Summary Notes.app/Contents/MacOS/SummaryNotes' \
+'build/Note Ferry.app/Contents/MacOS/SummaryNotes' \
   --format-file Tests/format-fixture.md "$PWD/local-output/formatted"
 ```
 
@@ -92,7 +93,7 @@ The local formatter uses Apple's inline Markdown parser plus block handling for 
 ### Test a real transcript without changing the clipboard
 
 ```sh
-'build/Summary Notes.app/Contents/MacOS/SummaryNotes' \
+'build/Note Ferry.app/Contents/MacOS/SummaryNotes' \
   --summarize-file /absolute/path/to/transcript.md "$PWD/local-output/example"
 ```
 
@@ -120,7 +121,7 @@ The build explicitly targets macOS 14, enables the hardened runtime for Develope
 
 ## Rendering for Apple Notes
 
-Rich text that looks well spaced elsewhere can paste densely into Notes. Summary Notes encodes spacing directly into the text:
+Rich text that looks well spaced elsewhere can paste densely into Notes. Note Ferry encodes spacing directly into the text:
 
 | Between | Formatting |
 | --- | --- |
