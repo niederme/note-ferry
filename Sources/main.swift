@@ -16,8 +16,22 @@ if arguments.count == 4 && arguments[1] == "--summarize-file" {
     } catch { fputs(error.localizedDescription + "\n", stderr); exit(1) }
 }
 
+if arguments.count == 4 && arguments[1] == "--format-file" {
+    do {
+        let source = try String(contentsOfFile: arguments[2], encoding: .utf8)
+        let rendered = try MarkdownFormatter.render(source)
+        let base = URL(fileURLWithPath: arguments[3])
+        try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        try NoteRenderer.rtf(rendered).write(to: base.appendingPathComponent("formatted.rtf"), options: .atomic)
+        try NoteRenderer.plainText(rendered).write(to: base.appendingPathComponent("formatted.txt"), atomically: true, encoding: .utf8)
+        print("Rich text and plain text saved locally. Clipboard untouched. No AI used.")
+        exit(0)
+    } catch { fputs(error.localizedDescription + "\n", stderr); exit(1) }
+}
+
 final class TranscriptTextView: NSTextView {
     var allowsTranscriptPaste = true
+    var placeholder = "Paste text here (⌘V)."
     var prepareForPaste: (() -> Void)?
     override func paste(_ sender: Any?) {
         guard allowsTranscriptPaste else { return }
@@ -33,7 +47,7 @@ final class TranscriptTextView: NSTextView {
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
         if string.isEmpty {
-            ("Paste a transcript here (⌘V)." as NSString).draw(
+            (placeholder as NSString).draw(
                 at: NSPoint(x: textContainerInset.width + 5, y: textContainerInset.height),
                 withAttributes: [.font: NSFont.systemFont(ofSize: 15), .foregroundColor: NSColor.placeholderTextColor])
         }
@@ -42,16 +56,21 @@ final class TranscriptTextView: NSTextView {
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTextViewDelegate {
     enum Mode { case input, processing, result }
+    enum Operation { case format, summarize }
+    var operation: Operation = .format
+    var resultName: String { operation == .format ? "formatted text" : "summary" }
     var mode: Mode = .input
     var updatingText = false
     var window: NSWindow!
-    let heading = NSTextField(labelWithString: "Summary Notes")
+    var aboutWindow: NSWindow?
+    let heading = NSTextField(labelWithString: "Note Ferry")
     let detail = NSTextField(wrappingLabelWithString: "")
     let privacy = NSTextField(wrappingLabelWithString: "Uses your Codex account to process the transcript with OpenAI. Formatting happens on your Mac.")
     let preview = TranscriptTextView(usingTextLayoutManager: true)
     let spinner = NSProgressIndicator()
     let progress = NSTextField(labelWithString: "")
-    let summarizeButton = NSButton(title: "Summarize", target: nil, action: nil)
+    let formatButton = NSButton(title: "Format only", target: nil, action: nil)
+    let summarizeButton = NSButton(title: "Summarize & format", target: nil, action: nil)
     let copyButton = NSButton(title: "Copy summary", target: nil, action: nil)
     let newButton = NSButton(title: "Clear", target: nil, action: nil)
     let restoreButton = NSButton(title: "Restore clipboard", target: nil, action: nil)
@@ -72,7 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     func applicationDidFinishLaunching(_ notification: Notification) {
         makeMenu()
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 790), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = "Summary Notes"
+        window.title = "Note Ferry"
         window.minSize = NSSize(width: 620, height: 560)
         window.delegate = self
         window.isReleasedWhenClosed = false
@@ -91,7 +110,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             NSApp.applicationIconImage = icon.image
         }
         icon.imageScaling = .scaleProportionallyUpOrDown
-        icon.setAccessibilityLabel("Summary Notes app icon")
+        icon.setAccessibilityLabel("Note Ferry app icon")
         icon.widthAnchor.constraint(equalToConstant: 52).isActive = true
         icon.heightAnchor.constraint(equalToConstant: 52).isActive = true
         let header = NSStackView(views: [icon, headerText])
@@ -130,16 +149,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         scroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 250).isActive = true
         privacy.font = .systemFont(ofSize: 11); privacy.textColor = .secondaryLabelColor
         root.addArrangedSubview(privacy)
-        let buttons = NSStackView(views: [copyButton, summarizeButton, newButton, restoreButton, cancelButton])
-        buttons.orientation = .horizontal; buttons.spacing = 10
+        let buttonSpacer = NSView()
+        buttonSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        buttonSpacer.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        let buttons = NSStackView(views: [copyButton, formatButton, summarizeButton, restoreButton, cancelButton, buttonSpacer, newButton])
+        buttons.orientation = .horizontal; buttons.alignment = .centerY; buttons.spacing = 10
         root.addArrangedSubview(buttons)
-        for button in [summarizeButton, copyButton, newButton, restoreButton, cancelButton] { button.bezelStyle = .rounded; button.target = self }
+        buttons.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56).isActive = true
+        for button in [formatButton, summarizeButton, copyButton, newButton, restoreButton, cancelButton] { button.bezelStyle = .rounded; button.target = self }
+        formatButton.action = #selector(formatInput)
+        formatButton.toolTip = "Keep the wording, format locally, and copy the result. No AI required."
         summarizeButton.action = #selector(summarizeInput)
-        summarizeButton.toolTip = "Summarize the transcript in this window."
+        summarizeButton.toolTip = "Summarize with Codex, then format and copy the result."
         copyButton.action = #selector(copySummary)
-        copyButton.toolTip = "Copy the formatted summary to your clipboard again."
+        copyButton.toolTip = "Copy the formatted result to your clipboard again."
         newButton.action = #selector(newTranscript)
-        newButton.toolTip = "Clear this window so you can paste another transcript."
+        newButton.toolTip = "Clear this window so you can paste new text."
         restoreButton.action = #selector(restoreClipboard)
         cancelButton.action = #selector(cancel); cancelButton.keyEquivalent = "\u{1b}"
         for view in [header, progress, spinner, scroll, privacy] { view.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56).isActive = true }
@@ -151,7 +176,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
                 let note = try JSONDecoder().decode(Summary.self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))
                 try note.validate()
                 display(note)
-                detail.stringValue = "Detailed summaries from your transcripts, formatted for pasting into Apple Notes."
+                detail.stringValue = "Your text, formatted for pasting into Apple Notes."
             } catch { showError(error) }
         }
         // Opening, reopening, and clipboard changes never start a model request.
@@ -160,11 +185,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     func makeMenu() {
         let menu = NSMenu(), appItem = NSMenuItem(), appMenu = NSMenu()
         menu.addItem(appItem)
-        appMenu.addItem(withTitle: "About Summary Notes", action: #selector(about), keyEquivalent: "").target = self
+        appMenu.addItem(withTitle: "About Note Ferry", action: #selector(about), keyEquivalent: "").target = self
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Clear", action: #selector(newTranscript), keyEquivalent: "n").target = self
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Quit Summary Notes", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "Quit Note Ferry", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         let editItem = NSMenuItem(title: "Edit", action: nil, keyEquivalent: ""), editMenu = NSMenu(title: "Edit")
         editMenu.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
@@ -176,10 +201,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         editItem.submenu = editMenu; menu.addItem(editItem); NSApp.mainMenu = menu
     }
     @objc func about() {
-        let alert = NSAlert()
-        alert.messageText = "Summary Notes"
-        alert.informativeText = "Paste a transcript and choose Summarize. The result is copied automatically for pasting into Apple Notes.\n\nUses your signed-in Codex CLI and account allowance. Source text stays in memory; the model’s temporary result file is removed when processing finishes. Codex session history is disabled.\n\nNo note is created or edited."
-        alert.runModal()
+        if let aboutWindow {
+            aboutWindow.makeKeyAndOrderFront(nil)
+            return
+        }
+        let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 440, height: 475),
+                             styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        panel.title = "About Note Ferry"
+        panel.isReleasedWhenClosed = false
+        let icon = NSImageView(image: NSApp.applicationIconImage)
+        icon.imageScaling = .scaleProportionallyUpOrDown
+        icon.setAccessibilityLabel("Note Ferry app icon")
+        icon.widthAnchor.constraint(equalToConstant: 128).isActive = true
+        icon.heightAnchor.constraint(equalToConstant: 128).isActive = true
+        let name = NSTextField(labelWithString: "Note Ferry")
+        name.font = .systemFont(ofSize: 24, weight: .semibold)
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
+        let versionLabel = NSTextField(labelWithString: "Version \(version) (\(build))")
+        versionLabel.font = .systemFont(ofSize: 12)
+        versionLabel.textColor = .secondaryLabelColor
+        let description = NSTextField(wrappingLabelWithString: "Your text, formatted for pasting into Apple Notes.\n\nFormat Markdown on your Mac, or summarize a transcript using your Codex account. Copy the result and paste it where you want it.")
+        description.font = .systemFont(ofSize: 13)
+        description.alignment = .center
+        description.widthAnchor.constraint(equalToConstant: 344).isActive = true
+        let credit = NSTextField(labelWithString: "Made by John Niedermeyer · MIT License")
+        credit.font = .systemFont(ofSize: 11)
+        credit.textColor = .secondaryLabelColor
+        let website = NSButton(title: "View on GitHub", target: self, action: #selector(openWebsite))
+        website.bezelStyle = .rounded
+        let stack = NSStackView(views: [icon, name, versionLabel, description, website, credit])
+        stack.orientation = .vertical
+        stack.alignment = .centerX
+        stack.spacing = 14
+        stack.setCustomSpacing(4, after: name)
+        stack.setCustomSpacing(22, after: versionLabel)
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        panel.contentView!.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.centerXAnchor.constraint(equalTo: panel.contentView!.centerXAnchor),
+            stack.topAnchor.constraint(equalTo: panel.contentView!.topAnchor, constant: 24),
+            stack.bottomAnchor.constraint(lessThanOrEqualTo: panel.contentView!.bottomAnchor, constant: -24)
+        ])
+        aboutWindow = panel
+        panel.center()
+        panel.makeKeyAndOrderFront(nil)
+    }
+    @objc func openWebsite() {
+        NSWorkspace.shared.open(URL(string: "https://github.com/niederme/note-ferry")!)
     }
     @objc func newTranscript() {
         guard runner == nil else { return }
@@ -195,11 +264,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     func showInputControls() {
         mode = .input
         preview.isEditable = true; preview.allowsTranscriptPaste = true; preview.needsDisplay = true
-        detail.stringValue = "Detailed summaries from your transcripts, formatted for pasting into Apple Notes."
-        summarizeButton.isHidden = false; summarizeButton.keyEquivalent = "\r"
-        summarizeButton.isEnabled = !preview.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        detail.stringValue = "Your text, formatted for pasting into Apple Notes."
+        privacy.stringValue = "Format only keeps your wording and runs on your Mac. Summarizing uses your Codex account with OpenAI."
+        preview.placeholder = "Paste your text here (⌘V)."
+        let hasText = !preview.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        formatButton.isHidden = false; formatButton.isEnabled = hasText; formatButton.keyEquivalent = "\r"
+        summarizeButton.isHidden = false; summarizeButton.isEnabled = hasText; summarizeButton.keyEquivalent = ""
         copyButton.isHidden = true; copyButton.keyEquivalent = ""
-        newButton.isHidden = true; restoreButton.isHidden = true; cancelButton.isHidden = true
+        window.defaultButtonCell = formatButton.cell as? NSButtonCell
+        newButton.isHidden = false; newButton.isEnabled = hasText
+        restoreButton.isHidden = true; cancelButton.isHidden = true
     }
     func textDidChange(_ notification: Notification) {
         guard !updatingText, mode != .processing else { return }
@@ -212,9 +286,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         }
         showInputControls()
     }
-    @objc func summarizeInput() {
+    @objc func formatInput() { processInput(.format) }
+    @objc func summarizeInput() { processInput(.summarize) }
+    func processInput(_ action: Operation) {
         guard runner == nil, mode == .input else { return }
+        operation = action
         let text = preview.string
+        if operation == .format {
+            do {
+                let originalClipboard = ClipboardSnapshot(.general)
+                let rendered = try MarkdownFormatter.render(text)
+                snapshot = originalClipboard
+                raw = text; lastWrite = nil
+                displayRich(rendered)
+                copyWhenReady()
+            } catch { showError(error) }
+            return
+        }
         do { try Transcript.validate(text) } catch { showError(error); return }
         snapshot = ClipboardSnapshot(.general)
         raw = text; rich = nil; lastWrite = nil
@@ -226,7 +314,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         detail.stringValue = "Summarizing your transcript with Codex. Your clipboard will update when it’s ready."
         progress.stringValue = "\(words.formatted()) words · 0:00 elapsed"; progress.isHidden = false
         spinner.isHidden = false; spinner.startAnimation(nil)
-        summarizeButton.isHidden = true; copyButton.isHidden = true; newButton.isHidden = true; restoreButton.isHidden = true
+        formatButton.isHidden = true; summarizeButton.isHidden = true; copyButton.isHidden = true; newButton.isHidden = true; restoreButton.isHidden = true
         cancelButton.isHidden = false; cancelButton.isEnabled = true
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             guard let self else { return }
@@ -244,16 +332,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
                 switch result {
                 case .success(let note):
                     self.display(note)
-                    do {
-                        let copied = try ClipboardOutput.write(self.rich!, to: .general, expectedChange: self.snapshot?.changeCount)
-                        if copied {
-                            self.lastWrite = NSPasteboard.general.changeCount; self.restoreButton.isHidden = false
-                            self.detail.stringValue = "Your summary is on the clipboard. Paste it into Apple Notes with ⌘V."
-                        } else {
-                            self.detail.stringValue = "Your summary is ready. You copied something else, so choose Copy summary when you’re ready to paste."
-                        }
-                        NSSound(named: "Glass")?.play(); NSApp.requestUserAttention(.informationalRequest)
-                    } catch { self.showError(error) }
+                    self.copyWhenReady()
+                    NSSound(named: "Glass")?.play(); NSApp.requestUserAttention(.informationalRequest)
                 case .failure(let error):
                     self.showInputControls()
                     if error is CancellationError { self.detail.stringValue = "Cancelled. Your transcript is still here and your clipboard is unchanged." }
@@ -263,8 +343,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         }
     }
     func display(_ note: Summary) {
+        operation = .summarize
+        privacy.stringValue = "Uses your Codex account to process the transcript with OpenAI. Formatting happens on your Mac."
+        displayRich(NoteRenderer.render(note))
+    }
+    func copyWhenReady() {
+        guard let rich else { return }
+        do {
+            let copied = try ClipboardOutput.write(rich, to: .general, expectedChange: snapshot?.changeCount)
+            if copied {
+                lastWrite = NSPasteboard.general.changeCount; restoreButton.isHidden = false
+                detail.stringValue = "Your \(resultName) is on the clipboard. Paste it into Apple Notes with ⌘V."
+            } else {
+                detail.stringValue = "Your \(resultName) is ready. Your newer clipboard was kept. Choose \(copyButton.title) when you’re ready."
+            }
+        } catch { showError(error) }
+    }
+    func displayRich(_ rendered: NSAttributedString) {
         preview.isEditable = false
-        rich = NoteRenderer.render(note)
+        rich = rendered
+        privacy.stringValue = operation == .format
+            ? "Formatted on your Mac. No AI was used."
+            : "Uses your Codex account to process the transcript with OpenAI. Formatting happens on your Mac."
+        copyButton.title = operation == .format ? "Copy formatted text" : "Copy summary"
         let screen = NSMutableAttributedString(attributedString: rich!)
         screen.addAttribute(.foregroundColor, value: NSColor.textColor, range: NSRange(location: 0, length: screen.length))
         updatingText = true
@@ -274,30 +375,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         preview.undoManager?.removeAllActions()
         updatingText = false
         mode = .result; preview.isEditable = false; preview.allowsTranscriptPaste = true
+        formatButton.isHidden = true; formatButton.keyEquivalent = ""
         copyButton.isHidden = false; copyButton.keyEquivalent = "\r"
         summarizeButton.isHidden = true; summarizeButton.keyEquivalent = ""
-        newButton.isHidden = false
+        window.defaultButtonCell = copyButton.cell as? NSButtonCell
+        newButton.isHidden = false; newButton.isEnabled = true
     }
     func showError(_ error: Error) { detail.stringValue = error.localizedDescription }
     @objc func cancel() { runner?.cancel(); cancelButton.isEnabled = false; detail.stringValue = "Cancelling…" }
     @objc func copySummary() {
         guard mode == .result, let rich else { return }
         do {
-            _ = try ClipboardOutput.write(rich, to: .general)
+            let beforeCopy = ClipboardSnapshot(.general)
+            let backup = lastWrite == beforeCopy.changeCount ? snapshot : beforeCopy
+            guard try ClipboardOutput.write(rich, to: .general, expectedChange: beforeCopy.changeCount) else {
+                detail.stringValue = "Your clipboard changed while copying. Choose \(copyButton.title) to try again."
+                return
+            }
+            snapshot = backup
             lastWrite = NSPasteboard.general.changeCount; restoreButton.isHidden = snapshot == nil
-            detail.stringValue = "Your summary is on the clipboard. Paste it into Apple Notes with ⌘V."
+            detail.stringValue = "Your \(resultName) is on the clipboard. Paste it into Apple Notes with ⌘V."
         } catch { showError(error) }
     }
     @objc func restoreClipboard() {
         guard let snapshot else { return }
         guard lastWrite == NSPasteboard.general.changeCount else {
-            detail.stringValue = "Your clipboard has changed since the summary was copied, so it was left alone."
+            detail.stringValue = "Your clipboard has changed since the result was copied, so it was left alone."
             return
         }
         if snapshot.restore(to: .general) {
             lastWrite = nil; restoreButton.isHidden = true
-            detail.stringValue = "Previous clipboard restored. Choose Copy summary to copy the formatted result again."
-        } else { detail.stringValue = "Couldn't restore the clipboard. The summary is still available here." }
+            detail.stringValue = "Previous clipboard restored. Choose \(copyButton.title) to copy the result again."
+        } else { detail.stringValue = "Couldn't restore the clipboard. The result is still available here." }
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         window.makeKeyAndOrderFront(nil)
