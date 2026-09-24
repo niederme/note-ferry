@@ -46,7 +46,7 @@ The app reuses your Codex CLI login. With a ChatGPT login, you do not need a sep
 
 Codex is discovered in `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, or the standard Codex app bundle location. Other installation paths are not currently configurable in the app.
 
-Note Ferry uses the CLI’s default model with medium reasoning effort. It deliberately ignores user configuration rather than inheriting custom tools, integrations, or model preferences. A source-branch prototype also offers **Summarize on Mac** through Apple Intelligence on supported Macs running macOS 26 or later; it never falls back to Codex without an explicit click. Other model providers are not implemented.
+Note Ferry uses the CLI’s default model with medium reasoning effort. It deliberately ignores user configuration rather than inheriting custom tools, integrations, or model preferences. The development build also offers on-device Apple Intelligence on supported Macs running macOS 26 or later, plus Claude through a separately billed Anthropic API key stored in the app's Keychain item. A first-run chooser, Settings default, and per-transcript picker select the provider. No provider silently falls back to another.
 
 ## Build in Xcode
 
@@ -72,7 +72,10 @@ make install   # Build and install in ~/Applications
 | `Sources/main.swift` | AppKit interface and clipboard workflow |
 | `Sources/MarkdownFormatter.swift` | Local Markdown parsing and Notes-friendly rich text |
 | `Sources/Core.swift` | Summary model, renderer, clipboard helpers, and Codex runner |
-| `Sources/LocalSummarizer.swift` | Optional on-device Apple Intelligence summarizer and text chunking |
+| `Sources/LocalSummarizer.swift` | On-device Apple Intelligence summarizer and text chunking |
+| `Sources/ClaudeRunner.swift` | Anthropic Messages API request, response validation, and cancellation |
+| `Sources/ProviderSettings.swift` | Default provider and Claude API key in macOS Keychain |
+| `Sources/SettingsWindow.swift` | First-run provider chooser and Settings |
 | `Resources/SummaryPrompt.txt` | Instructions for detailed, source-faithful summaries |
 | `Resources/Summary.schema.json` | Structured model-output contract |
 | `Resources/AppIcon.svg` | Approved vector icon, with outlined lettering |

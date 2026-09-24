@@ -85,7 +85,7 @@ Transcripts must contain at least 100 characters and fit within a 400,000-byte l
 
 ## What’s next
 
-In development: optional Apple Intelligence summaries on eligible Macs. Still planned: Claude support, optional API connections, a preferred provider in Settings, and a provider picker for trying another result. See the [roadmap](ROADMAP.md) for scope and constraints.
+The development build offers Apple Intelligence, Codex, and Claude API as summarizers, with a default in Settings and a per-transcript picker. Apple Intelligence is the initial default on a new install. These choices are not in the 1.1 download yet. Claude requires your own API key and is billed separately from a Claude subscription. See the [roadmap](ROADMAP.md) for future work, including result comparison and possible subscription access.
 
 ## Build or contribute
 

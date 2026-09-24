@@ -2,15 +2,15 @@
 
 [Back to Note Ferry](README.md) · [Development guide](docs/DEVELOPMENT.md)
 
-The current 1.1 download uses Codex CLI for **Summarize & format** and has local **Format only**. A source-branch prototype adds an explicit **Summarize on Mac** choice using Apple Intelligence; it has not shipped. Other plans have no promised release dates. Keep the core workflow simple: paste text, choose an action, and paste into Apple Notes.
+The current 1.1 download uses Codex CLI for **Summarize & format** and has local **Format only**. The development build adds Apple Intelligence and Claude API summarization, a first-run chooser, a default in Settings, and a per-transcript provider picker. None of these have shipped in the 1.1 download. Other plans have no promised release dates. Keep the core workflow simple: paste text, choose an action, and paste into Apple Notes.
 
 ## More ways to summarize
 
 | Provider | Intended access | Direction |
 | --- | --- | --- |
-| Apple Intelligence | Apple's on-device model through Foundation Models | Explicit local choice in prototype; evaluate quality before considering it as a default |
-| Codex / OpenAI | Existing Codex login, plus an optional direct OpenAI API connection | Keep the current subscription-backed workflow and add an explicit API option |
-| Claude | User's own Claude subscription through supported Claude Code integration where permitted, plus Anthropic API access | Prefer existing subscriptions when supported; provide API-key access as a separate choice |
+| Apple Intelligence | Apple's on-device model through Foundation Models | Initial default in development build on eligible Macs; evaluate quality before release |
+| Codex / OpenAI | Existing Codex login; optional direct OpenAI API connection is still planned | Keep the current subscription-backed workflow and add an explicit API option |
+| Claude | Own separately billed Anthropic API key in development build; subscription integration remains exploratory | API-key access is implemented locally; investigate supported Claude Code subscription access separately |
 
 Subscription access and API billing must be clearly distinguished. A subscription must not be described as including API credits. Use providers' supported sign-in flows and integrations; do not extract or repurpose session tokens. Keep API keys in macOS Keychain. Show whether a selected connection uses a subscription or separately billed API usage before a request starts.
 
@@ -34,10 +34,10 @@ Evaluate invoking the user's unmodified Claude Code installation with their own 
 
 ## Implementation sequence
 
-1. Evaluate the Apple Intelligence prototype with short and long synthetic transcripts, including attribution and action-item fidelity checks. Keep the local and Codex choices explicit.
+1. Evaluate the Apple Intelligence development build with short and long synthetic transcripts, including attribution and action-item fidelity checks. Keep the local and Codex choices explicit.
 2. Separate provider execution from the shared summary schema, renderer, and clipboard handling. Make errors and progress provider-neutral.
-3. Add Claude and optional direct API connections, with explicit authentication and billing choices.
-4. Add Settings and the per-transcript provider picker, then session-only result comparison.
+3. Validate the new Claude API integration with a user-owned key; consider optional direct OpenAI API access separately.
+4. Test Settings and the per-transcript provider picker, then add session-only result comparison.
 
 All providers should use the same output structure and Apple Notes formatting. Retain explicit user-triggered processing, cancellation, clipboard protection, and the rule that the app never creates or edits notes.
 

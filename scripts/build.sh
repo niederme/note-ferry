@@ -11,7 +11,7 @@ binaries=()
 for architecture in "${architectures[@]}"; do
     case "$architecture" in arm64|x86_64) ;; *) printf 'Unsupported architecture: %s\n' "$architecture" >&2; exit 1 ;; esac
     binary="$PWD/.build/NoteFerry-$architecture"
-    xcrun swiftc -swift-version 5 -O -target "$architecture-apple-macos14.0" -module-cache-path "$PWD/.build/module-cache" -framework AppKit -F "$SPARKLE_ROOT" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks Sources/Core.swift Sources/MarkdownFormatter.swift Sources/LocalSummarizer.swift Sources/main.swift -o "$binary"
+    xcrun swiftc -swift-version 5 -O -target "$architecture-apple-macos14.0" -module-cache-path "$PWD/.build/module-cache" -framework AppKit -F "$SPARKLE_ROOT" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks Sources/Core.swift Sources/MarkdownFormatter.swift Sources/LocalSummarizer.swift Sources/ProviderSettings.swift Sources/SettingsWindow.swift Sources/ClaudeRunner.swift Sources/main.swift -o "$binary"
     binaries+=("$binary")
 done
 xcrun lipo -create "${binaries[@]}" -output "$APP/Contents/MacOS/Note Ferry"

@@ -57,7 +57,7 @@ final class TranscriptTextView: NSTextView {
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTextViewDelegate {
     enum Mode { case input, processing, result }
-    enum Operation { case format, local, codex }
+    enum Operation { case format, local, codex, claude }
     var operation: Operation = .format
     var resultName: String { operation == .format ? "formatted text" : "summary" }
     var mode: Mode = .input
@@ -72,13 +72,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     let spinner = NSProgressIndicator()
     let progress = NSTextField(labelWithString: "")
     let formatButton = NSButton(title: "Format only", target: nil, action: nil)
-    let localButton = NSButton(title: "Summarize on Mac", target: nil, action: nil)
-    let summarizeButton = NSButton(title: "Summarize with Codex", target: nil, action: nil)
+    let summarizeButton = NSButton(title: "Summarize & format", target: nil, action: nil)
+    let providerPicker = NSPopUpButton(frame: .zero, pullsDown: false)
+    var selectedProvider = ProviderSettings.shared.defaultProvider
+    lazy var providerSettingsWindow: ProviderSettingsWindow = {
+        let controller = ProviderSettingsWindow()
+        controller.onChange = { [weak self] in
+            guard let self else { return }
+            self.selectedProvider = ProviderSettings.shared.defaultProvider
+            self.refreshProviderControls()
+        }
+        return controller
+    }()
     let copyButton = NSButton(title: "Copy summary", target: nil, action: nil)
     let newButton = NSButton(title: "Clear", target: nil, action: nil)
     let restoreButton = NSButton(title: "Restore clipboard", target: nil, action: nil)
     let cancelButton = NSButton(title: "Cancel", target: nil, action: nil)
     var runner: CodexRunner?
+    var claudeRunner: ClaudeRunner?
     var localTask: Task<Void, Never>?
     var completedChunks = 0
     var totalChunks = 0
@@ -158,17 +169,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         let buttonSpacer = NSView()
         buttonSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
         buttonSpacer.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        let buttons = NSStackView(views: [copyButton, formatButton, localButton, summarizeButton, restoreButton, cancelButton, buttonSpacer, newButton])
+        let buttons = NSStackView(views: [copyButton, formatButton, summarizeButton, providerPicker, restoreButton, cancelButton, buttonSpacer, newButton])
         buttons.orientation = .horizontal; buttons.alignment = .centerY; buttons.spacing = 10
         root.addArrangedSubview(buttons)
         buttons.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56).isActive = true
-        for button in [formatButton, localButton, summarizeButton, copyButton, newButton, restoreButton, cancelButton] { button.bezelStyle = .rounded; button.target = self }
+        for button in [formatButton, summarizeButton, copyButton, newButton, restoreButton, cancelButton] { button.bezelStyle = .rounded; button.target = self }
         formatButton.action = #selector(formatInput)
         formatButton.toolTip = "Keep the wording, format locally, and copy the result. No AI required."
-        localButton.action = #selector(summarizeLocally)
-        localButton.toolTip = "Summarize with Apple Intelligence on this Mac, then format and copy the result."
         summarizeButton.action = #selector(summarizeInput)
-        summarizeButton.toolTip = "Summarize with Codex, then format and copy the result."
+        for provider in SummaryProvider.allCases {
+            providerPicker.addItem(withTitle: provider.displayName)
+            providerPicker.lastItem?.tag = SummaryProvider.allCases.firstIndex(of: provider) ?? 0
+        }
+        providerPicker.target = self
+        providerPicker.action = #selector(providerPickerChanged)
+        providerPicker.setAccessibilityLabel("Summarizer for this text")
         copyButton.action = #selector(copySummary)
         copyButton.toolTip = "Copy the formatted result to your clipboard again."
         newButton.action = #selector(newTranscript)
@@ -179,6 +194,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         newTranscript()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        if !ProviderSettings.shared.hasCompletedOnboarding {
+            DispatchQueue.main.async { [weak self] in self?.providerSettingsWindow.show(onboarding: true) }
+        }
         if let index = arguments.firstIndex(of: "--preview"), arguments.count > index + 1 {
             do {
                 let note = try JSONDecoder().decode(Summary.self, from: Data(contentsOf: URL(fileURLWithPath: arguments[index + 1])))
@@ -196,6 +214,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         menu.addItem(appItem)
         appMenu.addItem(withTitle: "About Note Ferry", action: #selector(about), keyEquivalent: "").target = self
         appMenu.addItem(withTitle: "Check for Updates…", action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)), keyEquivalent: "").target = updaterController
+        appMenu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Clear", action: #selector(newTranscript), keyEquivalent: "n").target = self
         appMenu.addItem(.separator())
@@ -231,7 +250,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         let versionLabel = NSTextField(labelWithString: "Version \(version) (\(build))")
         versionLabel.font = .systemFont(ofSize: 12)
         versionLabel.textColor = .secondaryLabelColor
-        let description = NSTextField(wrappingLabelWithString: "Your text, formatted for pasting into Apple Notes.\n\nFormat Markdown on your Mac, summarize locally with Apple Intelligence on eligible Macs, or use your Codex account. Copy the result and paste it where you want it.")
+        let description = NSTextField(wrappingLabelWithString: "Your text, formatted for pasting into Apple Notes.\n\nFormat Markdown on your Mac, summarize locally with Apple Intelligence on eligible Macs, or use Codex or your Claude API key. Copy the result and paste it where you want it.")
         description.font = .systemFont(ofSize: 13)
         description.alignment = .center
         description.widthAnchor.constraint(equalToConstant: 344).isActive = true
@@ -261,7 +280,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         NSWorkspace.shared.open(URL(string: "https://github.com/niederme/note-ferry")!)
     }
     @objc func newTranscript() {
-        guard runner == nil, localTask == nil else { return }
+        guard runner == nil, claudeRunner == nil, localTask == nil else { return }
         updatingText = true
         preview.textStorage?.setAttributedString(NSAttributedString(string: "", attributes: inputAttributes))
         preview.typingAttributes = inputAttributes
@@ -275,23 +294,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         mode = .input
         preview.isEditable = true; preview.allowsTranscriptPaste = true; preview.needsDisplay = true
         detail.stringValue = "Your text, formatted for pasting into Apple Notes."
-        if let reason = LocalModelAvailability.message {
-            privacy.stringValue = reason + " Format only remains available; Codex sends text to OpenAI."
-        } else {
-            privacy.stringValue = "Format only and Apple Intelligence run on your Mac. Codex sends text to OpenAI."
+        switch selectedProvider {
+        case .apple:
+            privacy.stringValue = (LocalModelAvailability.message ?? "Apple Intelligence summarizes on this Mac.") + " Experimental: review names and follow-ups."
+        case .codex:
+            privacy.stringValue = "Codex sends text to OpenAI using your Codex account. Formatting happens on your Mac."
+        case .claude:
+            privacy.stringValue = "Claude sends text to Anthropic using your API key. API use is billed separately."
         }
         preview.placeholder = "Paste your text here (⌘V)."
         let hasText = !preview.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         formatButton.isHidden = false; formatButton.isEnabled = hasText; formatButton.keyEquivalent = "\r"
-        localButton.isHidden = false
-        localButton.isEnabled = hasText && LocalModelAvailability.message == nil
-        localButton.toolTip = LocalModelAvailability.message ?? "Summarize with Apple Intelligence on this Mac, then format and copy the result."
         summarizeButton.isHidden = false; summarizeButton.isEnabled = hasText; summarizeButton.keyEquivalent = ""
+        summarizeButton.toolTip = "Summarize with \(selectedProvider.displayName), then format and copy the result."
+        providerPicker.isHidden = false; providerPicker.isEnabled = true
+        providerPicker.selectItem(withTag: SummaryProvider.allCases.firstIndex(of: selectedProvider) ?? 0)
         copyButton.isHidden = true; copyButton.keyEquivalent = ""
         window.defaultButtonCell = formatButton.cell as? NSButtonCell
         newButton.isHidden = false; newButton.isEnabled = hasText
         restoreButton.isHidden = true; cancelButton.isHidden = true
     }
+    func refreshProviderControls() {
+        if mode == .input { showInputControls() }
+    }
+    @objc func providerPickerChanged() {
+        guard mode == .input, SummaryProvider.allCases.indices.contains(providerPicker.indexOfSelectedItem) else { return }
+        selectedProvider = SummaryProvider.allCases[providerPicker.indexOfSelectedItem]
+        showInputControls()
+    }
+    @objc func openSettings() { providerSettingsWindow.show() }
     func textDidChange(_ notification: Notification) {
         guard !updatingText, mode != .processing else { return }
         if mode == .result {
@@ -304,13 +335,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         showInputControls()
     }
     @objc func formatInput() { processInput(.format) }
-    @objc func summarizeLocally() { processInput(.local) }
-    @objc func summarizeInput() { processInput(.codex) }
+    @objc func summarizeInput() {
+        switch selectedProvider {
+        case .apple: processInput(.local)
+        case .codex: processInput(.codex)
+        case .claude: processInput(.claude)
+        }
+    }
+    private func confirmClaudeTransfer() -> Bool {
+        if UserDefaults.standard.bool(forKey: "approvedClaudeAPITransfer") { return true }
+        let alert = NSAlert()
+        alert.messageText = "Send this text to Anthropic?"
+        alert.informativeText = "Note Ferry will send the text in this window and your saved API key directly to Anthropic’s Messages API when you choose Send & summarize. API usage is billed separately from a Claude subscription. Future requests only run when you choose Summarize & format with Claude selected."
+        alert.addButton(withTitle: "Send & summarize")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return false }
+        UserDefaults.standard.set(true, forKey: "approvedClaudeAPITransfer")
+        return true
+    }
     func processInput(_ action: Operation) {
-        guard runner == nil, localTask == nil, mode == .input else { return }
+        guard runner == nil, claudeRunner == nil, localTask == nil, mode == .input else { return }
         operation = action
         let text = preview.string
-        if operation == .format {
+        if action == .format {
             do {
                 let originalClipboard = ClipboardSnapshot(.general)
                 let rendered = try MarkdownFormatter.render(text)
@@ -323,18 +370,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         }
         do { try Transcript.validate(text) } catch { showError(error); return }
         if action == .local, let message = LocalModelAvailability.message { showError(AppError.message(message)); return }
+        var claudeKey: String?
+        if action == .claude {
+            do {
+                claudeKey = try ProviderSettings.shared.loadClaudeAPIKey()
+            } catch { showError(error); return }
+            guard claudeKey != nil else {
+                showError(AppError.message("Add your Claude API key in Settings before summarizing. Nothing was sent or copied."))
+                openSettings()
+                return
+            }
+            guard confirmClaudeTransfer() else { return }
+        }
         snapshot = ClipboardSnapshot(.general)
         raw = text; rich = nil; lastWrite = nil
         let token = UUID(); jobID = token
         mode = .processing; preview.isEditable = false; preview.allowsTranscriptPaste = false
         started = Date()
         let words = text.split(whereSeparator: \.isWhitespace).count
-        detail.stringValue = action == .local
-            ? "Summarizing on this Mac. Your clipboard will update when it’s ready."
-            : "Summarizing your transcript with Codex. Your clipboard will update when it’s ready."
+        switch action {
+        case .format: break
+        case .local: detail.stringValue = "Summarizing on this Mac. Your clipboard will update when it’s ready."
+        case .codex: detail.stringValue = "Summarizing with Codex. Your clipboard will update when it’s ready."
+        case .claude: detail.stringValue = "Summarizing with Claude. Your clipboard will update when it’s ready."
+        }
         progress.stringValue = "\(words.formatted()) words · 0:00 elapsed"; progress.isHidden = false
         spinner.isHidden = false; spinner.startAnimation(nil)
-        formatButton.isHidden = true; localButton.isHidden = true; summarizeButton.isHidden = true; copyButton.isHidden = true; newButton.isHidden = true; restoreButton.isHidden = true
+        formatButton.isHidden = true; summarizeButton.isHidden = true; providerPicker.isHidden = true
+        copyButton.isHidden = true; newButton.isHidden = true; restoreButton.isHidden = true
         cancelButton.isHidden = false; cancelButton.isEnabled = true
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             guard let self else { return }
@@ -359,18 +422,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             } else {
                 finish(token, result: .failure(AppError.message("On-device summaries require macOS 26 or later.")))
             }
-        } else {
+        } else if action == .codex {
             let worker = CodexRunner(); runner = worker
             let resources = Bundle.main.resourceURL!
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 let result = Result { try worker.run(transcript: text, resources: resources) }
                 DispatchQueue.main.async { self?.finish(token, result: result) }
             }
+        } else if let key = claudeKey {
+            let worker = ClaudeRunner(); claudeRunner = worker
+            let resources = Bundle.main.resourceURL!
+            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+                let result = Result { try worker.run(transcript: text, resources: resources, apiKey: key) }
+                DispatchQueue.main.async { self?.finish(token, result: result) }
+            }
         }
     }
     func finish(_ token: UUID, result: Result<Summary, Error>) {
         guard jobID == token else { return }
-        timer?.invalidate(); timer = nil; runner = nil; localTask = nil; jobID = nil
+        timer?.invalidate(); timer = nil; runner = nil; claudeRunner = nil; localTask = nil; jobID = nil
         completedChunks = 0; totalChunks = 0
         spinner.stopAnimation(nil); spinner.isHidden = true; progress.isHidden = true
         cancelButton.isHidden = true
@@ -409,6 +479,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         case .format: privacy.stringValue = "Formatted on your Mac. No AI was used."
         case .local: privacy.stringValue = "Summarized on this Mac with Apple Intelligence. Formatting also happened here."
         case .codex: privacy.stringValue = "Summarized with your Codex account through OpenAI. Formatting happened on your Mac."
+        case .claude: privacy.stringValue = "Summarized with your API key through Anthropic. Formatting happened on your Mac."
         }
         copyButton.title = operation == .format ? "Copy formatted text" : "Copy summary"
         let screen = NSMutableAttributedString(attributedString: rich!)
@@ -421,7 +492,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         updatingText = false
         mode = .result; preview.isEditable = false; preview.allowsTranscriptPaste = true
         formatButton.isHidden = true; formatButton.keyEquivalent = ""
-        localButton.isHidden = true; localButton.keyEquivalent = ""
+        providerPicker.isHidden = true
         copyButton.isHidden = false; copyButton.keyEquivalent = "\r"
         summarizeButton.isHidden = true; summarizeButton.keyEquivalent = ""
         window.defaultButtonCell = copyButton.cell as? NSButtonCell
@@ -429,7 +500,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     }
     func showError(_ error: Error) { detail.stringValue = error.localizedDescription }
     @objc func cancel() {
-        runner?.cancel(); localTask?.cancel()
+        runner?.cancel(); claudeRunner?.cancel(); localTask?.cancel()
         cancelButton.isEnabled = false; detail.stringValue = "Cancelling…"
     }
     @objc func copySummary() {
@@ -465,7 +536,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         sender.orderOut(nil)
         return false
     }
-    func applicationWillTerminate(_ notification: Notification) { runner?.cancel(); localTask?.cancel() }
+    func applicationWillTerminate(_ notification: Notification) { runner?.cancel(); claudeRunner?.cancel(); localTask?.cancel() }
 }
 
 let app = NSApplication.shared

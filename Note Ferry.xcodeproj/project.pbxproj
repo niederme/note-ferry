@@ -10,8 +10,11 @@
 		16C791B689A232E47398D396 /* Sparkle.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = CB95A0AFA2462E178E3ECD02 /* Sparkle.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		21A40A696E4C0A9686A3B448 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A2AD86BB78EE511ED2B5E66F /* AppIcon.icns */; };
 		22FE43DBB805BF6BEB09C61F /* Summary.schema.json in Resources */ = {isa = PBXBuildFile; fileRef = 1BA92E188E7F7B21219FA9B4 /* Summary.schema.json */; };
+		339A3E0CBAB37A38BC707F59 /* ClaudeRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20E40BB7A0D2892512DC8219 /* ClaudeRunner.swift */; };
 		6D67FE4B4DD607CB998A446A /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = 5C3A95E6E8D554E0A3DD1904 /* LICENSE */; };
 		8A021F19CDDAE3FE887B6021 /* MarkdownFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D9D9E5AE8004927DA995386 /* MarkdownFormatter.swift */; };
+		A1600CE1026511160FDB1519 /* SettingsWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = BADCE6A69DF5F2D902F91972 /* SettingsWindow.swift */; };
+		B1458ADBF253659A9F2F9B0A /* ProviderSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6538C6A5ACE578ADF38555E2 /* ProviderSettings.swift */; };
 		B2BABFAC3992A84FC7681E71 /* Core.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99AEB9F31C0DB7834DF5EEDB /* Core.swift */; };
 		BB7665FCF77647BAF45EEA75 /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CB95A0AFA2462E178E3ECD02 /* Sparkle.framework */; };
 		BD377A239D9DF28C02CCFF2D /* SummaryPrompt.txt in Resources */ = {isa = PBXBuildFile; fileRef = 7E28FFB786781A82528C4282 /* SummaryPrompt.txt */; };
@@ -37,6 +40,7 @@
 /* Begin PBXFileReference section */
 		0BC740F27D9249CF7831543F /* ROADMAP.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = ROADMAP.md; sourceTree = "<group>"; };
 		1BA92E188E7F7B21219FA9B4 /* Summary.schema.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Summary.schema.json; sourceTree = "<group>"; };
+		20E40BB7A0D2892512DC8219 /* ClaudeRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeRunner.swift; sourceTree = "<group>"; };
 		3D9D9E5AE8004927DA995386 /* MarkdownFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownFormatter.swift; sourceTree = "<group>"; };
 		43688D7348230BD3C1EF3745 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		4410C731E0887634F0BEDA7A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -45,6 +49,7 @@
 		5C3A95E6E8D554E0A3DD1904 /* LICENSE */ = {isa = PBXFileReference; path = LICENSE; sourceTree = "<group>"; };
 		5F273306BBD44099826F60AA /* AppIcon.svg */ = {isa = PBXFileReference; path = AppIcon.svg; sourceTree = "<group>"; };
 		5F73106FF5C8B2C7A625FAB3 /* format-fixture.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "format-fixture.md"; sourceTree = "<group>"; };
+		6538C6A5ACE578ADF38555E2 /* ProviderSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderSettings.swift; sourceTree = "<group>"; };
 		6AD332E092CD2FE053CB19B5 /* fetch-sparkle.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "fetch-sparkle.sh"; sourceTree = "<group>"; };
 		7E28FFB786781A82528C4282 /* SummaryPrompt.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = SummaryPrompt.txt; sourceTree = "<group>"; };
 		80FAD5160AA085864B941310 /* Icon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Icon.swift; sourceTree = "<group>"; };
@@ -58,6 +63,7 @@
 		B360DFD0944443B0BFF76F4A /* app-icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "app-icon.png"; sourceTree = "<group>"; };
 		B407FBE4A93AAD0E284F559B /* app.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = app.jpg; sourceTree = "<group>"; };
 		B71B5DB84DE7FAB0ABF49FBE /* Sparkle.LICENSE */ = {isa = PBXFileReference; path = Sparkle.LICENSE; sourceTree = "<group>"; };
+		BADCE6A69DF5F2D902F91972 /* SettingsWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindow.swift; sourceTree = "<group>"; };
 		BBB7A072E2DF95001BDE9D94 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		BF9F1CB9F61CDDB461108D68 /* PRIVACY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = PRIVACY.md; sourceTree = "<group>"; };
 		C1B12BCECA7F526EB2DCAA4D /* install.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = install.sh; sourceTree = "<group>"; };
@@ -132,10 +138,13 @@
 		6419EA8649DC7D573F71F8ED /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				20E40BB7A0D2892512DC8219 /* ClaudeRunner.swift */,
 				99AEB9F31C0DB7834DF5EEDB /* Core.swift */,
 				A0C64FEA22A29A3AA80DD17F /* LocalSummarizer.swift */,
 				43688D7348230BD3C1EF3745 /* main.swift */,
 				3D9D9E5AE8004927DA995386 /* MarkdownFormatter.swift */,
+				6538C6A5ACE578ADF38555E2 /* ProviderSettings.swift */,
+				BADCE6A69DF5F2D902F91972 /* SettingsWindow.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -278,9 +287,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				339A3E0CBAB37A38BC707F59 /* ClaudeRunner.swift in Sources */,
 				B2BABFAC3992A84FC7681E71 /* Core.swift in Sources */,
 				DA38A5D445647A08B2A13B3B /* LocalSummarizer.swift in Sources */,
 				8A021F19CDDAE3FE887B6021 /* MarkdownFormatter.swift in Sources */,
+				B1458ADBF253659A9F2F9B0A /* ProviderSettings.swift in Sources */,
+				A1600CE1026511160FDB1519 /* SettingsWindow.swift in Sources */,
 				D18C6FA2CC0B56D9848148F3 /* main.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
