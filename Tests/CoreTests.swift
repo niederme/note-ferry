@@ -197,9 +197,21 @@ final class MockClaudeURLProtocol: URLProtocol {
               && messages[0]["content"]?.contains(validSource) == true
               && output["format"] != nil, "Claude request lost the source or schema")
         MockClaudeURLProtocol.status = 401
-        rejects({ _ = try ClaudeRunner(session: claudeSession, timeout: 2)
-            .run(transcript: validSource, resources: resources, apiKey: "test-key") },
-            "Claude accepted an invalid API key response")
+        do {
+            _ = try ClaudeRunner(session: claudeSession, timeout: 2)
+                .run(transcript: validSource, resources: resources, apiKey: "test-key")
+            fatalError("Claude accepted an invalid API key response")
+        } catch {
+            check(error.localizedDescription.contains("401"), "Invalid key error did not identify HTTP 401")
+        }
+        MockClaudeURLProtocol.status = 403
+        do {
+            _ = try ClaudeRunner(session: claudeSession, timeout: 2)
+                .run(transcript: validSource, resources: resources, apiKey: "test-key")
+            fatalError("Claude accepted a key with insufficient permission")
+        } catch {
+            check(error.localizedDescription.contains("403"), "Permission error did not identify HTTP 403")
+        }
         MockClaudeURLProtocol.status = 200
         MockClaudeURLProtocol.payload = envelope("not-json")
         rejects({ _ = try ClaudeRunner(session: claudeSession, timeout: 2)

@@ -454,7 +454,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             if error is CancellationError { detail.stringValue = "Cancelled. Your transcript is still here and your clipboard is unchanged." }
             else if operation == .local && !(error is AppError) {
                 detail.stringValue = "Apple Intelligence couldn't complete the summary. Your text and clipboard were kept. Try again or choose Codex."
-            } else { showError(error) }
+            } else {
+                showError(error)
+                if operation == .claude {
+                    let alert = NSAlert()
+                    alert.messageText = "Claude couldn’t summarize"
+                    alert.informativeText = error.localizedDescription
+                    alert.alertStyle = .warning
+                    alert.addButton(withTitle: "OK")
+                    alert.beginSheetModal(for: window)
+                    NSApp.requestUserAttention(.informationalRequest)
+                }
+            }
         }
     }
     func display(_ note: Summary) {

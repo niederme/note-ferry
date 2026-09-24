@@ -87,8 +87,10 @@ final class ClaudeRunner: @unchecked Sendable {
         }
         switch response.statusCode {
         case 200: break
-        case 401, 403:
-            throw AppError.message("Claude rejected this API key. Check the key in Settings. Your clipboard is unchanged.")
+        case 401:
+            throw AppError.message("Anthropic returned 401: the saved Claude API key is invalid, expired, or revoked. Create a new API key in Claude Console and replace it in Settings. Your transcript and clipboard are unchanged.")
+        case 403:
+            throw AppError.message("Anthropic returned 403: the saved API key lacks permission for this request. Check its workspace and model access in Claude Console. Your transcript and clipboard are unchanged.")
         case 402:
             throw AppError.message("Your Anthropic API account needs billing or credits. Check your Anthropic account and try again. Your clipboard is unchanged.")
         case 429:
