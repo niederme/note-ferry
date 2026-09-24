@@ -8,8 +8,8 @@
 <key>CFBundleExecutable</key><string>Note Ferry</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleVersion</key><string>3</string>
-<key>CFBundleShortVersionString</key><string>1.1</string>
+<key>CFBundleVersion</key><string>4</string>
+<key>CFBundleShortVersionString</key><string>1.2</string>
 <key>SUFeedURL</key><string>https://raw.githubusercontent.com/niederme/note-ferry/main/appcast.xml</string>
 <key>SUPublicEDKey</key><string>jk/qFiY8Sq8W1xua3ngXYGMbHjKkGuUCXVMQECxi68o=</string>
 <key>SUVerifyUpdateBeforeExtraction</key><true/>

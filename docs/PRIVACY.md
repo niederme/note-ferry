@@ -2,9 +2,9 @@
 
 [Back to Note Ferry](../README.md)
 
-In the current 1.1 release, **Summarize & format sends the transcript to OpenAI through Codex**. Rich-text formatting happens locally. **Format only** runs entirely on your Mac. It does not call Codex, load linked pages or images, or require an account.
+In version 1.2, **Summarize & format** uses the provider you select: Apple Intelligence on a compatible Mac, Codex through OpenAI, or Claude through Anthropic. Rich-text formatting happens locally. **Format only** runs entirely on your Mac; it does not call a model, load linked pages or images, or require an account.
 
-The development build adds Apple Intelligence through Apple's on-device Foundation Models framework on eligible Macs. It also adds Claude through your own Anthropic API key. The chosen provider is shown before you summarize; failure never silently switches providers. Neither option has shipped in the 1.1 download. Apple Intelligence may need to download its model before it is available.
+Apple Intelligence uses Apple's on-device Foundation Models framework on eligible Macs. Claude uses your own Anthropic API key. The chosen provider is shown before you summarize; failure never silently switches providers. Apple Intelligence may need to download its model before it is available.
 
 - The app holds the source, preview, and clipboard backup in memory. It has no saved transcript library.
 - For Codex, the transcript is passed over standard input, not in command-line arguments or a source file.
@@ -14,7 +14,7 @@ The development build adds Apple Intelligence through Apple's on-device Foundati
 - Clipboard managers and system clipboard services may retain or synchronize copied content according to their own settings.
 
 
-For Claude in the development build, you explicitly choose **Save key from clipboard** in Settings. Note Ferry stores the copied API key in its own macOS Keychain item and clears it from the system clipboard after a successful save if the clipboard has not changed in the meantime. Clipboard managers may still retain their own history.
+For Claude, you explicitly choose **Save key from clipboard** in Settings. Note Ferry stores the copied API key in its own macOS Keychain item and clears it from the system clipboard after a successful save if the clipboard has not changed in the meantime. Clipboard managers may still retain their own history.
 
 When you choose Claude and click **Summarize & format**, the app asks for confirmation on first use, then sends the selected text and the key over HTTPS directly to Anthropic's Messages API. The key is used for authentication and is not placed in the transcript or a temporary file. API usage is billed separately from a Claude subscription. A failed or cancelled summary request leaves the clipboard unchanged; the app does not automatically retry with another provider.
 

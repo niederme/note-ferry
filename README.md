@@ -20,27 +20,27 @@ The original workflow was recording with Nook, sometimes using Granola, and copy
 
 [Nook](https://www.common-tools.co/nook) records and transcribes meetings on your Mac and already produces local summaries and Markdown files. You can keep using it for capture and bring its full transcript here when you want another summary formatted for Apple Notes. [Granola](https://www.granola.ai/) combines meeting transcription, enhanced notes, and calendar features. Note Ferry is useful when you want this particular output in Apple Notes or use transcripts from several tools.
 
-Note Ferry is free and open source, with no separate app subscription. In the current 1.1 download, **Summarize & format requires a signed-in Codex account and uses its allowance.** It sends transcript text to OpenAI, including transcripts captured locally by Nook. **Format only** runs on your Mac without an account. An optional [on-device summary mode](ROADMAP.md) is in development and is not in the 1.1 download.
+Note Ferry is free and open source, with no app subscription. **Format only** runs on your Mac without an account. For **Summarize & format**, choose Apple Intelligence on a compatible Mac, your signed-in Codex account, or your own Claude API key. Codex sends text to OpenAI; Claude sends it to Anthropic. Apple Intelligence summarizes on your Mac.
 
 ## Format existing text
 
 **Format only** is for writing you already want to keep: AI replies, your own notes, or any Markdown text. It converts headings, bold and italic text, links, and lists into rich text for Apple Notes, without rewriting or summarizing the words. It runs locally and needs no account or internet connection.
 
-Paste your text and click **Format only**. Paste into Apple Notes with **⌘V**. **Copy formatted text** copies it again. Choose **Summarize & format** when you want Codex to turn a raw transcript into a summary first. Both actions sit below the text area, with **Clear** separated on the right. Nothing is processed or sent until you click one.
+Paste your text and click **Format only**. Paste into Apple Notes with **⌘V**. **Copy formatted text** copies it again. Choose **Summarize & format** when you want your selected summarizer to turn a raw transcript into a summary first. Both actions sit below the text area, with **Clear** separated on the right. Nothing is processed or sent until you click one.
 
 Both options use spaced native lists, preserve a newer clipboard, and offer **Restore clipboard** after copying. Common Markdown is supported, including numbered and nested lists, quotes, and code blocks. Images are not downloaded and tables are not converted into native Notes tables. Formatting is not a complete Markdown publishing engine.
 
 ## Download
 
-Download Note Ferry 1.1 (build 3), signed with Developer ID and notarized by Apple:
+Download Note Ferry 1.2 (build 4), signed with Developer ID and notarized by Apple:
 
-**[Download Note Ferry 1.1 for Mac](https://github.com/niederme/note-ferry/releases/download/v1.1.0/Note-Ferry-1.1-universal.zip)**
+**[Download Note Ferry 1.2 for Mac](https://github.com/niederme/note-ferry/releases/download/v1.2.0/Note-Ferry-1.2-universal.zip)**
 
-Unzip the download and move **Note Ferry.app** to Applications, replacing an earlier copy. The universal app includes both Apple silicon and Intel versions. You do not need Xcode. If you have 1.0, this first update requires a manual download; later releases can be installed from inside the app.
+Unzip the download and move **Note Ferry.app** to Applications, replacing an earlier copy. If you already have 1.1, you can instead choose **Note Ferry → Check for Updates…** after the signed update feed is published. The universal app includes Apple silicon and Intel versions. Xcode is not required.
 
-**Summarize & format requires Codex CLI, a signed-in Codex account, and internet access.** Install Codex using the [official setup instructions](https://developers.openai.com/codex/cli/), then run `codex login` in Terminal. Note Ferry uses that login and your account’s usage allowance. With a ChatGPT login, you do not need a separate API key in this app. **Format only** needs neither Codex nor an account.
+**Apple Intelligence** needs macOS 26 or later, a compatible Mac, and Apple Intelligence enabled. **Codex** needs the [Codex CLI](https://developers.openai.com/codex/cli/), a signed-in Codex account, and internet access; run `codex login` in Terminal. **Claude** needs an Anthropic API key and internet access; API use is billed separately from a Claude subscription. **Format only** needs no account or internet connection.
 
-Requires macOS 14 or later. Runtime testing has been on Apple silicon with macOS 27; Intel hardware and older macOS versions have not been tested. See the [release notes and checksum](https://github.com/niederme/note-ferry/releases/tag/v1.1.0).
+The app requires macOS 14 or later. Runtime testing has been on Apple silicon with macOS 27; Intel hardware and older macOS versions have not been tested. See the [release notes and checksum](https://github.com/niederme/note-ferry/releases/tag/v1.2.0).
 
 ## Updates
 
@@ -49,7 +49,7 @@ Choose **Note Ferry → Check for Updates…** whenever you want to check. On th
 ## How to use Note Ferry
 
 1. Copy the text you want to keep, such as an AI reply, your own notes, or a meeting transcript.
-2. Open Note Ferry, paste the text, and choose **Summarize & format** for a Codex summary or **Format only** to preserve the wording.
+2. Open Note Ferry, paste the text, and choose **Summarize & format** with the provider you want, or **Format only** to preserve the wording.
 3. When the result is ready and copied, paste it into Apple Notes with **⌘V**.
 
 Use normal Paste to keep the formatting. **Paste and Match Style** removes it.
@@ -71,23 +71,23 @@ Closing the window lets processing continue. Quitting cancels it and discards th
 
 ## Privacy
 
-Summarization sends your transcript to **OpenAI through Codex**. Formatting happens on your Mac. Note Ferry never creates or edits an Apple Note.
+Apple Intelligence summarizes on your Mac. Codex sends text to OpenAI, and Claude sends text to Anthropic after a first-use confirmation. Formatting happens on your Mac with every option. Note Ferry never creates or edits an Apple Note.
 
 The app normally removes its temporary model output when processing finishes; an interrupted shutdown can leave a temporary file behind. Clipboard managers may retain copied content. [Read the data-handling details](docs/PRIVACY.md).
 
 ## Help
 
-If Codex is missing or signed out, install it and run `codex login` in Terminal. If your account reaches a usage limit, wait for it to reset before retrying. Failed or cancelled requests leave your clipboard intact.
+If Codex is missing or signed out, install it and run `codex login` in Terminal. If Claude rejects a key, create a new one in Anthropic Console and replace it in Settings. If Apple Intelligence is unavailable, check its status in System Settings or choose another provider. Failed or cancelled requests leave your clipboard intact.
 
-Transcripts must contain at least 100 characters and fit within a 400,000-byte limit. Larger transcripts are rejected rather than cut off. Processing times out after ten minutes.
+Text to summarize must contain at least 100 characters. Codex and Claude accept up to 400 KB; Apple Intelligence currently accepts up to 100 KB. Larger input is rejected rather than cut off. Codex and Claude requests time out after ten minutes.
 
-[Report a problem](https://github.com/niederme/note-ferry/issues), including your macOS and Codex versions and a small fictional example. Please leave private transcripts and credentials out of reports.
+[Report a problem](https://github.com/niederme/note-ferry/issues), including your macOS version, selected summarizer, and a small fictional example. Please leave private transcripts and credentials out of reports.
 
-## In the development build
+## Choose a summarizer
 
-The source build adds Apple Intelligence, Codex, and Claude as summary choices. On first launch, **Choose a summarizer** asks for a default; Apple Intelligence is preselected for a new user, though on-device summarization requires a compatible, enabled Mac. Change the default later in Settings, or use the picker beside **Summarize & format** for one piece of text. **Format only** stays local and does not use the selected summarizer.
+On first launch, **Choose a summarizer** asks for a default. Apple Intelligence is preselected on a new install, even if it is unavailable on that Mac; choose Codex or Claude instead if needed. Change your default later in **Note Ferry → Settings…**, or use the picker beside **Summarize & format** for one piece of text. The picker never starts processing by itself. **Format only** stays local regardless of the selected summarizer.
 
-For Claude, copy an API key from Anthropic Console and click **Save key from clipboard** in Settings. The app saves it in this Mac’s Keychain and clears the copied key if it is still on the clipboard after a successful save. The first Claude summary asks you to confirm sending that text and key to Anthropic. API usage is billed separately from a Claude subscription. These features are in the development build, **not the 1.1 download**. See the [development guide](docs/DEVELOPMENT.md) to build it yourself.
+For Claude, copy an API key from Anthropic Console and click **Save key from clipboard** in Settings. Note Ferry stores it in this Mac’s Keychain and clears the copied key if it is still on the clipboard after a successful save. Your first Claude summary asks you to confirm sending the text and key to Anthropic. A saved key is not proof that Anthropic will accept it.
 
 ## What’s next
 

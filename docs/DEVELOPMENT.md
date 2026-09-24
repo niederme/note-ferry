@@ -50,7 +50,7 @@ The app reuses your Codex CLI login. With a ChatGPT login, you do not need a sep
 
 Codex is discovered in `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, or the standard Codex app bundle location. Other installation paths are not currently configurable in the app.
 
-Note Ferry uses the CLI’s default model with medium reasoning effort. It deliberately ignores user configuration rather than inheriting custom tools, integrations, or model preferences. The development build also offers on-device Apple Intelligence on supported Macs running macOS 26 or later, plus Claude through a separately billed Anthropic API key stored in the app's Keychain item. A first-run chooser, Settings default, and per-transcript picker select the provider. No provider silently falls back to another.
+Note Ferry uses the CLI’s default model with medium reasoning effort. It deliberately ignores user configuration rather than inheriting custom tools, integrations, or model preferences. Version 1.2 also offers on-device Apple Intelligence on supported Macs running macOS 26 or later, plus Claude through a separately billed Anthropic API key stored in the app's Keychain item. A first-run chooser, Settings default, and per-transcript picker select the provider. No provider silently falls back to another.
 
 ## Build in Xcode
 
@@ -90,7 +90,7 @@ make install   # Build and install in ~/Applications
 | `Tests/` | Synthetic fixture and automated checks |
 | `scripts/` | Build, installation, test, and icon-generation tools |
 
-The model supplies structured content. The app owns typography, lists, spacing, and clipboard handling, so these do not depend on how the model formats Markdown. The local prototype accepts up to 100 KB, uses fresh sessions for roughly 4,000-character portions, and consolidates takeaways separately. It can take longer and may be less detailed than Codex. Model availability depends on macOS, hardware, Apple Intelligence settings, and model readiness.
+The model supplies structured content. The app owns typography, lists, spacing, and clipboard handling, so these do not depend on how the model formats Markdown. The on-device path accepts up to 100 KB, uses fresh sessions for roughly 4,000-character portions, and consolidates takeaways separately. It can take longer and may be less detailed than Codex. Model availability depends on macOS, hardware, Apple Intelligence settings, and model readiness.
 
 ### Preview without a model call
 
@@ -160,6 +160,6 @@ Headings and labels are bold. Bullets use native list metadata rather than decor
 
 ## Contributing
 
-Bug reports, formatting improvements, and compatibility reports are welcome. Include your macOS and Codex CLI versions and a small synthetic example that reproduces the issue.
+Bug reports, formatting improvements, and compatibility reports are welcome. Include your macOS version, selected summarizer, and a small synthetic example that reproduces the issue.
 
 Please do not include private transcripts, real meeting summaries, credentials, or screenshots containing personal information in issues or pull requests. Keep generated output in `local-output/` and run `make test` for changes to the renderer, clipboard handling, or backend.

@@ -56,6 +56,15 @@ final class MockClaudeURLProtocol: URLProtocol {
                 "Non-API clipboard text was accepted as a Claude key")
         let hasTestKey = try providerSettings.hasClaudeAPIKey()
         check(!hasTestKey, "A fresh test Keychain unexpectedly has a Claude key")
+        if #available(macOS 26.0, *) {
+            let actions = LocalSummarizer.unique([
+                NoteItem(label: "FAQ drafting", text: "Sam will draft the updated FAQ by Thursday."),
+                NoteItem(label: "FAQ drafting", text: "Sam offered to draft an updated FAQ by Thursday."),
+                NoteItem(label: "FAQ drafting", text: "Priya will draft the marketing FAQ by Monday.")
+            ])
+            check(actions.count == 2 && actions[0].text.hasPrefix("Sam") && actions[1].text.hasPrefix("Priya"),
+                  "On-device action consolidation lost a distinct action or kept a repeated one")
+        }
         let resources = root.appendingPathComponent("Resources")
         let fixture = try Data(contentsOf: root.appendingPathComponent("Tests/fixture.json"))
         let note = try JSONDecoder().decode(Summary.self, from: fixture)
