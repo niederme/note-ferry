@@ -10,7 +10,7 @@ Build, test, and contribute to Note Ferry. See the [download instructions](../RE
 - A recent Xcode or Xcode Command Line Tools installation providing Swift and the macOS SDK.
 - Codex CLI supporting `exec`, `--ephemeral`, `--ignore-user-config`, and `--output-schema`, signed in for live summarization.
 
-There are no third-party Swift or Python library dependencies. The app uses AppKit. Codex is an external runtime dependency and is not bundled.
+The app uses AppKit and bundles Sparkle 2.10 for updates. The build downloads Sparkle on first use and checks its pinned SHA-256. Sparkle’s license is in `Resources/Sparkle.LICENSE` and included in the app. Codex is an external runtime dependency and is not bundled.
 
 ## Install from source
 
@@ -38,7 +38,7 @@ This installs `~/Applications/Note Ferry.app` and registers it with Launch Servi
 
 Spotlight indexing may take a little time. Open the app directly from your home folder’s Applications directory if needed. Raycast may need its application list refreshed. No Service, Shortcut, or keyboard shortcut setup is required.
 
-Source builds target your Mac’s architecture and are ad-hoc signed for local use. A release download must be separately signed and notarized before publication.
+Source builds target your Mac’s architecture and are ad-hoc signed for local use. The first build downloads the pinned Sparkle distribution. A release download must be separately signed and notarized before publication. Source builds point to the official Note Ferry update feed.
 
 ### Codex account and usage
 
@@ -64,6 +64,8 @@ make install   # Build and install in ~/Applications
 | `Resources/SummaryPrompt.txt` | Instructions for detailed, source-faithful summaries |
 | `Resources/Summary.schema.json` | Structured model-output contract |
 | `Resources/AppIcon.svg` | Approved vector icon, with outlined lettering |
+| `Resources/Sparkle.LICENSE` | License for the bundled updater |
+| `scripts/fetch-sparkle.sh` | Fetch and verify the pinned Sparkle distribution |
 | `Tests/` | Synthetic fixture and automated checks |
 | `scripts/` | Build, installation, test, and icon-generation tools |
 
@@ -117,7 +119,11 @@ BUILD_ARCHS='arm64 x86_64' \
   ./scripts/build.sh
 ```
 
-The build explicitly targets macOS 14, enables the hardened runtime for Developer ID signing, requests a secure timestamp, and verifies the signature. Submit a ZIP of the app using `xcrun notarytool` with credentials saved in Keychain. Once Apple accepts it, review the notarization log, staple the ticket to the app with `xcrun stapler`, and verify with both `stapler validate` and `spctl --assess --type execute`. Create the final download ZIP **after** stapling, and generate its SHA-256 checksum. Never commit signing keys or notarization credentials.
+The build targets macOS 14, embeds Sparkle with symlinks preserved, signs its helpers and framework before the host app, enables the hardened runtime for Developer ID signing, requests secure timestamps, and verifies the signature. Submit a ZIP of the app using `xcrun notarytool` with credentials saved in Keychain. Once Apple accepts it, review the notarization log, staple the ticket to the app with `xcrun stapler`, and verify with both `stapler validate` and `spctl --assess --type execute`. Create the final download ZIP **after** stapling, and generate its SHA-256 checksum.
+
+Sparkle uses the public EdDSA key in the app’s Info.plist. The matching private key is in the release owner’s login Keychain under the `note-ferry` account; never export or commit it. For each new release, increment `CFBundleVersion`, sign and notarize the app, upload the final ZIP to GitHub Releases, then generate the appcast with the pinned Sparkle tools and the final ZIP. Include the release notes in the appcast, verify its signature, and publish the appcast to the `main` branch only after the ZIP is reachable. The `SUFeedURL` in the app points at the raw `main` version of `appcast.xml`. New builds require an EdDSA-signed archive and feed because verification before extraction and signed-feed checks are enabled. Keep the appcast update process in the release PR so reviewers can check the exact URL, version, and signature.
+
+Version 1.0 did not include Sparkle. Users must install 1.1 manually once; subsequent updates can use the app menu. A source build also points to the official feed, so fork maintainers should change the URL and public key to their own before distributing their app. Never commit signing keys or notarization credentials.
 
 ## Rendering for Apple Notes
 

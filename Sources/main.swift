@@ -1,4 +1,5 @@
 import AppKit
+import Sparkle
 
 let arguments = CommandLine.arguments
 if arguments.count == 4 && arguments[1] == "--summarize-file" {
@@ -63,6 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     var updatingText = false
     var window: NSWindow!
     var aboutWindow: NSWindow?
+    let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
     let heading = NSTextField(labelWithString: "Note Ferry")
     let detail = NSTextField(wrappingLabelWithString: "")
     let privacy = NSTextField(wrappingLabelWithString: "Uses your Codex account to process the transcript with OpenAI. Formatting happens on your Mac.")
@@ -186,6 +188,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         let menu = NSMenu(), appItem = NSMenuItem(), appMenu = NSMenu()
         menu.addItem(appItem)
         appMenu.addItem(withTitle: "About Note Ferry", action: #selector(about), keyEquivalent: "").target = self
+        appMenu.addItem(withTitle: "Check for Updates…", action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)), keyEquivalent: "").target = updaterController
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Clear", action: #selector(newTranscript), keyEquivalent: "n").target = self
         appMenu.addItem(.separator())

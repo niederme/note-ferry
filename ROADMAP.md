@@ -2,7 +2,7 @@
 
 [Back to Note Ferry](README.md) · [Development guide](docs/DEVELOPMENT.md)
 
-The upcoming Note Ferry 1.0 uses Codex CLI for **Summarize & format** and has local **Format only**. Everything below is planned, with no promised release dates. Keep the core workflow simple: paste text, choose Format only or Summarize & format, and paste into Apple Notes.
+Note Ferry uses Codex CLI for **Summarize & format** and has local **Format only**. Everything below is planned, with no promised release dates. Keep the core workflow simple: paste text, choose Format only or Summarize & format, and paste into Apple Notes.
 
 ## More ways to summarize
 

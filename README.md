@@ -32,15 +32,19 @@ Both options use spaced native lists, preserve a newer clipboard, and offer **Re
 
 ## Download
 
-Download Note Ferry 1.0 (build 2), signed with Developer ID and notarized by Apple:
+Download Note Ferry 1.1 (build 3), signed with Developer ID and notarized by Apple:
 
-**[Download Note Ferry 1.0 for Mac](https://github.com/niederme/note-ferry/releases/download/v1.0.0/Note-Ferry-1.0-universal.zip)**
+**[Download Note Ferry 1.1 for Mac](https://github.com/niederme/note-ferry/releases/download/v1.1.0/Note-Ferry-1.1-universal.zip)**
 
-Unzip the download and move **Note Ferry.app** to Applications. The universal app includes both Apple silicon and Intel versions. You do not need Xcode.
+Unzip the download and move **Note Ferry.app** to Applications, replacing an earlier copy. The universal app includes both Apple silicon and Intel versions. You do not need Xcode. If you have 1.0, this first update requires a manual download; later releases can be installed from inside the app.
 
 **Summarize & format requires Codex CLI, a signed-in Codex account, and internet access.** Install Codex using the [official setup instructions](https://developers.openai.com/codex/cli/), then run `codex login` in Terminal. Note Ferry uses that login and your account’s usage allowance. With a ChatGPT login, you do not need a separate API key in this app. **Format only** needs neither Codex nor an account.
 
-Requires macOS 14 or later. Runtime testing has been on Apple silicon with macOS 27; Intel hardware and older macOS versions have not been tested. See the [release notes and checksum](https://github.com/niederme/note-ferry/releases/tag/v1.0.0).
+Requires macOS 14 or later. Runtime testing has been on Apple silicon with macOS 27; Intel hardware and older macOS versions have not been tested. See the [release notes and checksum](https://github.com/niederme/note-ferry/releases/tag/v1.1.0).
+
+## Updates
+
+Choose **Note Ferry → Check for Updates…** whenever you want to check. On the second launch, Sparkle asks whether it may check automatically in the background. That choice is yours; automatic installation is off by default. Update checks use a signed feed on GitHub and do not send your text or transcript.
 
 ## How to use Note Ferry
 
@@ -93,4 +97,4 @@ Created by **John Niedermeyer**, with AI-assisted development.
 
 Released under the [MIT License](LICENSE). You may use, modify, and redistribute the software, including commercially, as long as you retain the copyright and license notice in copies or substantial portions. MIT does not require visible in-app credit or publication of your modifications.
 
-The license covers this project's code and documentation. It does not grant rights to third-party tools, services, or trademarks, or change their terms. This is an independent project, not affiliated with Apple, OpenAI, Nook, or Granola.
+The license covers this project's code and documentation. Sparkle is bundled under its [own license](Resources/Sparkle.LICENSE). The project license does not grant rights to other third-party tools, services, or trademarks, or change their terms. This is an independent project, not affiliated with Apple, OpenAI, Nook, or Granola.

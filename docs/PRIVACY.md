@@ -16,3 +16,7 @@
 Transcripts are treated as source material to summarize, not as instructions to execute. The app performs no web research or external fact checking.
 
 Explicit command-line exports made with `--summarize-file` or `--format-file` persist until you delete them. See the [development guide](DEVELOPMENT.md#test-a-real-transcript-without-changing-the-clipboard).
+
+## Software updates
+
+Note Ferry uses Sparkle to check a signed update feed hosted on GitHub. A manual check contacts GitHub when you choose **Check for Updates…**. On the second launch, Sparkle asks whether you want background checks; automatic installation is off by default. Update checks do not include your clipboard contents, transcript, or formatted result. Sparkle's optional system profiling is not enabled. Network services may receive ordinary connection metadata such as your IP address.
