@@ -1,5 +1,6 @@
 import Foundation
 import Security
+import LocalAuthentication
 
 enum SummaryProvider: String, CaseIterable {
     case apple
@@ -61,6 +62,24 @@ final class ProviderSettings {
         set { defaults.set(newValue, forKey: DefaultsKey.hasCompletedOnboarding) }
     }
 
+    func hasClaudeAPIKey() throws -> Bool {
+        var query = baseKeychainQuery
+        query[kSecReturnAttributes as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        let context = LAContext()
+        context.interactionNotAllowed = true
+        query[kSecUseAuthenticationContext as String] = context
+
+        switch SecItemCopyMatching(query as CFDictionary, nil) {
+        case errSecSuccess:
+            return true
+        case errSecItemNotFound:
+            return false
+        default:
+            throw AppError.message("Claude Keychain status is unavailable. Try again after unlocking your Mac.")
+        }
+    }
+
     func loadClaudeAPIKey() throws -> String? {
         var query = baseKeychainQuery
         query[kSecReturnData as String] = true
@@ -84,8 +103,8 @@ final class ProviderSettings {
 
     func saveClaudeAPIKey(_ key: String) throws {
         let value = key.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !value.isEmpty else {
-            throw AppError.message("Enter a Claude API key before saving.")
+        guard value.hasPrefix("sk-ant-api") else {
+            throw AppError.message("This does not look like a Claude API key. Copy one from Claude Console and try again.")
         }
 
         let data = Data(value.utf8)

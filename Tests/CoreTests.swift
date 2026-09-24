@@ -52,6 +52,10 @@ final class MockClaudeURLProtocol: URLProtocol {
         let restoredSettings = ProviderSettings(defaults: preferences, bundleIdentifier: preferencesSuite)
         check(restoredSettings.defaultProvider == .codex && restoredSettings.hasCompletedOnboarding,
               "Provider choice and onboarding state did not persist")
+        rejects({ try providerSettings.saveClaudeAPIKey("not-a-claude-api-key") },
+                "Non-API clipboard text was accepted as a Claude key")
+        let hasTestKey = try providerSettings.hasClaudeAPIKey()
+        check(!hasTestKey, "A fresh test Keychain unexpectedly has a Claude key")
         let resources = root.appendingPathComponent("Resources")
         let fixture = try Data(contentsOf: root.appendingPathComponent("Tests/fixture.json"))
         let note = try JSONDecoder().decode(Summary.self, from: fixture)

@@ -7,10 +7,11 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
     private let picker = NSPopUpButton(frame: .zero, pullsDown: false)
     private let providerDetail = NSTextField(wrappingLabelWithString: "")
     private let connectionDetail = NSTextField(wrappingLabelWithString: "")
-    private let keyField = NSSecureTextField()
-    private let saveKeyButton = NSButton(title: "Save key", target: nil, action: nil)
+    private let saveKeyButton = NSButton(title: "Save key from clipboard", target: nil, action: nil)
     private let removeKeyButton = NSButton(title: "Remove key", target: nil, action: nil)
-    private let getKeyButton = NSButton(title: "Get an API key…", target: nil, action: nil)
+    private let getKeyButton = NSButton(title: "Get an API key ↗", target: nil, action: nil)
+    private let keyStatus = NSTextField(wrappingLabelWithString: "")
+    private let keyInstructions = NSTextField(wrappingLabelWithString: "")
     private let doneButton = NSButton(title: "Done", target: nil, action: nil)
     private let feedback = NSTextField(wrappingLabelWithString: "")
     private let heading = NSTextField(labelWithString: "")
@@ -35,7 +36,7 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
     }
 
     private func makeWindow() {
-        let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 550, height: 490),
+        let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 550, height: 540),
                              styleMask: [.titled, .closable], backing: .buffered, defer: false)
         panel.isReleasedWhenClosed = false
         panel.delegate = self
@@ -84,19 +85,24 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
         let keyLabel = NSTextField(labelWithString: "Claude API key")
         keyLabel.font = .systemFont(ofSize: 13, weight: .semibold)
         root.addArrangedSubview(keyLabel)
-        keyField.placeholderString = "Paste your Anthropic API key"
-        keyField.setAccessibilityLabel("Claude API key")
-        root.addArrangedSubview(keyField)
-        keyField.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56).isActive = true
-        let keyActions = NSStackView(views: [saveKeyButton, removeKeyButton, getKeyButton])
+        keyStatus.font = .systemFont(ofSize: 12, weight: .medium)
+        root.addArrangedSubview(keyStatus)
+        keyInstructions.font = .systemFont(ofSize: 12)
+        keyInstructions.textColor = .secondaryLabelColor
+        root.addArrangedSubview(keyInstructions)
+        keyInstructions.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56).isActive = true
+        let keyActions = NSStackView(views: [saveKeyButton, getKeyButton])
         keyActions.orientation = .horizontal
         keyActions.spacing = 8
         root.addArrangedSubview(keyActions)
         for button in [saveKeyButton, removeKeyButton, getKeyButton, doneButton] { button.bezelStyle = .rounded; button.target = self }
+        getKeyButton.isBordered = false
+        removeKeyButton.isBordered = false
+        root.addArrangedSubview(removeKeyButton)
         saveKeyButton.action = #selector(saveKey)
         removeKeyButton.action = #selector(removeKey)
         getKeyButton.action = #selector(openClaudeConsole)
-        let billing = NSTextField(wrappingLabelWithString: "Claude API use is billed separately by Anthropic. Your key is stored in this Mac’s Keychain. Note Ferry never reads Claude Code’s login.")
+        let billing = NSTextField(wrappingLabelWithString: "Anthropic bills API use separately from a Claude subscription. The key stays in this Mac’s Keychain; Note Ferry does not use Claude Code’s login.")
         billing.font = .systemFont(ofSize: 11)
         billing.textColor = .secondaryLabelColor
         root.addArrangedSubview(billing)
@@ -132,26 +138,46 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
         }
         let codex = CodexRunner.executable() == nil ? "Codex CLI was not found. Install it and run ‘codex login’ in Terminal." : "Codex CLI is installed. If prompted to sign in, run ‘codex login’ in Terminal."
         let claude: String
+        let hasKey: Bool
         do {
-            claude = try ProviderSettings.shared.loadClaudeAPIKey() == nil ? "Claude API key not saved." : "Claude API key saved in Keychain."
-        } catch { claude = "Claude Keychain status unavailable: \(error.localizedDescription)" }
-        connectionDetail.stringValue = codex + "\n" + claude
-        removeKeyButton.isEnabled = (try? ProviderSettings.shared.loadClaudeAPIKey()) != nil
+            hasKey = try ProviderSettings.shared.hasClaudeAPIKey()
+            claude = hasKey ? "Claude API key saved in Keychain." : "Claude API key is not set up."
+        } catch {
+            hasKey = false
+            claude = error.localizedDescription
+        }
+        connectionDetail.stringValue = codex
+        keyStatus.stringValue = claude
+        keyInstructions.stringValue = hasKey
+            ? "To replace it, copy a new key from Anthropic Console, then save it here."
+            : "Copy a key from Anthropic Console, then save it here."
+        saveKeyButton.title = hasKey ? "Replace key from clipboard" : "Save key from clipboard"
+        removeKeyButton.isHidden = !hasKey
     }
 
     @objc private func providerChanged() {
         let index = picker.indexOfSelectedItem
         guard SummaryProvider.allCases.indices.contains(index) else { return }
         ProviderSettings.shared.defaultProvider = SummaryProvider.allCases[index]
+        feedback.stringValue = ""
         refresh()
         onChange?()
     }
 
     @objc private func saveKey() {
         do {
-            try ProviderSettings.shared.saveClaudeAPIKey(keyField.stringValue)
-            keyField.stringValue = ""
-            feedback.stringValue = "Claude API key saved."
+            let clipboard = NSPasteboard.general
+            let changeCount = clipboard.changeCount
+            guard let key = clipboard.string(forType: .string) else {
+                throw AppError.message("Copy a Claude API key from Claude Console first.")
+            }
+            try ProviderSettings.shared.saveClaudeAPIKey(key)
+            if clipboard.changeCount == changeCount {
+                clipboard.clearContents()
+                feedback.stringValue = "Saved. The copied key was cleared from your clipboard."
+            } else {
+                feedback.stringValue = "Saved to Keychain. Your clipboard was left unchanged."
+            }
             refresh()
             onChange?()
         } catch { feedback.stringValue = error.localizedDescription }
@@ -160,8 +186,7 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
     @objc private func removeKey() {
         do {
             try ProviderSettings.shared.deleteClaudeAPIKey()
-            keyField.stringValue = ""
-            feedback.stringValue = "Claude API key removed."
+            feedback.stringValue = ""
             refresh()
             onChange?()
         } catch { feedback.stringValue = error.localizedDescription }
