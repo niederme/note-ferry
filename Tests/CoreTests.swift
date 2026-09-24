@@ -75,6 +75,21 @@ import AppKit
         rejects({ _ = try MarkdownFormatter.render(String(repeating: "é", count: 200_001)) }, "Oversized formatting input accepted")
         let validSource = String(repeating: "Alex: Discuss the project. Sam: I will send the proposal on Friday.\n", count: 10)
         try Transcript.validate(validSource)
+        let chunkSource = "First decision and rationale.\nSecond decision with a longer explanation.\nThird decision and follow-up."
+        let chunks = TextChunker.split(chunkSource, maxCharacters: 35)
+        check(chunks.count > 1 && chunks.allSatisfy { $0.count <= 35 }, "Long text was not split within the model budget")
+        check(chunks.joined(separator: " ").split(whereSeparator: \.isWhitespace).map(String.init)
+              == chunkSource.split(whereSeparator: \.isWhitespace).map(String.init), "Chunking dropped or reordered source words")
+        let unbroken = String(repeating: "x", count: 90)
+        check(TextChunker.split(unbroken, maxCharacters: 25).joined() == unbroken, "Long unbroken source was truncated")
+        let tinyTailSource = String(repeating: "A ", count: 1_990) + "Maya: I will send it Friday."
+        let balanced = TextChunker.split(tinyTailSource, maxCharacters: 4_000)
+        check(balanced.count == 2 && balanced.allSatisfy { $0.count >= 800 && $0.count <= 4_000 }, "Tiny final model chunk was not balanced")
+        check(balanced.joined(separator: " ").split(whereSeparator: \.isWhitespace).map(String.init)
+              == tinyTailSource.split(whereSeparator: \.isWhitespace).map(String.init), "Rebalancing lost source words")
+        let turnSource = String(repeating: "A ", count: 18) + "\nMaya: I will send the prototype Friday."
+        let turns = TextChunker.split(turnSource, maxCharacters: 50)
+        check(turns.count == 2 && turns[1].hasPrefix("Maya:"), "Chunker split a speaker turn")
         let board = NSPasteboard.withUniqueName()
         defer { board.releaseGlobally() }
         board.setString(validSource, forType: .string)

@@ -15,7 +15,7 @@ struct Summary: Codable {
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !sections.isEmpty, sections.contains(where: { !$0.items.isEmpty }),
               sections.allSatisfy({ !$0.heading.isEmpty && !$0.items.isEmpty }) else {
-            throw AppError.message("Codex returned an incomplete summary. Your clipboard is unchanged. Try again.")
+            throw AppError.message("The model returned an incomplete summary. Your clipboard is unchanged. Try again.")
         }
         let items = takeaways + actions + sections.flatMap(\.items) + openQuestions + uncertainties
         guard items.allSatisfy({ !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
@@ -32,10 +32,10 @@ enum AppError: LocalizedError {
 enum Transcript {
     static func validate(_ text: String) throws {
         guard text.trimmingCharacters(in: .whitespacesAndNewlines).count >= 100 else {
-            throw AppError.message("Copy a transcript from Nook, Granola, or another app, then try again. The clipboard needs at least 100 characters of text.")
+            throw AppError.message("Paste at least 100 characters of text to summarize, then try again.")
         }
         guard text.utf8.count <= 400_000 else {
-            throw AppError.message("This transcript is larger than 400 KB. Split it into smaller calls or parts and summarize each separately. Nothing was truncated or sent.")
+            throw AppError.message("This text is larger than 400 KB. Split it into smaller parts and summarize each separately. Nothing was truncated or sent.")
         }
     }
 }

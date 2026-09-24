@@ -2,9 +2,9 @@
 
 [Back to Note Ferry](../README.md)
 
-**Summarization sends the transcript to OpenAI through Codex. It is not an on-device AI workflow.** Rich-text formatting happens locally.
+In the current 1.1 release, **Summarize & format sends the transcript to OpenAI through Codex**. Rich-text formatting happens locally. **Format only** runs entirely on your Mac. It does not call Codex, load linked pages or images, or require an account.
 
-**Format only** runs entirely on your Mac. It does not call Codex, load linked pages or images, or require an account. The Codex details below apply only to **Summarize & format**.
+A source-branch prototype adds **Summarize on Mac** using Apple's on-device Foundation Models framework on eligible Macs. It does not send the text to Codex or switch to Codex if the local model fails. Apple Intelligence may need to download its model before it is available. This mode has not shipped in the 1.1 download. The Codex details below apply only to **Summarize with Codex** in the prototype or **Summarize & format** in 1.1.
 
 - The app holds the source, preview, and clipboard backup in memory. It has no saved transcript library.
 - The transcript is passed over standard input, not in command-line arguments or a source file.

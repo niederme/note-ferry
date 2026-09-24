@@ -7,7 +7,7 @@ Build, test, and contribute to Note Ferry. See the [download instructions](../RE
 ## Requirements
 
 - macOS 14 or later. Runtime testing so far has been on Apple silicon with macOS 27.
-- A recent Xcode or Xcode Command Line Tools installation providing Swift and the macOS SDK.
+- Xcode with the macOS 26 or later SDK, even when building for macOS 14. The source includes an optional Apple Foundation Models path behind a runtime availability check.
 - Codex CLI supporting `exec`, `--ephemeral`, `--ignore-user-config`, and `--output-schema`, signed in for live summarization.
 
 The app uses AppKit and bundles Sparkle 2.10 for updates. The build downloads Sparkle on first use and checks its pinned SHA-256. Sparkle’s license is in `Resources/Sparkle.LICENSE` and included in the app. Codex is an external runtime dependency and is not bundled.
@@ -21,7 +21,7 @@ git clone https://github.com/niederme/note-ferry.git
 cd note-ferry
 ```
 
-For **Summarize & format**, make sure Codex CLI is installed and signed in. **Format only** does not use Codex:
+For **Summarize with Codex** (called **Summarize & format** in the 1.1 release), make sure Codex CLI is installed and signed in. **Format only** and **Summarize on Mac** do not use Codex:
 
 ```sh
 codex --version
@@ -46,7 +46,7 @@ The app reuses your Codex CLI login. With a ChatGPT login, you do not need a sep
 
 Codex is discovered in `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, or the standard Codex app bundle location. Other installation paths are not currently configurable in the app.
 
-Note Ferry uses the CLI’s default model with medium reasoning effort. It deliberately ignores user configuration rather than inheriting custom tools, integrations, or model preferences. Apple Intelligence and other model providers are not implemented.
+Note Ferry uses the CLI’s default model with medium reasoning effort. It deliberately ignores user configuration rather than inheriting custom tools, integrations, or model preferences. A source-branch prototype also offers **Summarize on Mac** through Apple Intelligence on supported Macs running macOS 26 or later; it never falls back to Codex without an explicit click. Other model providers are not implemented.
 
 ## Build and test
 
@@ -61,6 +61,7 @@ make install   # Build and install in ~/Applications
 | `Sources/main.swift` | AppKit interface and clipboard workflow |
 | `Sources/MarkdownFormatter.swift` | Local Markdown parsing and Notes-friendly rich text |
 | `Sources/Core.swift` | Summary model, renderer, clipboard helpers, and Codex runner |
+| `Sources/LocalSummarizer.swift` | Optional on-device Apple Intelligence summarizer and text chunking |
 | `Resources/SummaryPrompt.txt` | Instructions for detailed, source-faithful summaries |
 | `Resources/Summary.schema.json` | Structured model-output contract |
 | `Resources/AppIcon.svg` | Approved vector icon, with outlined lettering |
@@ -69,7 +70,7 @@ make install   # Build and install in ~/Applications
 | `Tests/` | Synthetic fixture and automated checks |
 | `scripts/` | Build, installation, test, and icon-generation tools |
 
-The model supplies structured content. The app owns typography, lists, spacing, and clipboard handling, so these do not depend on how the model formats Markdown.
+The model supplies structured content. The app owns typography, lists, spacing, and clipboard handling, so these do not depend on how the model formats Markdown. The local prototype accepts up to 100 KB, uses fresh sessions for roughly 4,000-character portions, and consolidates takeaways separately. It can take longer and may be less detailed than Codex. Model availability depends on macOS, hardware, Apple Intelligence settings, and model readiness.
 
 ### Preview without a model call
 

@@ -2,13 +2,13 @@
 
 [Back to Note Ferry](README.md) · [Development guide](docs/DEVELOPMENT.md)
 
-Note Ferry uses Codex CLI for **Summarize & format** and has local **Format only**. Everything below is planned, with no promised release dates. Keep the core workflow simple: paste text, choose Format only or Summarize & format, and paste into Apple Notes.
+The current 1.1 download uses Codex CLI for **Summarize & format** and has local **Format only**. A source-branch prototype adds an explicit **Summarize on Mac** choice using Apple Intelligence; it has not shipped. Other plans have no promised release dates. Keep the core workflow simple: paste text, choose an action, and paste into Apple Notes.
 
 ## More ways to summarize
 
 | Provider | Intended access | Direction |
 | --- | --- | --- |
-| Apple Intelligence | Apple's on-device model through Foundation Models | Default for eligible Macs when no other service is configured; no separate AI subscription or API key |
+| Apple Intelligence | Apple's on-device model through Foundation Models | Explicit local choice in prototype; evaluate quality before considering it as a default |
 | Codex / OpenAI | Existing Codex login, plus an optional direct OpenAI API connection | Keep the current subscription-backed workflow and add an explicit API option |
 | Claude | User's own Claude subscription through supported Claude Code integration where permitted, plus Anthropic API access | Prefer existing subscriptions when supported; provide API-key access as a separate choice |
 
@@ -26,7 +26,7 @@ Subscription access and API billing must be clearly distinguished. A subscriptio
 
 The on-device option is a fallback for compatible, enabled Macs, not a universal fallback for every Mac supported by Note Ferry. Apple's Foundation Models framework starts with macOS 26 and requires an Apple Intelligence-compatible device with Apple Intelligence enabled. Check actual model availability, language support, and download readiness at runtime. Keep Codex and API options usable on older supported Macs. [Apple's framework requirements](https://www.apple.com/ca/newsroom/2025/09/apples-foundation-models-framework-unlocks-new-intelligent-app-experiences/)
 
-Long call transcripts need a dedicated evaluation. Apple's documented on-device context limit is small enough that full transcripts may require chunking and a consolidation pass. Measure preservation of names, speaker attribution, decisions, commitments, and uncertainty across chunks before shipping it as a default. Recheck limits against the SDK and model being targeted. Do not silently truncate a transcript or imply parity with cloud models. [Apple's context-window guidance](https://developer.apple.com/documentation/technotes/tn3193-managing-the-on-device-foundation-model-s-context-window)
+The prototype splits text into roughly 4,000-character portions, makes detailed notes in fresh sessions, and consolidates the takeaways in further sessions. It keeps all source portions and accepts up to 100 KB locally; the Codex path retains its 400 KB limit. Long call transcripts still need human evaluation for names, speaker attribution, decisions, commitments, and uncertainty before this can become a default. Do not silently truncate a transcript or imply parity with cloud models. [Apple's context-window guidance](https://developer.apple.com/documentation/technotes/tn3193-managing-the-on-device-foundation-model-s-context-window)
 
 ## Claude subscription feasibility
 
@@ -34,8 +34,8 @@ Evaluate invoking the user's unmodified Claude Code installation with their own 
 
 ## Implementation sequence
 
-1. Separate provider execution from the shared summary schema, renderer, and clipboard handling. Make errors and progress provider-neutral.
-2. Prototype Apple Intelligence with short and long synthetic transcripts, including attribution and action-item fidelity checks.
+1. Evaluate the Apple Intelligence prototype with short and long synthetic transcripts, including attribution and action-item fidelity checks. Keep the local and Codex choices explicit.
+2. Separate provider execution from the shared summary schema, renderer, and clipboard handling. Make errors and progress provider-neutral.
 3. Add Claude and optional direct API connections, with explicit authentication and billing choices.
 4. Add Settings and the per-transcript provider picker, then session-only result comparison.
 

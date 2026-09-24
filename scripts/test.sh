@@ -2,5 +2,5 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p .build/module-cache
-xcrun swiftc -swift-version 5 -module-cache-path "$PWD/.build/module-cache" -framework AppKit Sources/Core.swift Sources/MarkdownFormatter.swift Tests/CoreTests.swift -o .build/core-tests
+xcrun swiftc -swift-version 5 -target "$(uname -m)-apple-macos14.0" -module-cache-path "$PWD/.build/module-cache" -framework AppKit Sources/Core.swift Sources/MarkdownFormatter.swift Sources/LocalSummarizer.swift Tests/CoreTests.swift -o .build/core-tests
 ./.build/core-tests

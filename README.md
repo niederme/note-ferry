@@ -20,7 +20,7 @@ The original workflow was recording with Nook, sometimes using Granola, and copy
 
 [Nook](https://www.common-tools.co/nook) records and transcribes meetings on your Mac and already produces local summaries and Markdown files. You can keep using it for capture and bring its full transcript here when you want another summary formatted for Apple Notes. [Granola](https://www.granola.ai/) combines meeting transcription, enhanced notes, and calendar features. Note Ferry is useful when you want this particular output in Apple Notes or use transcripts from several tools.
 
-Note Ferry is free and open source, with no separate app subscription. **Summarize & format requires a signed-in Codex account and uses its allowance.** It sends transcript text to OpenAI, including transcripts captured locally by Nook. **Format only** runs on your Mac without an account. Apple Intelligence summarization is [planned](ROADMAP.md).
+Note Ferry is free and open source, with no separate app subscription. In the current 1.1 download, **Summarize & format requires a signed-in Codex account and uses its allowance.** It sends transcript text to OpenAI, including transcripts captured locally by Nook. **Format only** runs on your Mac without an account. An optional [on-device summary mode](ROADMAP.md) is in development and is not in the 1.1 download.
 
 ## Format existing text
 
@@ -85,7 +85,7 @@ Transcripts must contain at least 100 characters and fit within a 400,000-byte l
 
 ## What’s next
 
-Planned: Apple Intelligence as the default for eligible Macs without another service configured, Claude support, optional API connections, a preferred provider in Settings, and a provider picker for trying another result. See the [roadmap](ROADMAP.md) for scope and constraints.
+In development: optional Apple Intelligence summaries on eligible Macs. Still planned: Claude support, optional API connections, a preferred provider in Settings, and a provider picker for trying another result. See the [roadmap](ROADMAP.md) for scope and constraints.
 
 ## Build or contribute
 
