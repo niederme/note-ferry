@@ -1,0 +1,23 @@
+<?xml version="1.0" standalone="yes"?><!-- sparkle-sign-warning:
+IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
+--><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>Note Ferry</title>
+        <item>
+            <title>1.1</title>
+            <pubDate>Thu, 24 Sep 2026 12:18:24 -0400</pubDate>
+            <link>https://github.com/niederme/note-ferry/releases/tag/v1.1.0</link>
+            <sparkle:version>3</sparkle:version>
+            <sparkle:shortVersionString>1.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[Note Ferry 1.1 adds in-app update checks through Sparkle. You can choose Check for Updates from the Note Ferry menu. On the second launch, the app asks whether it may check automatically in the background.
+
+The rest of the app still formats text locally or summarizes it with your Codex account when you choose that action.
+]]></description>
+            <enclosure url="https://github.com/niederme/note-ferry/releases/download/v1.1.0/Note-Ferry-1.1-universal.zip" length="1482296" type="application/octet-stream" sparkle:edSignature="atR4WrI5e16ZCS7PIXaAJr32iKqfSZCfRWKcNHB2ADniot599VZBEqEpu78n/eXoeti+rlTAWqCYndZTS/YLCg=="></enclosure>
+        </item>
+    </channel>
+</rss><!-- sparkle-signatures:
+edSignature: cVmOwT5RYZSYN6xBQ5SRlbNpUmAW0xMYvs8pC1pNtlfb08AYEzS3SxVedH7wZhMPe8UGULK+ZcBoDKwnNlPeBQ==
+length: 1537
+-->
