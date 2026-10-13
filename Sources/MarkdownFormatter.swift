@@ -97,6 +97,15 @@ enum MarkdownFormatter {
         return (0..<match.numberOfRanges).map { match.range(at: $0).location == NSNotFound ? "" : text.substring(with: match.range(at: $0)) }
     }
 
+    private static func fence(_ line: String) -> (marker: String, info: String)? {
+        guard let match = matches("^ {0,3}(`{3,}|~{3,})(.*)$", line) else { return nil }
+        return (match[1], match[2].trimmingCharacters(in: .whitespaces).lowercased())
+    }
+
+    private static func closesFence(_ line: String, marker: String) -> Bool {
+        matches("^ {0,3}" + String(marker.prefix(1)) + "{" + String(marker.count) + ",}[ \\t]*$", line) != nil
+    }
+
     private static func parse(_ source: String) -> [Block] {
         var lines = source.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n").components(separatedBy: "\n")
         if let first = lines.firstIndex(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }) {
@@ -105,10 +114,20 @@ enum MarkdownFormatter {
         while lines.last?.trimmingCharacters(in: .whitespaces).isEmpty == true { lines.removeLast() }
         // Chat replies sometimes wrap an entire Markdown answer in a mislabeled code fence.
         // Only unwrap a complete outer fence when its contents show clear Markdown structure.
-        if lines.count >= 3, let opening = lines.first, ["```", "```md", "```markdown", "```text", "```plaintext", "```vbnet"].contains(opening.lowercased()), lines.last == "```",
-           !lines.dropFirst().dropLast().contains(where: { $0.hasPrefix("```") }),
-           lines.dropFirst().dropLast().contains(where: { matches("^(#{1,6} |[-*+] \\*\\*|\\*\\*[^*]+\\*\\*$)", $0) != nil }) {
-            lines = Array(lines.dropFirst().dropLast())
+        if lines.count >= 3, let opening = fence(lines[0]), closesFence(lines[lines.count - 1], marker: opening.marker),
+           !lines.dropFirst().dropLast().contains(where: { closesFence($0, marker: opening.marker) }) {
+            let body = Array(lines.dropFirst().dropLast())
+            let markdownStructure = body.contains { matches("^(#{1,6} |[-*+] \\*\\*|\\*\\*[^*]+\\*\\*$)", $0) != nil }
+            let plainWrapper = ["", "md", "markdown", "text", "plaintext", "vbnet"].contains(opening.info)
+                && !body.contains(where: { fence($0) != nil })
+            // A longer, sometimes mislabeled outer fence can wrap Markdown containing
+            // Codex action blocks. Require a heading and a shorter inner prompt fence.
+            let promptWrapper = body.contains { matches("^ {0,3}#{1,6} +", $0) != nil }
+                && body.contains { line in
+                    guard let inner = fence(line) else { return false }
+                    return inner.info == "codex-prompt" && inner.marker.count < opening.marker.count
+                }
+            if markdownStructure && (plainWrapper || promptWrapper) { lines = body }
         }
         var blocks: [Block] = []
         var index = 0
@@ -129,14 +148,19 @@ enum MarkdownFormatter {
         while index < lines.count {
             let line = lines[index]
             if line.trimmingCharacters(in: .whitespaces).isEmpty { index += 1; continue }
-            if let fence = matches("^ {0,3}(`{3,}|~{3,})(.*)$", line) {
-                let marker = fence[1]
+            if let opening = fence(line) {
                 index += 1
                 var body: [String] = []
-                let closing = "^ {0,3}" + String(marker.prefix(1)) + "{" + String(marker.count) + ",}[ \t]*$"
-                while index < lines.count && matches(closing, lines[index]) == nil { body.append(lines[index]); index += 1 }
+                while index < lines.count && !closesFence(lines[index], marker: opening.marker) { body.append(lines[index]); index += 1 }
                 if index < lines.count { index += 1 }
-                blocks.append(Block(kind: .code, text: body.joined(separator: "\n")))
+                if opening.info == "codex-prompt" {
+                    // ChatGPT Meetings exports these as prose action items.
+                    if !body.joined().trimmingCharacters(in: .whitespaces).isEmpty {
+                        blocks.append(Block(kind: .list(0, nil), text: joined(body)))
+                    }
+                } else {
+                    blocks.append(Block(kind: .code, text: body.joined(separator: "\n")))
+                }
                 continue
             }
             // Indented code starts a block; a nested list marker remains a list item.
