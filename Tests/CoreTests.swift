@@ -116,6 +116,31 @@ final class MockClaudeURLProtocol: URLProtocol {
         check(wrapped.string == "What worked\n\nEvidence. We checked the result.\n", "Chat Markdown wrapper was not handled")
         let codeHeading = try MarkdownFormatter.render("```python\n# A comment\nprint('hello')\n```")
         check(codeHeading.string == "# A comment\nprint('hello')\n", "Code fence mistaken for a chat answer")
+        let actions = "# Action items\n\n```codex-prompt\nReview the seven vendors’ responses.\nPrepare follow-up questions by Friday.\n```\n\n```codex-prompt\nDraft a **short rubric** for the calls.\n```"
+        let actionText = try MarkdownFormatter.render(actions)
+        check(actionText.string == "Action items\n\nReview the seven vendors’ responses. Prepare follow-up questions by Friday.\u{2028}\nDraft a short rubric for the calls.\n", "Codex action wording, wrapping, or spacing lost")
+        let actionRTF = try NoteRenderer.rtf(actionText)
+        let decodedActions = try NSAttributedString(data: actionRTF, options: [.documentType: NSAttributedString.DocumentType.rtf], documentAttributes: nil)
+        check(decodedActions.string == actionText.string, "Codex actions changed during RTF round trip")
+        for phrase in ["Review the seven", "Draft a short"] {
+            let range = (decodedActions.string as NSString).range(of: phrase)
+            let style = decodedActions.attribute(.paragraphStyle, at: range.location, effectiveRange: nil) as! NSParagraphStyle
+            let font = decodedActions.attribute(.font, at: range.location, effectiveRange: nil) as! NSFont
+            check(style.textLists.count == 1, "Codex action should be a native bullet")
+            check(!font.isFixedPitch, "Codex action should not use a code font")
+        }
+        check(NoteRenderer.plainText(actionText).contains("• Review the seven") && NoteRenderer.plainText(actionText).contains("\n\n• Draft a short"), "Codex actions lost bullets or spacing in plain text")
+        let wrappedActions = try MarkdownFormatter.render("````perl\n" + actions + "\n````")
+        check(wrappedActions.string == actionText.string, "Nested Codex actions in a mislabeled chat wrapper were not handled")
+        let tildeActions = try MarkdownFormatter.render("~~~codex-prompt\nReview the proposal.\n~~~")
+        check(NoteRenderer.plainText(tildeActions).hasPrefix("• Review the proposal."), "Tilde prompt fence was not handled")
+        let ordinaryNestedCode = "# A comment\n```swift\nlet a = 1\n```"
+        let literalWrapper = try MarkdownFormatter.render("````perl\n" + ordinaryNestedCode + "\n````")
+        check(literalWrapper.string == ordinaryNestedCode + "\n", "Ordinary nested code was unwrapped")
+        let mixedActions = try MarkdownFormatter.render(actions + "\n\n```swift\nlet literal = \"**not bold**\"\n```")
+        check(mixedActions.string.contains("let literal = \"**not bold**\""), "Source code following Codex actions lost its literal wording")
+        let emptyAction = try MarkdownFormatter.render("Before.\n\n```codex-prompt\n \n```\n\nAfter.")
+        check(emptyAction.string == "Before.\n\nAfter.\n", "Empty Codex action created a blank bullet")
         rejects({ _ = try MarkdownFormatter.render("```\n```") }, "Empty code fence replaced clipboard with blank output")
         let indentedCode = try MarkdownFormatter.render("    let a = 1\n    let b = 2\n\nAfterwards.")
         check(indentedCode.string == "let a = 1\nlet b = 2\n\nAfterwards.\n", "Indented code lost line breaks")
