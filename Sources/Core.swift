@@ -94,6 +94,45 @@ enum NoteRenderer {
         try rich.data(from: NSRange(location: 0, length: rich.length), documentAttributes: [.documentType: NSAttributedString.DocumentType.rtf])
     }
 
+    static func tableHTML(_ rich: NSAttributedString) throws -> Data? {
+        var hasTables = false
+        rich.enumerateAttribute(.paragraphStyle, in: NSRange(location: 0, length: rich.length)) { value, _, stop in
+            if (value as? NSParagraphStyle)?.textBlocks.contains(where: { $0 is NSTextTableBlock }) == true {
+                hasTables = true; stop.pointee = true
+            }
+        }
+        guard hasTables else { return nil }
+        // Serialize local rich text only; this does not load HTML or fetch images.
+        return try rich.data(from: NSRange(location: 0, length: rich.length), documentAttributes: [.documentType: NSAttributedString.DocumentType.html])
+    }
+
+    static func previewText(_ rich: NSAttributedString) -> NSAttributedString {
+        // Classic AppKit lays out tables but needs visible list markers. Materialize
+        // them only for the screen; the clipboard keeps the native list metadata.
+        let result = NSMutableAttributedString(string: "")
+        let string = rich.string as NSString
+        var location = 0
+        var counters: [ObjectIdentifier: Int] = [:]
+        while location < rich.length {
+            let range = string.paragraphRange(for: NSRange(location: location, length: 0))
+            let paragraph = NSMutableAttributedString(attributedString: rich.attributedSubstring(from: range))
+            if let style = rich.attribute(.paragraphStyle, at: location, effectiveRange: nil) as? NSParagraphStyle,
+               let list = style.textLists.last {
+                let key = ObjectIdentifier(list)
+                let number = counters[key] ?? list.startingItemNumber
+                counters[key] = number + 1
+                let marker = NSAttributedString(string: "\t" + list.marker(forItemNumber: number) + "\t", attributes: [.font: NSFont.systemFont(ofSize: 14)])
+                paragraph.insert(marker, at: 0)
+                let visibleStyle = style.mutableCopy() as! NSMutableParagraphStyle
+                visibleStyle.textLists = []
+                paragraph.addAttribute(.paragraphStyle, value: visibleStyle, range: NSRange(location: 0, length: paragraph.length))
+            }
+            result.append(paragraph)
+            location = NSMaxRange(range)
+        }
+        return result
+    }
+
     static func plainText(_ rich: NSAttributedString) -> String {
         let string = rich.string as NSString
         var result = "", location = 0
@@ -108,7 +147,12 @@ enum NoteRenderer {
                 result += String(repeating: "  ", count: max(0, (paragraph?.textLists.count ?? 1) - 1))
                 result += list.marker(forItemNumber: number) + " "
             }
-            result += string.substring(with: range)
+            var text = string.substring(with: range)
+            if let cell = paragraph?.textBlocks.last as? NSTextTableBlock {
+                if text.hasSuffix("\n") { text.removeLast() }
+                text += cell.startingColumn + cell.columnSpan < cell.table.numberOfColumns ? "\t" : "\n"
+            }
+            result += text
             location = NSMaxRange(range)
         }
         return result.replacingOccurrences(of: "\u{2028}", with: "\n")
@@ -141,9 +185,11 @@ enum ClipboardOutput {
     static let marker = NSPasteboard.PasteboardType("me.nieder.note-ferry.result")
     static func write(_ rich: NSAttributedString, to board: NSPasteboard, expectedChange: Int? = nil) throws -> Bool {
         let data = try NoteRenderer.rtf(rich) // Prepare everything before touching the clipboard.
+        let html = try NoteRenderer.tableHTML(rich)
         let item = NSPasteboardItem()
         guard item.setData(data, forType: .rtf), item.setString(NoteRenderer.plainText(rich), forType: .string),
               item.setString("1", forType: marker) else { throw AppError.message("Couldn't prepare rich text. Your clipboard is unchanged.") }
+        if let html, !item.setData(html, forType: .html) { throw AppError.message("Couldn't prepare the table. Your clipboard is unchanged.") }
         if let expectedChange, expectedChange != board.changeCount { return false }
         let backup = ClipboardSnapshot(board)
         board.clearContents()

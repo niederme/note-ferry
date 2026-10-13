@@ -150,6 +150,7 @@ final class MockClaudeURLProtocol: URLProtocol {
         check(shortText.string == "Hello, world.\n", "Short plain text should not require a transcript")
         let hardBreak = try MarkdownFormatter.render("First line  \nsecond line")
         check(hardBreak.string == "First line\u{2028}second line\n", "Explicit Markdown line break lost")
+        try testMarkdownPatterns(root: root)
         rejects({ _ = try MarkdownFormatter.render(" \n\t") }, "Blank formatting input accepted")
         rejects({ _ = try MarkdownFormatter.render(String(repeating: "é", count: 200_001)) }, "Oversized formatting input accepted")
         let validSource = String(repeating: "Alex: Discuss the project. Sam: I will send the proposal on Friday.\n", count: 10)
@@ -280,5 +281,90 @@ final class MockClaudeURLProtocol: URLProtocol {
         check(board.string(forType: .string) == validSource, "Claude failure touched clipboard")
         unsetenv("NF_TEST_MODE")
         print("Passed \(checks) checks: RTF/native lists, spacing, Unicode, clipboard race/restore, validation, failures, timeout, cancellation.")
+    }
+
+    static func testMarkdownPatterns(root: URL) throws {
+        let source = try String(contentsOf: root.appendingPathComponent("Tests/markdown-patterns.md"), encoding: .utf8)
+        let rich = try MarkdownFormatter.render(source)
+        let decoded = try NSAttributedString(data: NoteRenderer.rtf(rich), options: [.documentType: NSAttributedString.DocumentType.rtf], documentAttributes: nil)
+        check(decoded.string == rich.string, "Mixed Markdown wording changed in the RTF round trip")
+        func attrs(_ phrase: String) -> [NSAttributedString.Key: Any] {
+            let range = (decoded.string as NSString).range(of: phrase)
+            check(range.location != NSNotFound, "Missing mixed Markdown wording: " + phrase)
+            return decoded.attributes(at: range.location, effectiveRange: nil)
+        }
+        func cell(_ phrase: String) -> NSTextTableBlock {
+            let style = attrs(phrase)[.paragraphStyle] as! NSParagraphStyle
+            check(style.textBlocks.last is NSTextTableBlock, "Table cell metadata lost: " + phrase)
+            return style.textBlocks.last as! NSTextTableBlock
+        }
+        check(cell("Criterion").table.numberOfColumns == 3, "Three-column table was flattened")
+        check(cell("Experience").startingRow == 1 && cell("35%").startingColumn == 1, "Table rows or columns moved")
+        check(cell("Vendor").table.numberOfColumns == 7 && cell("Atlas").startingRow == 1, "Wide table was flattened")
+        check(NSFontManager.shared.traits(of: attrs("Criterion")[.font] as! NSFont).contains(.boldFontMask), "Table header should be bold")
+        check((attrs("35%")[.paragraphStyle] as! NSParagraphStyle).alignment == .right, "Column alignment lost")
+        check((attrs("Show a shipped app")[.paragraphStyle] as! NSParagraphStyle).alignment == .center, "Centered column lost")
+        let plain = NoteRenderer.plainText(rich)
+        check(plain.contains("Criterion\tWeight\tEvidence\nExperience\t35%\tShow a shipped app."), "Plain table fallback lost row/column separators")
+        check(plain.contains("Atlas\tU\tU\tU\tU\tPending\t\n"), "Empty trailing table cell was discarded")
+        let html = try NoteRenderer.tableHTML(rich)!
+        let htmlText = String(decoding: html, as: UTF8.self)
+        check(htmlText.contains("<table") && htmlText.contains("<td") && htmlText.contains("Verify ownership."), "HTML table clipboard representation lost structure")
+        let plainHTML = try NoteRenderer.tableHTML(try MarkdownFormatter.render("Plain text."))
+        check(plainHTML == nil, "Ordinary rich text should retain its existing clipboard representations")
+        check(plain.contains("☐\tReview the proposal.\n\n☑\tRecord the decision."), "Checklist state or item spacing lost")
+        check(plain.contains("☑\tSend the follow-up."), "Uppercase checked state lost")
+        check(NSFontManager.shared.traits(of: attrs("Alternate heading")[.font] as! NSFont).contains(.boldFontMask), "Setext heading lost")
+        check(plain.contains("────────────"), "Thematic divider was not rendered")
+        check((attrs("A quoted list item")[.paragraphStyle] as! NSParagraphStyle).textLists.count == 1, "Quoted list lost native list structure")
+        check((attrs("A quoted list item")[.paragraphStyle] as! NSParagraphStyle).headIndent >= 40, "Quoted list lost quote indentation")
+        check(plain.contains("let literal = \"**not bold**\""), "Code inside a quote was interpreted as prose")
+        check(attrs("Image: Architecture sketch")[.link] as? URL == URL(string: "https://example.com/sketch.png"), "Image alt text or destination was discarded")
+        check(attrs("Outdated")[.strikethroughStyle] as? Int == NSUnderlineStyle.single.rawValue, "Strikethrough lost")
+        check(plain.contains("literal **stars**"), "Inline code was interpreted as emphasis")
+        check(attrs("https://example.com/guide")[.link] as? URL == URL(string: "https://example.com/guide"), "Autolink lost")
+        check(plain.contains("| Literal | Code |\n| --- | --- |\n- [ ] Not a real checklist here."), "Code containing table/checklist syntax was transformed")
+        let escaped = try MarkdownFormatter.render("Name | Detail\n--- | ---\nA \\| B | `x\\|y`\nShort |\nExtra | value | retained")
+        check(NoteRenderer.plainText(escaped).contains("A | B\tx|y"), "Escaped table pipe split a cell or changed code wording")
+        check(NoteRenderer.plainText(escaped).contains("Extra\tvalue\tretained"), "Ragged table discarded extra cell contents")
+        let notTable = try MarkdownFormatter.render("A | B\nnot | a delimiter")
+        let notTableHTML = try NoteRenderer.tableHTML(notTable)
+        check(notTableHTML == nil && notTable.string.contains("A | B"), "Ordinary pipe-containing prose became a table")
+        let nestedQuote = try MarkdownFormatter.render("> > **Nested quote**\n> >\n> > Continued.")
+        check(nestedQuote.string.contains("Nested quote") && !nestedQuote.string.contains(">"), "Nested quote markers leaked into output")
+        let title = try MarkdownFormatter.render("Two-line\nheading\n===\nBody.")
+        check(title.string == "Two-line heading\n\nBody.\n", "Multiline setext heading lost structure")
+        let breaks = try MarkdownFormatter.render("A | B\n--- | ---\nOne<br>two | `<br>`")
+        check(NoteRenderer.plainText(breaks).contains("One\ntwo\t<br>"), "Table HTML line break was lost or code was interpreted as HTML")
+        let screen = NoteRenderer.previewText(rich)
+        check(screen.string.contains("\t•\tA quoted list item."), "Table-capable preview lost visible native list markers")
+        check(!rich.string.contains("\t•\t"), "Preview markers changed the clipboard content")
+        let view = NSTextView(usingTextLayoutManager: false)
+        view.frame = NSRect(x: 0, y: 0, width: 900, height: 2000)
+        view.textContainer?.containerSize = NSSize(width: 900, height: CGFloat.greatestFiniteMagnitude)
+        view.textStorage?.setAttributedString(screen)
+        let layout = view.layoutManager!, container = view.textContainer!
+        layout.ensureLayout(for: container)
+        func bounds(_ phrase: String) -> NSRect {
+            let range = (screen.string as NSString).range(of: phrase)
+            return layout.boundingRect(forGlyphRange: layout.glyphRange(forCharacterRange: range, actualCharacterRange: nil), in: container)
+        }
+        let criterion = bounds("Criterion"), weight = bounds("Weight"), evidence = bounds("Evidence")
+        check(abs(criterion.minY - weight.minY) < 1 && abs(weight.minY - evidence.minY) < 1, "Table header cells do not share a visual row")
+        check(criterion.maxX < weight.minX && weight.maxX < evidence.minX, "Table columns overlap visually")
+        check(bounds("Verify ownership.").maxX <= 900, "Wide table overflowed the text container")
+        let nestedTasks = try MarkdownFormatter.render("- [ ] Parent\n    - [x] Child\n        - [ ] Grandchild\n- [ ] Next")
+        let child = (nestedTasks.string as NSString).range(of: "Child")
+        let grandchild = (nestedTasks.string as NSString).range(of: "Grandchild")
+        check((nestedTasks.attribute(.paragraphStyle, at: child.location, effectiveRange: nil) as! NSParagraphStyle).headIndent == 44, "Nested checklist indentation lost")
+        check((nestedTasks.attribute(.paragraphStyle, at: grandchild.location, effectiveRange: nil) as! NSParagraphStyle).headIndent == 66, "Deeper checklist became source code")
+        let hugeRow = "| " + Array(repeating: "x", count: 160).joined(separator: " | ") + " |"
+        let hugeDelimiter = "| " + Array(repeating: "-", count: 160).joined(separator: " | ") + " |"
+        rejects({ _ = try MarkdownFormatter.render(([hugeRow, hugeDelimiter] + Array(repeating: hugeRow, count: 160)).joined(separator: "\n")) }, "Oversized table layout was accepted")
+        let tableBoard = NSPasteboard.withUniqueName()
+        defer { tableBoard.releaseGlobally() }
+        let copied = try ClipboardOutput.write(rich, to: tableBoard)
+        check(copied && tableBoard.data(forType: .rtf) != nil && tableBoard.data(forType: .html) != nil, "Table clipboard representations missing")
+        check(tableBoard.string(forType: .string) == plain, "Plain clipboard table fallback changed")
     }
 }

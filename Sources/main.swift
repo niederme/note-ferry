@@ -68,7 +68,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     let heading = NSTextField(labelWithString: "Note Ferry")
     let detail = NSTextField(wrappingLabelWithString: "")
     let privacy = NSTextField(wrappingLabelWithString: "Uses your Codex account to process the transcript with OpenAI. Formatting happens on your Mac.")
-    let preview = TranscriptTextView(usingTextLayoutManager: true)
+    // NSTextTable grids need the classic AppKit layout manager.
+    let preview = TranscriptTextView(usingTextLayoutManager: false)
     let spinner = NSProgressIndicator()
     let progress = NSTextField(labelWithString: "")
     let formatButton = NSButton(title: "Format only", target: nil, action: nil)
@@ -204,6 +205,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
                 operation = .codex
                 display(note)
                 detail.stringValue = "Your text, formatted for pasting into Apple Notes."
+            } catch { showError(error) }
+        } else if let index = arguments.firstIndex(of: "--preview-markdown"), arguments.count > index + 1 {
+            do {
+                let source = try String(contentsOfFile: arguments[index + 1], encoding: .utf8)
+                operation = .format
+                displayRich(try MarkdownFormatter.render(source))
+                detail.stringValue = "Formatting preview. Your clipboard is unchanged."
             } catch { showError(error) }
         }
         // Opening, reopening, and clipboard changes never start a model request.
@@ -493,7 +501,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         case .claude: privacy.stringValue = "Summarized with your API key through Anthropic. Formatting happened on your Mac."
         }
         copyButton.title = operation == .format ? "Copy formatted text" : "Copy summary"
-        let screen = NSMutableAttributedString(attributedString: rich!)
+        let screen = NSMutableAttributedString(attributedString: NoteRenderer.previewText(rich!))
         screen.addAttribute(.foregroundColor, value: NSColor.textColor, range: NSRange(location: 0, length: screen.length))
         updatingText = true
         preview.textStorage?.setAttributedString(screen)
