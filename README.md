@@ -28,7 +28,7 @@ Note Ferry is free and open source, with no app subscription. **Format only** ru
 
 Paste your text and click **Format only**. Paste into Apple Notes with **⌘V**. **Copy formatted text** copies it again. Choose **Summarize & format** when you want your selected summarizer to turn a raw transcript into a summary first. Both actions sit below the text area, with **Clear** separated on the right. Nothing is processed or sent until you click one.
 
-Both options use spaced native lists, preserve a newer clipboard, and offer **Restore clipboard** after copying. Common Markdown is supported, including numbered and nested lists, quotes, and code blocks. Images are not downloaded and tables are not converted into native Notes tables. Formatting is not a complete Markdown publishing engine.
+Both options use spaced native lists, preserve a newer clipboard, and offer **Restore clipboard** after copying. Common Markdown is supported, including numbered and nested lists, checklists, quotes, divider lines, code blocks, and tables. Tables retain a grid with wrapped cells in rich text and HTML clipboard formats; how they paste depends on the receiving app. Checklist states remain visible checkbox symbols. Images become links using their description and are not downloaded. Formatting is not a complete Markdown publishing engine.
 
 ## Download
 

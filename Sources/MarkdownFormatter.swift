@@ -3,9 +3,10 @@ import AppKit
 /// Local Markdown conversion. Source text never passes through a model or an HTML loader.
 enum MarkdownFormatter {
     private struct Block {
-        enum Kind { case paragraph, heading(Int), list(Int, Int?), code, quote }
+        enum Kind { case paragraph, heading(Int), list(Int, Int?), task(Int, Bool), code, divider, table([[String]], [NSTextAlignment]) }
         let kind: Kind
         var text: String
+        var quoteDepth: Int = 0
     }
 
     static func render(_ source: String) throws -> NSAttributedString {
@@ -20,10 +21,13 @@ enum MarkdownFormatter {
         let base = NSMutableParagraphStyle()
         base.paragraphSpacing = 0; base.paragraphSpacingBefore = 0
         var lists: [(indent: Int, ordered: Bool, list: NSTextList)] = []
+        var taskIndents: [Int] = []
         func spacer(_ text: String) {
             result.append(NSAttributedString(string: text, attributes: [.font: NSFont.systemFont(ofSize: 14), .paragraphStyle: base]))
         }
         for (index, block) in blocks.enumerated() {
+            if case .task = block.kind {} else { taskIndents = [] }
+            if index > 0, block.quoteDepth != blocks[index - 1].quoteDepth { lists = []; taskIndents = [] }
             let paragraph = base.mutableCopy() as! NSMutableParagraphStyle
             var size: CGFloat = 14
             var bold = false
@@ -34,8 +38,18 @@ enum MarkdownFormatter {
                 case .list:
                     // List items already carry a soft return for space inside the preceding item.
                     if case .list = blocks[index - 1].kind {} else { spacer("\n") }
+                case .task:
+                    if case .task = blocks[index - 1].kind {} else { spacer("\n") }
                 default: spacer("\n")
                 }
+            }
+            if case .table(let rows, let alignments) = block.kind {
+                guard (rows.map(\.count).max() ?? 0) * rows.count <= 25_000 else {
+                    throw AppError.message("This table has too many cells to format. Split it into smaller tables. Your clipboard is unchanged.")
+                }
+                result.append(table(rows, alignments: alignments, quoteDepth: block.quoteDepth))
+                lists = []
+                continue
             }
             switch block.kind {
             case .heading(let level): size = level == 1 ? 24 : 17; bold = true; lists = []
@@ -52,21 +66,70 @@ enum MarkdownFormatter {
                 paragraph.firstLineHeadIndent = CGFloat((lists.count - 1) * 22)
                 paragraph.tabStops = [NSTextTab(textAlignment: .left, location: CGFloat((lists.count - 1) * 22 + 8)), NSTextTab(textAlignment: .left, location: CGFloat(lists.count * 22))]
             case .code: code = true; lists = []
-            case .quote: paragraph.headIndent = 18; paragraph.firstLineHeadIndent = 18; lists = []
+            case .task(let indent, _):
+                if taskIndents.isEmpty { taskIndents = lists.isEmpty ? [0] : lists.map(\.indent) }
+                while let last = taskIndents.last, last > indent { taskIndents.removeLast() }
+                if taskIndents.last != indent { taskIndents.append(indent) }
+                let inset = CGFloat((taskIndents.count - 1) * 22)
+                paragraph.headIndent = inset + 22
+                paragraph.firstLineHeadIndent = inset
+                paragraph.tabStops = [NSTextTab(textAlignment: .left, location: inset + 22)]
+                lists = []
+            case .divider, .table: lists = []
             case .paragraph: lists = []
             }
+            paragraph.headIndent += CGFloat(block.quoteDepth * 18)
+            paragraph.firstLineHeadIndent += CGFloat(block.quoteDepth * 18)
+            if block.quoteDepth > 0 {
+                paragraph.tabStops = paragraph.tabStops.map { NSTextTab(textAlignment: $0.alignment, location: $0.location + CGFloat(block.quoteDepth * 18), options: $0.options) }
+            }
+            var text = block.text
+            if case .task(_, let checked) = block.kind { text = (checked ? "☑" : "☐") + "\t" + text }
             let rich = code
-                ? NSAttributedString(string: block.text, attributes: [.font: NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)])
-                : inline(block.text, size: size, bold: bold)
+                ? NSAttributedString(string: text, attributes: [.font: NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)])
+                : inline(text, size: size, bold: bold)
             let styled = NSMutableAttributedString(attributedString: rich)
             styled.addAttribute(.paragraphStyle, value: paragraph, range: NSRange(location: 0, length: styled.length))
             result.append(styled)
             var ending = "\n"
             if case .list = block.kind, index + 1 < blocks.count, case .list = blocks[index + 1].kind { ending = "\u{2028}\n" }
+            if case .task = block.kind, index + 1 < blocks.count, case .task = blocks[index + 1].kind { ending = "\u{2028}\n" }
             result.append(NSAttributedString(string: ending, attributes: [.font: NSFont.systemFont(ofSize: size), .paragraphStyle: paragraph]))
         }
         guard !result.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw AppError.message("There’s no text to format. Your clipboard is unchanged.")
+        }
+        return result
+    }
+
+    private static func table(_ rows: [[String]], alignments: [NSTextAlignment], quoteDepth: Int) -> NSAttributedString {
+        let columns = rows.map(\.count).max() ?? 0
+        let table = NSTextTable()
+        table.numberOfColumns = columns
+        table.layoutAlgorithm = .fixedLayoutAlgorithm
+        table.collapsesBorders = true
+        table.setValue(100, type: .percentageValueType, for: .width)
+        let weights = (0..<columns).map { column in
+            CGFloat(min(80, max(12, rows.map { column < $0.count ? $0[column].count : 0 }.max() ?? 0)))
+        }
+        let total = weights.reduce(0, +)
+        let result = NSMutableAttributedString(string: "")
+        for (row, cells) in rows.enumerated() {
+            for column in 0..<columns {
+                let cell = NSTextTableBlock(table: table, startingRow: row, rowSpan: 1, startingColumn: column, columnSpan: 1)
+                cell.setValue(weights[column] / total * 100, type: .percentageValueType, for: .width)
+                cell.setWidth(6, type: .absoluteValueType, for: .padding)
+                cell.setWidth(0.5, type: .absoluteValueType, for: .border)
+                cell.setBorderColor(.gray)
+                let paragraph = NSMutableParagraphStyle()
+                paragraph.textBlocks = [cell]
+                paragraph.alignment = column < alignments.count ? alignments[column] : .left
+                paragraph.headIndent = CGFloat(quoteDepth * 18)
+                let rich = NSMutableAttributedString(attributedString: inline(column < cells.count ? cells[column] : "", size: 14, bold: row == 0))
+                rich.append(NSAttributedString(string: "\n", attributes: [.font: NSFont.systemFont(ofSize: 14)]))
+                rich.addAttribute(.paragraphStyle, value: paragraph, range: NSRange(location: 0, length: rich.length))
+                result.append(rich)
+            }
         }
         return result
     }
@@ -84,8 +147,11 @@ enum MarkdownFormatter {
             if intent.contains(.emphasized) { font = NSFontManager.shared.convert(font, toHaveTrait: .italicFontMask) }
             var attributes: [NSAttributedString.Key: Any] = [.font: font]
             if intent.contains(.strikethrough) { attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue }
-            if let link = run.link { attributes[.link] = link }
-            result.append(NSAttributedString(string: String(parsed[run.range].characters), attributes: attributes))
+            if let link = run.link ?? run.imageURL { attributes[.link] = link }
+            var text = String(parsed[run.range].characters)
+            if intent.contains(.inlineHTML), matches("(?i)^<br\\s*/?>$", text) != nil { text = "\u{2028}" }
+            if run.imageURL != nil { text = "Image: " + (text.trimmingCharacters(in: .whitespaces).isEmpty ? "image" : text) }
+            result.append(NSAttributedString(string: text, attributes: attributes))
         }
         return result
     }
@@ -106,7 +172,44 @@ enum MarkdownFormatter {
         matches("^ {0,3}" + String(marker.prefix(1)) + "{" + String(marker.count) + ",}[ \\t]*$", line) != nil
     }
 
-    private static func parse(_ source: String) -> [Block] {
+    private static func tableCells(_ line: String) -> [String]? {
+        guard !line.hasPrefix("    "), !line.hasPrefix("\t") else { return nil }
+        let text = line.trimmingCharacters(in: .whitespaces)
+        var cells = [String](), cell = "", escaped = false, hasPipe = false
+        for character in text {
+            if escaped {
+                cell.append(character); escaped = false
+            } else if character == "\\" {
+                cell.append(character); escaped = true
+            } else if character == "|" {
+                cells.append(cell.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "\\|", with: "|")); cell = ""; hasPipe = true
+            } else { cell.append(character) }
+        }
+        guard hasPipe else { return nil }
+        cells.append(cell.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "\\|", with: "|"))
+        if text.hasPrefix("|") { cells.removeFirst() }
+        // An escaped final pipe belongs to the last cell.
+        if cells.last == "" && text.hasSuffix("|") { cells.removeLast() }
+        return cells.isEmpty ? nil : cells
+    }
+
+    private static func tableHeader(_ lines: [String], at index: Int) -> (cells: [String], alignments: [NSTextAlignment])? {
+        guard index + 1 < lines.count, let cells = tableCells(lines[index]), let delimiters = tableCells(lines[index + 1]),
+              cells.count == delimiters.count, delimiters.allSatisfy({ matches("^:?-+:?$", $0) != nil }) else { return nil }
+        return (cells, delimiters.map { $0.hasSuffix(":") ? ($0.hasPrefix(":") ? .center : .right) : .left })
+    }
+
+    private static func setextLevel(_ line: String) -> Int? {
+        if matches("^ {0,3}=+[ \\t]*$", line) != nil { return 1 }
+        if matches("^ {0,3}-+[ \\t]*$", line) != nil { return 2 }
+        return nil
+    }
+
+    private static func isDivider(_ line: String) -> Bool {
+        matches("^ {0,3}([*_-])(?:[ \\t]*\\1){2,}[ \\t]*$", line) != nil
+    }
+
+    private static func parse(_ source: String, depth: Int = 0) -> [Block] {
         var lines = source.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n").components(separatedBy: "\n")
         if let first = lines.firstIndex(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }) {
             lines.removeSubrange(0..<first)
@@ -131,8 +234,10 @@ enum MarkdownFormatter {
         }
         var blocks: [Block] = []
         var index = 0
-        func isSpecial(_ line: String) -> Bool {
-            matches("^\\s*(#{1,6} |[-*+] |[0-9]+[.)] |>|```|~~~)", line) != nil || (line.hasPrefix("**") && line.hasSuffix("**"))
+        func isSpecial(_ at: Int) -> Bool {
+            let line = lines[at]
+            return matches("^\\s*(#{1,6} |[-*+] |[0-9]+[.)] |>|```|~~~)", line) != nil
+                || matches("^\\*\\*([^*]+)\\*\\*\\s*$", line) != nil || isDivider(line) || tableHeader(lines, at: at) != nil
         }
         func joined(_ lines: [String]) -> String {
             var output = ""
@@ -165,7 +270,9 @@ enum MarkdownFormatter {
             }
             // Indented code starts a block; a nested list marker remains a list item.
             let followsList: Bool
-            if let last = blocks.last, case .list = last.kind { followsList = true } else { followsList = false }
+            if let last = blocks.last {
+                switch last.kind { case .list, .task: followsList = true; default: followsList = false }
+            } else { followsList = false }
             let nestedItem = followsList && matches("^\\s*(?:[-*+]|[0-9]+[.)]) +", line) != nil
             if let codeLine = matches("^(?: {4}|\\t)(.*)$", line), !nestedItem {
                 var body = [codeLine[1]]; index += 1
@@ -178,29 +285,51 @@ enum MarkdownFormatter {
                 while body.last == "" { body.removeLast() }
                 blocks.append(Block(kind: .code, text: body.joined(separator: "\n"))); continue
             }
+            if let header = tableHeader(lines, at: index) {
+                var rows = [header.cells]; index += 2
+                while index < lines.count, !isSpecial(index), let cells = tableCells(lines[index]) {
+                    rows.append(cells); index += 1
+                }
+                blocks.append(Block(kind: .table(rows, header.alignments), text: "")); continue
+            }
             if let heading = matches("^ {0,3}(#{1,6}) +(.+?)(?: +#+)?$", line) {
                 blocks.append(Block(kind: .heading(heading[1].count), text: heading[2])); index += 1; continue
             }
             if let heading = matches("^\\*\\*([^*]+)\\*\\*\\s*$", line) {
                 blocks.append(Block(kind: .heading(2), text: heading[1])); index += 1; continue
             }
+            if isDivider(line) {
+                blocks.append(Block(kind: .divider, text: "────────────")); index += 1; continue
+            }
             if let item = matches("^(\\s*)(?:([-*+])|([0-9]+)[.)]) +(.+)$", line) {
                 let indent = item[1].replacingOccurrences(of: "\t", with: "    ").count
                 var body = [item[4]]
                 index += 1
-                while index < lines.count && !lines[index].trimmingCharacters(in: .whitespaces).isEmpty && !isSpecial(lines[index]) {
+                while index < lines.count && !lines[index].trimmingCharacters(in: .whitespaces).isEmpty && !isSpecial(index) {
                     body.append(lines[index]); index += 1
                 }
-                blocks.append(Block(kind: .list(indent, Int(item[3])), text: joined(body))); continue
+                if let task = matches("^\\[([ xX])\\] +(.+)$", joined(body)) {
+                    blocks.append(Block(kind: .task(indent, task[1].lowercased() == "x"), text: task[2]))
+                } else {
+                    blocks.append(Block(kind: .list(indent, Int(item[3])), text: joined(body)))
+                }
+                continue
             }
-            if let quote = matches("^ *> ?(.*)$", line) {
+            if let quote = matches("^ {0,3}>[ \\t]?(.*)$", line) {
                 var body = [quote[1]]; index += 1
-                while index < lines.count, let next = matches("^ *> ?(.*)$", lines[index]) { body.append(next[1]); index += 1 }
-                blocks.append(Block(kind: .quote, text: joined(body))); continue
+                while index < lines.count, let next = matches("^ {0,3}>[ \\t]?(.*)$", lines[index]) { body.append(next[1]); index += 1 }
+                // Bound recursion for deeply nested pasted quotes.
+                var quoted = depth < 16 ? parse(body.joined(separator: "\n"), depth: depth + 1) : [Block(kind: .paragraph, text: joined(body))]
+                for index in quoted.indices { quoted[index].quoteDepth += 1 }
+                blocks.append(contentsOf: quoted); continue
             }
             var body = [line]; index += 1
-            while index < lines.count && !lines[index].trimmingCharacters(in: .whitespaces).isEmpty && !isSpecial(lines[index]) { body.append(lines[index]); index += 1 }
-            blocks.append(Block(kind: .paragraph, text: joined(body)))
+            while index < lines.count && !lines[index].trimmingCharacters(in: .whitespaces).isEmpty && setextLevel(lines[index]) == nil && !isSpecial(index) { body.append(lines[index]); index += 1 }
+            if index < lines.count, let level = setextLevel(lines[index]) {
+                blocks.append(Block(kind: .heading(level), text: joined(body))); index += 1
+            } else {
+                blocks.append(Block(kind: .paragraph, text: joined(body)))
+            }
         }
         return blocks
     }

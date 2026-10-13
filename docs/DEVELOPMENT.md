@@ -111,7 +111,17 @@ This opens a preview without changing your clipboard. **Copy summary** explicitl
 
 This writes `formatted.rtf` and `formatted.txt`. No model is called. Blank input and input over 400,000 UTF-8 bytes are rejected; the transcript minimum length does not apply. These explicit exports persist until you delete them.
 
-The local formatter uses Apple's inline Markdown parser plus block handling for headings, paragraphs, lists, quotes, fenced code, and indented code. A standalone bold line becomes a section heading. The `codex-prompt` blocks exported by ChatGPT Meetings become spaced native action-item bullets; their clickable behavior does not carry over to Notes. It recognizes whole-answer chat code fences containing clear Markdown structure, including mislabeled `vbnet` fences and longer outer fences wrapping headings and action blocks. Markdown syntax is removed while the wording is retained. Native tables and downloaded images are outside its scope.
+The local formatter uses Apple's inline Markdown parser plus block handling for ATX and setext headings, paragraphs, lists, checklists, nested quotes, thematic dividers, fenced code, and indented code. A standalone bold line becomes a section heading. The `codex-prompt` blocks exported by ChatGPT Meetings become spaced native action-item bullets; their clickable behavior does not carry over to Notes. It recognizes whole-answer chat code fences containing clear Markdown structure, including mislabeled `vbnet` fences and longer outer fences wrapping headings and action blocks.
+
+Markdown tables become `NSTextTable` grids with bold headers, column alignment, proportional widths, wrapped cells, and borders. Escaped pipes and empty cells are preserved; extra cells in ragged rows expand the grid rather than dropping content. Table results include both RTF and HTML clipboard representations, plus a tab-separated plain-text fallback. Destination apps determine whether pasted tables become their own editable table objects. Checklist states use visible checkbox symbols, not native Notes checklist objects. Image descriptions become links without downloading the image. Inline `<br>` tags become soft line breaks; code remains literal.
+
+For a visual preview of the mixed-pattern fixture without changing the clipboard or calling a model:
+
+```sh
+open 'build/Note Ferry.app' --args --preview-markdown "$PWD/Tests/markdown-patterns.md"
+```
+
+Other raw HTML and Markdown extensions outside these patterns remain text; the formatter does not execute or load them.
 
 ### Test a real transcript without changing the clipboard
 
