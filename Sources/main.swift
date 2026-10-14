@@ -34,6 +34,11 @@ final class TranscriptTextView: NSTextView {
     var allowsTranscriptPaste = true
     var placeholder = "Paste text here (⌘V)."
     var prepareForPaste: (() -> Void)?
+    var copyFormattedSelection: (() -> Bool)?
+    override func copy(_ sender: Any?) {
+        if copyFormattedSelection?() == true { return }
+        super.copy(sender)
+    }
     override func paste(_ sender: Any?) {
         guard allowsTranscriptPaste else { return }
         prepareForPaste?()
@@ -146,6 +151,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         let scroll = NSScrollView()
         scroll.hasVerticalScroller = true; scroll.borderType = .bezelBorder
         preview.delegate = self
+        preview.copyFormattedSelection = { [weak self] in self?.copySelection() ?? false }
         preview.prepareForPaste = { [weak self] in
             guard let self, self.mode == .result else { return }
             self.preview.isEditable = true
@@ -535,6 +541,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             lastWrite = NSPasteboard.general.changeCount; restoreButton.isHidden = snapshot == nil
             detail.stringValue = "Your \(resultName) is on the clipboard. Paste it into Apple Notes with ⌘V."
         } catch { showError(error) }
+    }
+    func copySelection() -> Bool {
+        guard mode == .result, let rich, let screen = preview.textStorage else { return false }
+        guard let range = NoteRenderer.sourceRange(for: preview.selectedRange(), in: screen),
+              range.length > 0, NSMaxRange(range) <= rich.length else { return true }
+        do {
+            let beforeCopy = ClipboardSnapshot(.general)
+            let backup = lastWrite == beforeCopy.changeCount ? snapshot : beforeCopy
+            guard try ClipboardOutput.write(rich.attributedSubstring(from: range), to: .general, expectedChange: beforeCopy.changeCount) else {
+                detail.stringValue = "Your clipboard changed while copying. Select the text and copy again."
+                return true
+            }
+            snapshot = backup
+            lastWrite = NSPasteboard.general.changeCount; restoreButton.isHidden = false
+            detail.stringValue = "Your selected formatted text is on the clipboard. Paste it into Apple Notes with ⌘V."
+        } catch { showError(error) }
+        return true
     }
     @objc func restoreClipboard() {
         guard let snapshot else { return }

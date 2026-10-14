@@ -123,6 +123,8 @@ open 'build/Note Ferry.app' --args --preview-markdown "$PWD/Tests/markdown-patte
 
 Other raw HTML and Markdown extensions outside these patterns remain text; the formatter does not execute or load them.
 
+The table-capable preview displays list markers separately from the underlying note content. Copying a selection maps its range back to the original rich text, preserving native lists and table cells without exporting the preview's marker characters, tabs, or screen-only paragraph styles. The automatic clipboard output and Copy formatted text button use the original rich text directly.
+
 ### Test a real transcript without changing the clipboard
 
 ```sh
