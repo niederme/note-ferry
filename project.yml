@@ -44,6 +44,12 @@ targets:
         ENABLE_HARDENED_RUNTIME: NO
         ENABLE_USER_SCRIPT_SANDBOXING: NO
         LD_RUNPATH_SEARCH_PATHS: '$(inherited) @executable_path/../Frameworks'
+      configs:
+        Release:
+          CODE_SIGN_IDENTITY: Apple Development
+          CODE_SIGN_STYLE: Automatic
+          DEVELOPMENT_TEAM: 289GY9L343
+          ENABLE_HARDENED_RUNTIME: YES
     preBuildScripts:
       - name: Fetch Sparkle
         script: '"${PROJECT_DIR}/scripts/fetch-sparkle.sh"'

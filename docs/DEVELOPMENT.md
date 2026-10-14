@@ -144,6 +144,8 @@ For manual acceptance, copy the synthetic example and paste it into a note you c
 
 ### Release builds
 
+Xcode's **Archive** action uses the Release configuration, which enables Hardened Runtime and automatic Apple Development signing for the release owner's team (`289GY9L343`). Debug keeps local ad-hoc signing without a team. Fork maintainers must select their own team for Release archives. After pulling an archive-settings fix, create a new archive; an existing archive does not pick up changed settings. For distribution, export with Developer ID signing and notarization on the Mac with the release credentials. A successful local or development-signed build does not confirm notarization readiness.
+
 Build both architectures with a Developer ID Application identity installed in your Keychain:
 
 ```sh
