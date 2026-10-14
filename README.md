@@ -87,6 +87,8 @@ Text to summarize must contain at least 100 characters. Codex and Claude accept 
 
 On first launch, **Choose a summarizer** asks for a default. Apple Intelligence is preselected on a new install, even if it is unavailable on that Mac; choose Codex or Claude instead if needed. Change your default later in **Note Ferry → Settings…**, or use the picker beside **Summarize & format** for one piece of text. The picker never starts processing by itself. **Format only** stays local regardless of the selected summarizer.
 
+Codex summaries use **GPT-6.1 Sol with medium reasoning effort**, through your signed-in Codex account. Your account and installed CLI must support that model. Note Ferry uses this explicit selection rather than your CLI’s default model and does not silently switch models if it is unavailable.
+
 For Claude, copy an API key from Anthropic Console and click **Save key from clipboard** in Settings. Note Ferry stores it in this Mac’s Keychain and clears the copied key if it is still on the clipboard after a successful save. Your first Claude summary asks you to confirm sending the text and key to Anthropic. A saved key is not proof that Anthropic will accept it.
 
 ## What’s next
