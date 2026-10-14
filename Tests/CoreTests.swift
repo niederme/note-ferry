@@ -196,6 +196,14 @@ final class MockClaudeURLProtocol: URLProtocol {
             rejects({ _ = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock) }, "Invalid response accepted: " + mode)
             check(board.string(forType: .string) == validSource, "Backend failure touched clipboard")
         }
+        setenv("NF_TEST_MODE", "unavailable", 1)
+        do {
+            _ = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock)
+            fatalError("Unavailable Codex model accepted")
+        } catch {
+            check(error.localizedDescription.contains("model isn't available") && error.localizedDescription.contains("choose another summarizer"), "Unavailable model reported as a generic network failure")
+        }
+        check(board.string(forType: .string) == validSource, "Unavailable model touched clipboard")
         setenv("NF_TEST_MODE", "hang", 1)
         let before = Date()
         rejects({ _ = try CodexRunner(timeout: 0.15).run(transcript: validSource, resources: resources, executable: mock) }, "Timeout not enforced")
