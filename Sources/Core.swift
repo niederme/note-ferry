@@ -256,7 +256,7 @@ final class CodexRunner: @unchecked Sendable {
         environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:" + FileManager.default.homeDirectoryForCurrentUser.path + "/.local/bin"
         for key in ["CODEX_THREAD_ID", "CODEX_INTERNAL_ORIGINATOR_OVERRIDE", "CODEX_MANAGED_BY_NPM", "CODEX_MANAGED_BY_BUN"] { environment.removeValue(forKey: key) }
         task.environment = environment
-        task.arguments = ["exec", "--model", "gpt-6.1-sol", "--ignore-user-config", "--ephemeral", "--skip-git-repo-check", "--sandbox", "read-only",
+        task.arguments = ["exec", "--model", "gpt-5.6-sol", "--ignore-user-config", "--ephemeral", "--skip-git-repo-check", "--sandbox", "read-only",
             "--color", "never", "--output-schema", resources.appendingPathComponent("Summary.schema.json").path,
             "--output-last-message", output.path, "-c", "approval_policy=\"never\"", "-c", "web_search=\"disabled\"",
             "-c", "model_reasoning_effort=\"medium\"", "-c", "project_doc_max_bytes=0"]
@@ -310,6 +310,9 @@ final class CodexRunner: @unchecked Sendable {
             }
             if detail.contains("usage limit") || detail.contains("rate limit") || detail.contains("quota") {
                 throw AppError.message("Your Codex account reached a usage limit. Wait for it to reset, then retry. Your clipboard is unchanged.")
+            }
+            if detail.contains("model_not_found") || (detail.contains("model") && detail.contains("not supported")) {
+                throw AppError.message("The selected Codex model isn't available to your signed-in account. Update Codex CLI or choose another summarizer. Your transcript and clipboard are unchanged.")
             }
             throw AppError.message("Codex couldn't complete the summary. Check your internet connection and Codex login, then retry. Your clipboard is unchanged.")
         }

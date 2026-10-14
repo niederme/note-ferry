@@ -11,13 +11,14 @@ while [[ $# -gt 0 ]]; do
         *) shift ;;
     esac
 done
-[[ "$MODEL" == "gpt-6.1-sol" && "$EFFORT" == 'model_reasoning_effort="medium"' ]] || {
+[[ "$MODEL" == "gpt-5.6-sol" && "$EFFORT" == 'model_reasoning_effort="medium"' ]] || {
     echo 'Unexpected summarization model or reasoning effort' >&2
     exit 1
 }
 cat >/dev/null
 case "${NF_TEST_MODE:-success}" in
     fail) echo 'authentication failed: 401' >&2; exit 1 ;;
+    unavailable) echo 'The selected model is not supported when using Codex with a ChatGPT account.' >&2; exit 1 ;;
     malformed) printf '{"title":' > "$DEST" ;;
     empty) printf '{}' > "$DEST" ;;
     hang) exec /bin/sleep 30 ;;
