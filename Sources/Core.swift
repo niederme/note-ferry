@@ -256,7 +256,7 @@ final class CodexRunner: @unchecked Sendable {
         environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:" + FileManager.default.homeDirectoryForCurrentUser.path + "/.local/bin"
         for key in ["CODEX_THREAD_ID", "CODEX_INTERNAL_ORIGINATOR_OVERRIDE", "CODEX_MANAGED_BY_NPM", "CODEX_MANAGED_BY_BUN"] { environment.removeValue(forKey: key) }
         task.environment = environment
-        task.arguments = ["exec", "--ignore-user-config", "--ephemeral", "--skip-git-repo-check", "--sandbox", "read-only",
+        task.arguments = ["exec", "--model", "gpt-6.1-sol", "--ignore-user-config", "--ephemeral", "--skip-git-repo-check", "--sandbox", "read-only",
             "--color", "never", "--output-schema", resources.appendingPathComponent("Summary.schema.json").path,
             "--output-last-message", output.path, "-c", "approval_policy=\"never\"", "-c", "web_search=\"disabled\"",
             "-c", "model_reasoning_effort=\"medium\"", "-c", "project_doc_max_bytes=0"]
