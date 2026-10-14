@@ -41,6 +41,7 @@ enum Transcript {
 }
 
 enum NoteRenderer {
+    private static let previewMarker = NSAttributedString.Key("me.nieder.note-ferry.preview-marker")
     // Real empty paragraphs carry the spacing through a paste. Paragraph margins are zero.
     static func render(_ note: Summary) -> NSAttributedString {
         let result = NSMutableAttributedString(string: "")
@@ -121,7 +122,7 @@ enum NoteRenderer {
                 let key = ObjectIdentifier(list)
                 let number = counters[key] ?? list.startingItemNumber
                 counters[key] = number + 1
-                let marker = NSAttributedString(string: "\t" + list.marker(forItemNumber: number) + "\t", attributes: [.font: NSFont.systemFont(ofSize: 14)])
+                let marker = NSAttributedString(string: "\t" + list.marker(forItemNumber: number) + "\t", attributes: [.font: NSFont.systemFont(ofSize: 14), previewMarker: true])
                 paragraph.insert(marker, at: 0)
                 let visibleStyle = style.mutableCopy() as! NSMutableParagraphStyle
                 visibleStyle.textLists = []
@@ -131,6 +132,19 @@ enum NoteRenderer {
             location = NSMaxRange(range)
         }
         return result
+    }
+
+    static func sourceRange(for selection: NSRange, in preview: NSAttributedString) -> NSRange? {
+        guard selection.location != NSNotFound, selection.location <= preview.length,
+              selection.length <= preview.length - selection.location else { return nil }
+        var prefixMarkers = 0, selectedMarkers = 0
+        let prefix = NSRange(location: 0, length: selection.location)
+        preview.enumerateAttribute(previewMarker, in: NSRange(location: 0, length: preview.length)) { value, range, _ in
+            guard value as? Bool == true else { return }
+            prefixMarkers += NSIntersectionRange(range, prefix).length
+            selectedMarkers += NSIntersectionRange(range, selection).length
+        }
+        return NSRange(location: selection.location - prefixMarkers, length: selection.length - selectedMarkers)
     }
 
     static func plainText(_ rich: NSAttributedString) -> String {

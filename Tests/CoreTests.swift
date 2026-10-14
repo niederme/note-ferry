@@ -151,6 +151,7 @@ final class MockClaudeURLProtocol: URLProtocol {
         let hardBreak = try MarkdownFormatter.render("First line  \nsecond line")
         check(hardBreak.string == "First line\u{2028}second line\n", "Explicit Markdown line break lost")
         try testMarkdownPatterns(root: root)
+        try testPreviewCopy()
         rejects({ _ = try MarkdownFormatter.render(" \n\t") }, "Blank formatting input accepted")
         rejects({ _ = try MarkdownFormatter.render(String(repeating: "é", count: 200_001)) }, "Oversized formatting input accepted")
         let validSource = String(repeating: "Alex: Discuss the project. Sam: I will send the proposal on Friday.\n", count: 10)
@@ -281,6 +282,51 @@ final class MockClaudeURLProtocol: URLProtocol {
         check(board.string(forType: .string) == validSource, "Claude failure touched clipboard")
         unsetenv("NF_TEST_MODE")
         print("Passed \(checks) checks: RTF/native lists, spacing, Unicode, clipboard race/restore, validation, failures, timeout, cancellation.")
+    }
+
+    static func testPreviewCopy() throws {
+        let rich = try MarkdownFormatter.render("# Review\n\n- A long bullet with **supporting evidence** that should wrap over several lines in a narrow note window while preserving its hanging indentation and native list behavior.\n- Another item.\n\n8. A numbered item.\n9. Another numbered item.\n\n| Name | Status |\n| --- | --- |\n| Atlas | Pending |")
+        let view = NSTextView(usingTextLayoutManager: false)
+        view.frame = NSRect(x: 0, y: 0, width: 240, height: 2000)
+        view.textContainer?.containerSize = NSSize(width: 240, height: CGFloat.greatestFiniteMagnitude)
+        view.textStorage?.setAttributedString(NoteRenderer.previewText(rich))
+        let screen = view.textStorage!
+        let full = NoteRenderer.sourceRange(for: NSRange(location: 0, length: screen.length), in: screen)!
+        check(full == NSRange(location: 0, length: rich.length), "Select-all preview copy changed the source range")
+        let visibleItem = (screen.string as NSString).range(of: "A long bullet with supporting evidence")
+        let sourceItem = NoteRenderer.sourceRange(for: visibleItem, in: screen)!
+        let copied = rich.attributedSubstring(from: sourceItem)
+        let board = NSPasteboard.withUniqueName()
+        defer { board.releaseGlobally() }
+        let wrote = try ClipboardOutput.write(copied, to: board)
+        check(wrote, "Selected preview text was not copied")
+        let decoded = try NSAttributedString(data: board.data(forType: .rtf)!, options: [.documentType: NSAttributedString.DocumentType.rtf], documentAttributes: nil)
+        check(decoded.string == "A long bullet with supporting evidence", "Selection copy leaked preview markers or changed wording")
+        let style = decoded.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as! NSParagraphStyle
+        check(style.textLists.count == 1 && style.headIndent > style.firstLineHeadIndent, "Selection copy lost the native hanging list")
+        let boldRange = (decoded.string as NSString).range(of: "supporting evidence")
+        check(NSFontManager.shared.traits(of: decoded.attribute(.font, at: boldRange.location, effectiveRange: nil) as! NSFont).contains(.boldFontMask), "Selection copy lost inline bold")
+        check(board.string(forType: .string) == "• A long bullet with supporting evidence", "Selection copy lost the plain-text list fallback")
+        let numbered = NoteRenderer.sourceRange(for: (screen.string as NSString).range(of: "Another numbered item."), in: screen)!
+        check(rich.attributedSubstring(from: numbered).string == "Another numbered item.", "Earlier list markers shifted a later selection")
+        let cellRange = NoteRenderer.sourceRange(for: (screen.string as NSString).range(of: "Atlas"), in: screen)!
+        let cell = rich.attributedSubstring(from: cellRange)
+        check((cell.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as! NSParagraphStyle).textBlocks.last is NSTextTableBlock, "Selection copy lost table cell structure")
+        let marker = (screen.string as NSString).range(of: "\t•\t")
+        check(NoteRenderer.sourceRange(for: marker, in: screen)?.length == 0, "A preview marker became copied note content")
+        let crossing = NSRange(location: marker.location + 1, length: marker.length - 1 + 6)
+        check(rich.attributedSubstring(from: NoteRenderer.sourceRange(for: crossing, in: screen)!).string == "A long", "Selection starting inside a marker shifted the body text")
+        check(NoteRenderer.sourceRange(for: NSRange(location: NSNotFound, length: 0), in: screen) == nil, "Invalid selection was accepted")
+        let layout = view.layoutManager!, container = view.textContainer!
+        layout.ensureLayout(for: container)
+        let firstGlyph = layout.glyphIndexForCharacter(at: visibleItem.location)
+        var line = NSRange()
+        let firstRect = layout.lineFragmentRect(forGlyphAt: firstGlyph, effectiveRange: &line)
+        let firstX = firstRect.minX + layout.location(forGlyphAt: firstGlyph).x
+        let nextGlyph = NSMaxRange(line)
+        let nextRect = layout.lineFragmentRect(forGlyphAt: nextGlyph, effectiveRange: nil)
+        let nextX = nextRect.minX + layout.location(forGlyphAt: nextGlyph).x
+        check(abs(firstX - nextX) < 1 && nextRect.minY > firstRect.minY, "Wrapped preview bullet text does not align with the first word")
     }
 
     static func testMarkdownPatterns(root: URL) throws {
