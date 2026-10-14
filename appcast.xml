@@ -6,6 +6,29 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Note Ferry</title>
         <item>
+            <title>1.2.1</title>
+            <pubDate>Wed, 14 Oct 2026 14:02:31 -0400</pubDate>
+            <link>https://github.com/niederme/note-ferry/releases/tag/v1.2.1</link>
+            <sparkle:version>6</sparkle:version>
+            <sparkle:shortVersionString>1.2.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[Note Ferry 1.2.1 improves formatting for text pasted into Apple Notes.
+
+- **Preserve table grids.** Markdown tables keep their rows, columns, headers, and wrapped cell text in the preview and rich clipboard output, including tables copied from ChatGPT Meetings.
+- **Keep bullet wrapping aligned.** Copying selected text from the formatted preview now preserves native list formatting, so wrapped lines align with the item text after pasting into Notes.
+- **Format meeting action prompts.** ChatGPT Meetings' `codex-prompt` blocks become readable action-item bullets, including when the source is wrapped in an extra code fence.
+- **Handle more Markdown patterns.** Improved support for nested lists, checklist symbols, quotes, divider lines, alternate heading syntax, image descriptions, and line breaks. Checklist symbols remain text; select the items and use Notes' Checklist button to make them clickable.
+- **Use a consistent Codex model.** Codex summaries explicitly use GPT-5.6 Sol with medium reasoning effort rather than the installed CLI's default. Your Codex account and CLI must support that model; Note Ferry does not silently switch models if it is unavailable. Unavailable models now show a specific message instead of a generic connection failure.
+
+### Install or update
+
+Choose **Note Ferry → Check for Updates…**, or download **Note-Ferry-1.2.1-universal.zip**, unzip it, and move **Note Ferry.app** to Applications, replacing the previous copy.
+
+Version 1.2.1 is build 6. The universal app supports Apple silicon and Intel Macs and requires macOS 14 or later. Apple Intelligence needs macOS 26 or later and compatible hardware. Runtime testing has been on Apple silicon with macOS 27; Intel hardware and older macOS versions have not been tested. **Format only** continues to run locally without AI.
+]]></description>
+            <enclosure url="https://github.com/niederme/note-ferry/releases/download/v1.2.1/Note-Ferry-1.2.1-universal.zip" length="1509897" type="application/octet-stream" sparkle:edSignature="58/ZQk3iitwq1IBtvWHfh2zOnm8nS80BJ3b/bO40aNTuqyPnTw7wn0R4O0eM2yPezL5W3rtRT2zcexRIvD4IDg=="/>
+        </item>
+        <item>
             <title>1.2</title>
             <pubDate>Thu, 24 Sep 2026 16:14:24 -0400</pubDate>
             <link>https://github.com/niederme/note-ferry/releases/tag/v1.2.0</link>
@@ -34,6 +57,6 @@ The rest of the app still formats text locally or summarizes it with your Codex 
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: sQi711lK8ol0zMh83H0OV8yCQ+rpjZmAyfezQOvff2aQtHkZqY/IrxTXXBN8pERDbHCTsCxMNBkDXwbUQQ4JDA==
-length: 2850
+edSignature: m6hKNZ/FI28yboQvLrSuN7JrxsoRp7cE0Nbd0hIPwHEj3Lvqlu8JPh4cCfFVbk3v8uQgNgLQUtqJVLibpzVoCA==
+length: 5449
 -->

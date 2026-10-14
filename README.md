@@ -32,15 +32,15 @@ Both options use spaced native lists, preserve a newer clipboard, and offer **Re
 
 ## Download
 
-Download Note Ferry 1.2 (build 4), signed with Developer ID and notarized by Apple:
+Download Note Ferry 1.2.1 (build 6), signed with Developer ID and notarized by Apple:
 
-**[Download Note Ferry 1.2 for Mac](https://github.com/niederme/note-ferry/releases/download/v1.2.0/Note-Ferry-1.2-universal.zip)**
+**[Download Note Ferry 1.2.1 for Mac](https://github.com/niederme/note-ferry/releases/download/v1.2.1/Note-Ferry-1.2.1-universal.zip)**
 
-Unzip the download and move **Note Ferry.app** to Applications, replacing an earlier copy. If you already have 1.1, you can instead choose **Note Ferry → Check for Updates…** after the signed update feed is published. The universal app includes Apple silicon and Intel versions. Xcode is not required.
+Unzip the download and move **Note Ferry.app** to Applications, replacing an earlier copy. If you already have Note Ferry installed, you can instead choose **Note Ferry → Check for Updates…**. The universal app includes Apple silicon and Intel versions. Xcode is not required.
 
 **Apple Intelligence** needs macOS 26 or later, a compatible Mac, and Apple Intelligence enabled. **Codex** needs the [Codex CLI](https://developers.openai.com/codex/cli/), a signed-in Codex account, and internet access; run `codex login` in Terminal. **Claude** needs an Anthropic API key and internet access; API use is billed separately from a Claude subscription. **Format only** needs no account or internet connection.
 
-The app requires macOS 14 or later. Runtime testing has been on Apple silicon with macOS 27; Intel hardware and older macOS versions have not been tested. See the [release notes and checksum](https://github.com/niederme/note-ferry/releases/tag/v1.2.0).
+The app requires macOS 14 or later. Runtime testing has been on Apple silicon with macOS 27; Intel hardware and older macOS versions have not been tested. See the [release notes and checksum](https://github.com/niederme/note-ferry/releases/tag/v1.2.1).
 
 ## Updates
 
