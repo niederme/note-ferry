@@ -6,6 +6,23 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Note Ferry</title>
         <item>
+            <title>1.2.2</title>
+            <pubDate>Thu, 15 Oct 2026 14:30:28 -0400</pubDate>
+            <link>https://github.com/niederme/note-ferry/releases/tag/v1.2.2</link>
+            <sparkle:version>7</sparkle:version>
+            <sparkle:shortVersionString>1.2.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[Note Ferry 1.2.2 fixes spacing when you use **Format only** on plain text.
+
+- Questions or complete sentences entered on separate lines now become separate, spaced paragraphs instead of running together.
+- Line breaks within an unfinished sentence remain line breaks.
+- Markdown documents continue to use Markdown soft-wrap rules.
+
+Version 1.2.2 is build 7. **Format only** still runs locally without AI.
+]]></description>
+            <enclosure url="https://github.com/niederme/note-ferry/releases/download/v1.2.2/Note-Ferry-1.2.2-universal.zip" length="1443459" type="application/octet-stream" sparkle:edSignature="o0Jjsi3QOVheRm9ApfOdOugEOch7v3ho2kz3BUjlymmnK0vwXRVcvl4FsHqX6IeHYe52IP0QaGH2r3KRNGsUCA=="/>
+        </item>
+        <item>
             <title>1.2.1</title>
             <pubDate>Wed, 14 Oct 2026 14:02:31 -0400</pubDate>
             <link>https://github.com/niederme/note-ferry/releases/tag/v1.2.1</link>
@@ -57,6 +74,6 @@ The rest of the app still formats text locally or summarizes it with your Codex 
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: m6hKNZ/FI28yboQvLrSuN7JrxsoRp7cE0Nbd0hIPwHEj3Lvqlu8JPh4cCfFVbk3v8uQgNgLQUtqJVLibpzVoCA==
-length: 5449
+edSignature: usbwH20essYxsawI2UkHHVsbvWD81jO7PmvMgL75VWE5ZopxWwjqUgmKqSsnDJ/loqebIiO9ShNQ1N/jjJR+DA==
+length: 6631
 -->
