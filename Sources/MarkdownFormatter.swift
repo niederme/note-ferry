@@ -250,6 +250,18 @@ enum MarkdownFormatter {
             }
             return output
         }
+        func plainLines(_ lines: [String]) -> String {
+            lines.map { line in
+                var content = line.trimmingCharacters(in: .whitespaces)
+                if content.hasSuffix("\\") { content.removeLast() }
+                return content
+            }.joined(separator: "\u{2028}")
+        }
+        func endsCompleteThought(_ line: String) -> Bool {
+            guard let last = line.trimmingCharacters(in: .whitespaces).last else { return false }
+            return last == "?" || last == "!" || last == "."
+        }
+        let plainTextInput = !lines.indices.contains(where: isSpecial)
         while index < lines.count {
             let line = lines[index]
             if line.trimmingCharacters(in: .whitespaces).isEmpty { index += 1; continue }
@@ -324,11 +336,13 @@ enum MarkdownFormatter {
                 blocks.append(contentsOf: quoted); continue
             }
             var body = [line]; index += 1
-            while index < lines.count && !lines[index].trimmingCharacters(in: .whitespaces).isEmpty && setextLevel(lines[index]) == nil && !isSpecial(index) { body.append(lines[index]); index += 1 }
+            while index < lines.count && !lines[index].trimmingCharacters(in: .whitespaces).isEmpty && setextLevel(lines[index]) == nil && !isSpecial(index) && !(plainTextInput && body.last.map(endsCompleteThought) == true) {
+                body.append(lines[index]); index += 1
+            }
             if index < lines.count, let level = setextLevel(lines[index]) {
                 blocks.append(Block(kind: .heading(level), text: joined(body))); index += 1
             } else {
-                blocks.append(Block(kind: .paragraph, text: joined(body)))
+                blocks.append(Block(kind: .paragraph, text: plainTextInput ? plainLines(body) : joined(body)))
             }
         }
         return blocks

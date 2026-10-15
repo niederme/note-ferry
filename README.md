@@ -54,7 +54,7 @@ Choose **Note Ferry → Check for Updates…** whenever you want to check. On th
 
 Use normal Paste to keep the formatting. **Paste and Match Style** removes it.
 
-Summaries include key takeaways, action items, and detailed topic sections, with bold headings and spaced bullets. Open questions and unclear transcription details are called out when relevant. Review important details, since AI summaries can contain mistakes. **Format only** preserves the original wording and formats the structure already present in your text.
+Summaries include key takeaways, action items, and detailed topic sections, with bold headings and spaced bullets. Open questions and unclear transcription details are called out when relevant. Review important details, since AI summaries can contain mistakes. **Format only** preserves the original wording and formats the structure already present in your text. Starting with 1.2.2, it keeps plain-text line breaks and adds a blank line between complete sentences or questions entered on separate lines. In Markdown documents, ordinary soft-wrapped lines continue to follow Markdown rules.
 
 ## Working with summaries
 
