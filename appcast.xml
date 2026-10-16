@@ -6,6 +6,24 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Note Ferry</title>
         <item>
+            <title>1.2.3</title>
+            <pubDate>Fri, 16 Oct 2026 12:10:23 -0400</pubDate>
+            <link>https://github.com/niederme/note-ferry/releases/tag/v1.2.3</link>
+            <sparkle:version>8</sparkle:version>
+            <sparkle:shortVersionString>1.2.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[Note Ferry 1.2.3 makes Claude API key setup easier to finish.
+
+- Paste a key directly into Settings, or choose **Paste from clipboard** to save and check it in one step.
+- Keys that work across workspaces can use a selected workspace. If Note Ferry needs a workspace ID, the key stays saved while you add it.
+- Key entry uses a regular text field, and saving leaves the clipboard unchanged.
+- Connection and setup messages are shorter and more specific.
+
+Version 1.2.3 is build 8. **Format only** still runs locally without AI.
+]]></description>
+            <enclosure url="https://github.com/niederme/note-ferry/releases/download/v1.2.3/Note-Ferry-1.2.3-universal.zip" length="1466846" type="application/octet-stream" sparkle:edSignature="Pkopkf468EU1Xx79jdi+4xms+TI8BFejHcvEF1MI2tqVgzis9aRXXDowIRfNJWa96mq5QYuCNxvPJ7Ub9RiEBg=="/>
+        </item>
+        <item>
             <title>1.2.2</title>
             <pubDate>Thu, 15 Oct 2026 14:30:28 -0400</pubDate>
             <link>https://github.com/niederme/note-ferry/releases/tag/v1.2.2</link>
@@ -74,6 +92,6 @@ The rest of the app still formats text locally or summarizes it with your Codex 
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: usbwH20essYxsawI2UkHHVsbvWD81jO7PmvMgL75VWE5ZopxWwjqUgmKqSsnDJ/loqebIiO9ShNQ1N/jjJR+DA==
-length: 6631
+edSignature: kGdW435kB7E967VIV0b36qE24TICRUx4AjtEY8vW8x7MX9JHQEd1ckTxBBxQx5pmT8QsR0Yecq+pOXxmWtk9BA==
+length: 7936
 -->
