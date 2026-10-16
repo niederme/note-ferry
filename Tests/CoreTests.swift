@@ -3,6 +3,7 @@ import AppKit
 final class MockClaudeURLProtocol: URLProtocol {
     static var status = 200
     static var payload = Data()
+    static var responseProvider: ((URLRequest) -> (Int, Data))?
     static var observedRequest: URLRequest?
     static var observedBody = Data()
 
@@ -22,9 +23,10 @@ final class MockClaudeURLProtocol: URLProtocol {
                 Self.observedBody.append(contentsOf: buffer.prefix(count))
             }
         }
-        let response = HTTPURLResponse(url: request.url!, statusCode: Self.status, httpVersion: "HTTP/1.1", headerFields: nil)!
+        let (status, payload) = Self.responseProvider?(request) ?? (Self.status, Self.payload)
+        let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: "HTTP/1.1", headerFields: nil)!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: Self.payload)
+        client?.urlProtocol(self, didLoad: payload)
         client?.urlProtocolDidFinishLoading(self)
     }
     override func stopLoading() {}
@@ -52,8 +54,38 @@ final class MockClaudeURLProtocol: URLProtocol {
         let restoredSettings = ProviderSettings(defaults: preferences, bundleIdentifier: preferencesSuite)
         check(restoredSettings.defaultProvider == .codex && restoredSettings.hasCompletedOnboarding,
               "Provider choice and onboarding state did not persist")
+        providerSettings.claudeNeedsWorkspaceID = true
+        check(restoredSettings.claudeNeedsWorkspaceID,
+              "An unfinished workspace setup was lost when settings reopened")
+        providerSettings.claudeNeedsWorkspaceID = false
+        check(!restoredSettings.claudeNeedsWorkspaceID,
+              "A completed workspace setup still asked for an ID")
         rejects({ try providerSettings.saveClaudeAPIKey("not-a-claude-api-key") },
                 "Non-API clipboard text was accepted as a Claude key")
+        let sampleKey = "sk-ant-api03-example_key_123456"
+        let normalizedSampleKey = try ProviderSettings.validatedClaudeAPIKey("  \(sampleKey)\n")
+        check(normalizedSampleKey == sampleKey,
+              "Surrounding whitespace was not removed from an API key")
+        let personalKey = "sk-ant-usr-example_key_123456"
+        let normalizedPersonalKey = try ProviderSettings.validatedClaudeAPIKey(personalKey)
+        check(normalizedPersonalKey == personalKey,
+              "A personal Claude API key was rejected")
+        let normalizedWorkspace = try ProviderSettings.validatedClaudeWorkspaceID(" wrkspc_example123\n")
+        check(normalizedWorkspace == "wrkspc_example123",
+              "Workspace ID was not normalized")
+        let emptyWorkspace = try ProviderSettings.validatedClaudeWorkspaceID("  ")
+        check(emptyWorkspace == nil,
+              "A blank workspace ID was not optional")
+        rejects({ _ = try ProviderSettings.validatedClaudeWorkspaceID("Default") },
+                "A workspace name was accepted as an ID")
+        rejects({ _ = try ProviderSettings.validatedClaudeAPIKey("sk-ant-api03-key\nwith-another-line") },
+                "Multiline clipboard text was accepted as an API key")
+        rejects({ _ = try ProviderSettings.validatedClaudeAPIKey("sk-ant-api03-key with a space") },
+                "Embedded spaces were accepted as an API key")
+        rejects({ _ = try ProviderSettings.validatedClaudeAPIKey("sk-ant-api") },
+                "An incomplete API key was accepted")
+        rejects({ _ = try ProviderSettings.validatedClaudeAPIKey("sk-ant-api03-example_key_123456🎈") },
+                "Non-ASCII clipboard content was accepted as an API key")
         let hasTestKey = try providerSettings.hasClaudeAPIKey()
         check(!hasTestKey, "A fresh test Keychain unexpectedly has a Claude key")
         if #available(macOS 26.0, *) {
@@ -226,6 +258,72 @@ final class MockClaudeURLProtocol: URLProtocol {
         let claudeConfiguration = URLSessionConfiguration.ephemeral
         claudeConfiguration.protocolClasses = [MockClaudeURLProtocol.self]
         let claudeSession = URLSession(configuration: claudeConfiguration)
+        func verifyKey(status: Int, workspaceID: String? = nil) -> Result<ClaudeKeyVerificationResult, Error> {
+            MockClaudeURLProtocol.status = status
+            let completed = DispatchSemaphore(value: 0)
+            var result: Result<ClaudeKeyVerificationResult, Error>!
+            ClaudeKeyVerifier(session: claudeSession).verify("test-key", workspaceID: workspaceID) {
+                result = $0
+                completed.signal()
+            }
+            guard completed.wait(timeout: .now() + 2) == .success else {
+                fatalError("Claude key verification did not finish")
+            }
+            return result
+        }
+        if case .failure = verifyKey(status: 200, workspaceID: "wrkspc_example123") {
+            fatalError("A successful Anthropic connection was rejected")
+        }
+        checks += 1
+        let verificationRequest = MockClaudeURLProtocol.observedRequest!
+        check(verificationRequest.httpMethod == "GET"
+              && verificationRequest.url?.path == "/v1/models/\(ClaudeRunner.modelID)"
+              && verificationRequest.value(forHTTPHeaderField: "x-api-key") == "test-key"
+              && verificationRequest.value(forHTTPHeaderField: "anthropic-workspace-id") == "wrkspc_example123"
+              && verificationRequest.value(forHTTPHeaderField: "anthropic-version") == "2023-06-01"
+              && MockClaudeURLProtocol.observedBody.isEmpty,
+              "Key verification did not use a small authenticated request")
+        if case .failure(let error) = verifyKey(status: 401) {
+            check(error.localizedDescription.contains("rejected"), "Invalid key feedback was unclear")
+        } else { fatalError("Anthropic 401 was accepted") }
+        if case .failure(let error) = verifyKey(status: 403) {
+            check(error.localizedDescription.contains("denied"), "Permission feedback was unclear")
+        } else { fatalError("Anthropic 403 was accepted") }
+        if case .failure(let error) = verifyKey(status: 404) {
+            check(error.localizedDescription.contains("Sonnet 4.6"), "Unavailable model feedback was unclear")
+        } else { fatalError("An unavailable Claude model was accepted") }
+        if case .failure(let error) = verifyKey(status: 404, workspaceID: "wrkspc_unavailable") {
+            check(error.localizedDescription.contains("workspace ID"), "Unavailable workspace feedback was unclear")
+        } else { fatalError("An unavailable workspace was accepted") }
+        MockClaudeURLProtocol.payload = Data(#"{"error":{"message":"anthropic-workspace-id is required"}}"#.utf8)
+        if case .failure(let error) = verifyKey(status: 400) {
+            check(error.localizedDescription.contains("workspace ID"), "Missing workspace feedback was unclear")
+        } else { fatalError("Anthropic workspace error was accepted") }
+        let defaultID = "wrkspc_default123"
+        let workspaceRequiredBody = Data(#"{"error":{"message":"anthropic-workspace-id is required"}}"#.utf8)
+        let workspacesBody = Data(#"{"data":[{"id":"wrkspc_code123","name":"Claude Code","archived_at":null},{"id":"wrkspc_default123","name":"Default","archived_at":null}]}"#.utf8)
+        MockClaudeURLProtocol.responseProvider = { request in
+            if request.url?.path == "/v1/organizations/workspaces" {
+                return (200, workspacesBody)
+            }
+            return request.value(forHTTPHeaderField: "anthropic-workspace-id") == defaultID
+                ? (200, Data()) : (400, workspaceRequiredBody)
+        }
+        if case .success(let result) = verifyKey(status: 200) {
+            check(result == .defaultWorkspace(defaultID), "The verifier did not select Default")
+        } else { fatalError("Default workspace could not be resolved") }
+        check(MockClaudeURLProtocol.observedRequest?.value(forHTTPHeaderField: "anthropic-workspace-id") == defaultID,
+              "The resolved workspace was not checked with Anthropic")
+        let otherWorkspacesBody = Data(#"{"data":[{"id":"wrkspc_code123","name":"Claude Code","archived_at":null}]}"#.utf8)
+        MockClaudeURLProtocol.responseProvider = { request in
+            request.url?.path == "/v1/organizations/workspaces"
+                ? (200, otherWorkspacesBody) : (400, workspaceRequiredBody)
+        }
+        if case .failure(let error) = verifyKey(status: 200) {
+            check(error.localizedDescription.contains("workspace ID"),
+                  "A non-Default workspace was selected without asking")
+        } else { fatalError("A non-Default workspace was silently selected") }
+        MockClaudeURLProtocol.responseProvider = nil
         let fixtureText = String(decoding: fixture, as: UTF8.self)
         func envelope(_ text: String, stop: String = "end_turn") -> Data {
             try! JSONSerialization.data(withJSONObject: [
@@ -236,12 +334,13 @@ final class MockClaudeURLProtocol: URLProtocol {
         MockClaudeURLProtocol.status = 200
         MockClaudeURLProtocol.payload = envelope(fixtureText)
         let claudeResult = try ClaudeRunner(session: claudeSession, timeout: 2)
-            .run(transcript: validSource, resources: resources, apiKey: "test-key")
+            .run(transcript: validSource, resources: resources, apiKey: "test-key", workspaceID: "wrkspc_example123")
         check(claudeResult.title == note.title, "Claude response did not decode")
         let claudeRequest = MockClaudeURLProtocol.observedRequest!
         check(claudeRequest.url?.absoluteString == "https://api.anthropic.com/v1/messages"
               && claudeRequest.httpMethod == "POST", "Claude request used the wrong endpoint")
         check(claudeRequest.value(forHTTPHeaderField: "x-api-key") == "test-key"
+              && claudeRequest.value(forHTTPHeaderField: "anthropic-workspace-id") == "wrkspc_example123"
               && claudeRequest.value(forHTTPHeaderField: "anthropic-version") == "2023-06-01",
               "Claude authentication or version headers are wrong")
         check(!MockClaudeURLProtocol.observedBody.isEmpty, "Claude request had no body")

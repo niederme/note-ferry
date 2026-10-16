@@ -385,9 +385,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         do { try Transcript.validate(text) } catch { showError(error); return }
         if action == .local, let message = LocalModelAvailability.message { showError(AppError.message(message)); return }
         var claudeKey: String?
+        var claudeWorkspaceID: String?
         if action == .claude {
+            if ProviderSettings.shared.claudeNeedsWorkspaceID && ProviderSettings.shared.claudeWorkspaceID == nil {
+                showError(AppError.message("Choose a Claude workspace in Settings before summarizing. Your text and clipboard are unchanged."))
+                openSettings()
+                return
+            }
             do {
                 claudeKey = try ProviderSettings.shared.loadClaudeAPIKey()
+                claudeWorkspaceID = ProviderSettings.shared.claudeWorkspaceID
             } catch { showError(error); return }
             guard claudeKey != nil else {
                 showError(AppError.message("Add your Claude API key in Settings before summarizing. Nothing was sent or copied."))
@@ -446,8 +453,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         } else if let key = claudeKey {
             let worker = ClaudeRunner(); claudeRunner = worker
             let resources = Bundle.main.resourceURL!
+            let workspaceID = claudeWorkspaceID
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                let result = Result { try worker.run(transcript: text, resources: resources, apiKey: key) }
+                let result = Result { try worker.run(transcript: text, resources: resources, apiKey: key, workspaceID: workspaceID) }
                 DispatchQueue.main.async { self?.finish(token, result: result) }
             }
         }

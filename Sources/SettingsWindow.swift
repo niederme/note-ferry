@@ -7,36 +7,51 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
     private let picker = NSPopUpButton(frame: .zero, pullsDown: false)
     private let providerDetail = NSTextField(wrappingLabelWithString: "")
     private let connectionDetail = NSTextField(wrappingLabelWithString: "")
-    private let saveKeyButton = NSButton(title: "Save key from clipboard", target: nil, action: nil)
+    private let keyField = NSTextField()
+    private let workspaceLabel = NSTextField(labelWithString: "Workspace ID")
+    private let workspaceField = NSTextField()
+    private let workspaceHelpButton = NSButton(title: "Find workspace ID ↗", target: nil, action: nil)
+    private let changeWorkspaceButton = NSButton(title: "Change workspace…", target: nil, action: nil)
+    private let pasteKeyButton = NSButton(title: "Paste from clipboard", target: nil, action: nil)
+    private let saveKeyButton = NSButton(title: "Save key", target: nil, action: nil)
     private let removeKeyButton = NSButton(title: "Remove key", target: nil, action: nil)
-    private let getKeyButton = NSButton(title: "Get an API key ↗", target: nil, action: nil)
+    private let getKeyButton = NSButton(title: "Get a key (choose Default workspace) ↗", target: nil, action: nil)
     private let keyStatus = NSTextField(wrappingLabelWithString: "")
     private let keyInstructions = NSTextField(wrappingLabelWithString: "")
     private let doneButton = NSButton(title: "Done", target: nil, action: nil)
     private let feedback = NSTextField(wrappingLabelWithString: "")
     private let heading = NSTextField(labelWithString: "")
     private let intro = NSTextField(wrappingLabelWithString: "")
+    private let keyVerifier = ClaudeKeyVerifier()
+    private var keyCheckGeneration = 0
+    private var workspaceRequired = false
+    private var pendingKeyForVerification: String?
 
     func show(onboarding: Bool = false) {
         self.onboarding = onboarding
         if window == nil { makeWindow() }
         window?.title = onboarding ? "Choose a summarizer" : "Note Ferry Settings"
-        heading.stringValue = onboarding ? "Choose a summarizer" : "Summarizer settings"
+        heading.stringValue = onboarding ? "Choose a summarizer" : "Settings"
         intro.stringValue = onboarding
-            ? (LocalModelAvailability.message == nil
-                ? "Apple Intelligence is selected to start. You can choose a different default now or change it any time. Formatting text never uses AI."
-                : "Apple Intelligence is not available on this Mac. Choose Codex or Claude to summarize; Format only remains available.")
-            : "Choose the default for Summarize & format. You can switch providers for one transcript in the main window."
-        feedback.stringValue = ""
+            ? "Choose how Note Ferry summarizes. You can change this later."
+            : ""
+        intro.isHidden = !onboarding
+        keyCheckGeneration += 1
+        workspaceRequired = ProviderSettings.shared.claudeNeedsWorkspaceID
+        pendingKeyForVerification = nil
+        keyField.stringValue = ""
+        workspaceField.stringValue = ProviderSettings.shared.claudeWorkspaceID ?? ""
+        showFeedback("")
         picker.selectItem(withTag: SummaryProvider.allCases.firstIndex(of: ProviderSettings.shared.defaultProvider) ?? 0)
         refresh()
         window?.center()
         window?.makeKeyAndOrderFront(nil)
+        window?.makeFirstResponder(picker)
         NSApp.activate(ignoringOtherApps: true)
     }
 
     private func makeWindow() {
-        let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 550, height: 540),
+        let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 550, height: 460),
                              styleMask: [.titled, .closable], backing: .buffered, defer: false)
         panel.isReleasedWhenClosed = false
         panel.delegate = self
@@ -76,9 +91,6 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
         let separator = NSBox()
         separator.boxType = .separator
         root.addArrangedSubview(separator)
-        let connectionHeading = NSTextField(labelWithString: "Connections")
-        connectionHeading.font = .systemFont(ofSize: 14, weight: .semibold)
-        root.addArrangedSubview(connectionHeading)
         connectionDetail.font = .systemFont(ofSize: 12)
         connectionDetail.textColor = .secondaryLabelColor
         root.addArrangedSubview(connectionDetail)
@@ -91,23 +103,54 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
         keyInstructions.textColor = .secondaryLabelColor
         root.addArrangedSubview(keyInstructions)
         keyInstructions.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56).isActive = true
-        let keyActions = NSStackView(views: [saveKeyButton, getKeyButton])
+        keyField.placeholderString = "Paste your Claude API key"
+        keyField.setAccessibilityLabel("Claude API key")
+        keyField.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        keyField.isAutomaticTextCompletionEnabled = false
+        keyField.contentType = NSTextContentType(rawValue: "APIKey")
+        keyField.target = self
+        keyField.action = #selector(saveKey)
+        root.addArrangedSubview(keyField)
+        keyField.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56).isActive = true
+        workspaceLabel.font = .systemFont(ofSize: 12, weight: .medium)
+        root.addArrangedSubview(workspaceLabel)
+        workspaceField.placeholderString = "wrkspc_…"
+        workspaceField.setAccessibilityLabel("Claude workspace ID")
+        workspaceField.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
+        workspaceField.isAutomaticTextCompletionEnabled = false
+        workspaceField.target = self
+        workspaceField.action = #selector(saveKey)
+        root.addArrangedSubview(workspaceField)
+        workspaceField.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56).isActive = true
+        workspaceHelpButton.isBordered = false
+        workspaceHelpButton.target = self
+        workspaceHelpButton.action = #selector(openClaudeWorkspaces)
+        root.addArrangedSubview(workspaceHelpButton)
+        changeWorkspaceButton.isBordered = false
+        changeWorkspaceButton.target = self
+        changeWorkspaceButton.action = #selector(changeWorkspace)
+        root.addArrangedSubview(changeWorkspaceButton)
+        let keyActions = NSStackView(views: [pasteKeyButton, saveKeyButton])
         keyActions.orientation = .horizontal
         keyActions.spacing = 8
         root.addArrangedSubview(keyActions)
-        for button in [saveKeyButton, removeKeyButton, getKeyButton, doneButton] { button.bezelStyle = .rounded; button.target = self }
+        for button in [pasteKeyButton, saveKeyButton, removeKeyButton, getKeyButton, doneButton] { button.bezelStyle = .rounded; button.target = self }
         getKeyButton.isBordered = false
         removeKeyButton.isBordered = false
         root.addArrangedSubview(removeKeyButton)
+        root.addArrangedSubview(getKeyButton)
+        pasteKeyButton.action = #selector(pasteKey)
         saveKeyButton.action = #selector(saveKey)
+        saveKeyButton.keyEquivalent = "\r"
         removeKeyButton.action = #selector(removeKey)
         getKeyButton.action = #selector(openClaudeConsole)
-        let billing = NSTextField(wrappingLabelWithString: "Anthropic bills API use separately from a Claude subscription. The key stays in this Mac’s Keychain; Note Ferry does not use Claude Code’s login.")
+        let billing = NSTextField(wrappingLabelWithString: "Claude API use is billed by Anthropic. Keys are stored in Mac Keychain.")
         billing.font = .systemFont(ofSize: 11)
         billing.textColor = .secondaryLabelColor
         root.addArrangedSubview(billing)
         feedback.font = .systemFont(ofSize: 12)
         feedback.textColor = .secondaryLabelColor
+        feedback.isHidden = true
         root.addArrangedSubview(feedback)
         let flexible = NSView()
         flexible.setContentHuggingPriority(.defaultLow, for: .vertical)
@@ -119,7 +162,6 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
         footer.alignment = .centerY
         root.addArrangedSubview(footer)
         doneButton.action = #selector(done)
-        doneButton.keyEquivalent = "\r"
         for view in [intro, providerDetail, separator, connectionDetail, billing, feedback, footer] {
             view.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56).isActive = true
         }
@@ -130,66 +172,169 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
         let chosen = SummaryProvider.allCases[picker.indexOfSelectedItem >= 0 ? picker.indexOfSelectedItem : 0]
         switch chosen {
         case .apple:
-            providerDetail.stringValue = "On-device and experimental. Review names, attribution, and action items carefully. " + (LocalModelAvailability.message ?? "Available on this Mac.")
+            providerDetail.stringValue = LocalModelAvailability.message ?? "On this Mac. Review summaries before using them."
         case .codex:
-            providerDetail.stringValue = "Uses your Codex account through the installed Codex CLI. Your text goes to OpenAI when you summarize."
+            providerDetail.stringValue = "Uses your Codex account. Summaries go to OpenAI."
         case .claude:
-            providerDetail.stringValue = "Uses your own Anthropic API key. Your text goes to Anthropic when you summarize; API usage is billed separately from a Claude subscription."
+            providerDetail.stringValue = "Uses your API key. Summaries go to Anthropic."
         }
-        let codex = CodexRunner.executable() == nil ? "Codex CLI was not found. Install it and run ‘codex login’ in Terminal." : "Codex CLI is installed. If prompted to sign in, run ‘codex login’ in Terminal."
+        connectionDetail.isHidden = chosen != .codex || CodexRunner.executable() != nil
+        connectionDetail.stringValue = "Codex CLI not found. Install it to use Codex."
         let claude: String
         let hasKey: Bool
         do {
             hasKey = try ProviderSettings.shared.hasClaudeAPIKey()
-            claude = hasKey ? "Claude API key saved in Keychain." : "Claude API key is not set up."
+            if hasKey, let workspaceName = ProviderSettings.shared.claudeWorkspaceName {
+                claude = "Key saved · \(workspaceName) workspace"
+            } else {
+                claude = hasKey ? "Key saved" : "No key saved"
+            }
         } catch {
             hasKey = false
             claude = error.localizedDescription
         }
-        connectionDetail.stringValue = codex
         keyStatus.stringValue = claude
-        keyInstructions.stringValue = hasKey
-            ? "To replace it, copy a new key from Anthropic Console, then save it here."
-            : "Copy a key from Anthropic Console, then save it here."
-        saveKeyButton.title = hasKey ? "Replace key from clipboard" : "Save key from clipboard"
+        keyInstructions.stringValue = "Enter the Default workspace ID. Your key is already saved."
+        keyInstructions.isHidden = !workspaceRequired || !hasKey
+        keyField.isHidden = workspaceRequired && hasKey
+        pasteKeyButton.isHidden = workspaceRequired && hasKey
+        saveKeyButton.title = workspaceRequired && hasKey ? "Save workspace" : (hasKey ? "Save changes" : "Save key")
         removeKeyButton.isHidden = !hasKey
+        getKeyButton.isHidden = hasKey
+        let showWorkspace = workspaceRequired
+        workspaceLabel.isHidden = !showWorkspace
+        workspaceField.isHidden = !showWorkspace
+        workspaceHelpButton.isHidden = !showWorkspace
+        changeWorkspaceButton.title = ProviderSettings.shared.claudeWorkspaceID == nil ? "Add workspace…" : "Change workspace…"
+        changeWorkspaceButton.isHidden = showWorkspace || !hasKey
+        window?.setContentSize(NSSize(width: 550, height: showWorkspace ? 565 : 460))
     }
 
     @objc private func providerChanged() {
         let index = picker.indexOfSelectedItem
         guard SummaryProvider.allCases.indices.contains(index) else { return }
         ProviderSettings.shared.defaultProvider = SummaryProvider.allCases[index]
-        feedback.stringValue = ""
+        showFeedback("")
         refresh()
         onChange?()
     }
 
+    @objc private func pasteKey() {
+        guard let text = NSPasteboard.general.string(forType: .string), !text.isEmpty else {
+            showFeedback("The clipboard has no text. Copy an API key first.", isError: true)
+            return
+        }
+        keyField.stringValue = text
+        saveKey()
+    }
+
     @objc private func saveKey() {
         do {
-            let clipboard = NSPasteboard.general
-            let changeCount = clipboard.changeCount
-            guard let key = clipboard.string(forType: .string) else {
-                throw AppError.message("Copy a Claude API key from Claude Console first.")
+            if workspaceRequired && workspaceField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && keyField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                throw AppError.message("Enter a workspace ID beginning with wrkspc_.")
             }
-            try ProviderSettings.shared.saveClaudeAPIKey(key)
-            if clipboard.changeCount == changeCount {
-                clipboard.clearContents()
-                feedback.stringValue = "Saved. The copied key was cleared from your clipboard."
+            let enteredKey = keyField.stringValue
+            let replacingKey = !enteredKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let candidateWorkspaceID = workspaceRequired
+                ? try ProviderSettings.validatedClaudeWorkspaceID(workspaceField.stringValue)
+                : nil
+            let keyForVerification: String?
+            if replacingKey {
+                keyForVerification = try ProviderSettings.validatedClaudeAPIKey(enteredKey)
+                try ProviderSettings.shared.saveClaudeAPIKey(enteredKey)
+                if workspaceRequired { ProviderSettings.shared.claudeNeedsWorkspaceID = true }
+                pendingKeyForVerification = keyForVerification
             } else {
-                feedback.stringValue = "Saved to Keychain. Your clipboard was left unchanged."
+                keyForVerification = pendingKeyForVerification
+                guard try ProviderSettings.shared.hasClaudeAPIKey() else {
+                    throw AppError.message("Paste a Claude API key to continue.")
+                }
+                guard workspaceRequired else {
+                    throw AppError.message("Paste a new key to replace the saved one.")
+                }
             }
+            keyCheckGeneration += 1
+            keyField.stringValue = ""
             refresh()
             onChange?()
-        } catch { feedback.stringValue = error.localizedDescription }
+            checkSavedKey(key: keyForVerification, workspaceID: candidateWorkspaceID,
+                          savedMessage: replacingKey ? "Saved in Keychain." : nil)
+        } catch { showFeedback(error.localizedDescription, isError: true) }
+    }
+
+    private func checkSavedKey(key suppliedKey: String? = nil, workspaceID candidateWorkspaceID: String? = nil,
+                               savedMessage: String? = nil) {
+        do {
+            guard let key = try suppliedKey ?? ProviderSettings.shared.loadClaudeAPIKey() else {
+                showFeedback("Save a Claude API key first.", isError: true)
+                refresh()
+                return
+            }
+            let workspaceID = candidateWorkspaceID ?? ProviderSettings.shared.claudeWorkspaceID
+            keyCheckGeneration += 1
+            let generation = keyCheckGeneration
+            showFeedback((savedMessage.map { "\($0) " } ?? "") + "Checking with Anthropic…")
+            keyVerifier.verify(key, workspaceID: workspaceID) { [weak self] result in
+                DispatchQueue.main.async {
+                    guard let self, self.keyCheckGeneration == generation else { return }
+                    switch result {
+                    case .success(let verification):
+                        if case .defaultWorkspace(let id) = verification {
+                            do {
+                                try ProviderSettings.shared.saveClaudeWorkspaceID(id, name: "Default")
+                                self.workspaceField.stringValue = id
+                                self.workspaceRequired = false
+                                ProviderSettings.shared.claudeNeedsWorkspaceID = false
+                                self.pendingKeyForVerification = nil
+                                self.refresh()
+                                self.showFeedback("Connected to Default workspace.")
+                            } catch {
+                                self.showFeedback(error.localizedDescription, isError: true)
+                            }
+                        } else {
+                            do {
+                                if let candidateWorkspaceID {
+                                    try ProviderSettings.shared.saveClaudeWorkspaceID(candidateWorkspaceID)
+                                }
+                                self.workspaceRequired = false
+                                ProviderSettings.shared.claudeNeedsWorkspaceID = false
+                                self.pendingKeyForVerification = nil
+                                self.refresh()
+                                self.showFeedback("Connected.")
+                            } catch {
+                                self.showFeedback(error.localizedDescription, isError: true)
+                            }
+                        }
+                    case .failure(let error):
+                        if let verificationError = error as? ClaudeKeyVerificationError,
+                           case .workspaceRequired = verificationError {
+                            self.workspaceRequired = true
+                            ProviderSettings.shared.claudeNeedsWorkspaceID = true
+                            self.refresh()
+                            self.window?.makeFirstResponder(self.workspaceField)
+                            self.showFeedback("")
+                            return
+                        }
+                        self.showFeedback(error.localizedDescription, isError: true)
+                    }
+                }
+            }
+        } catch { showFeedback(error.localizedDescription, isError: true) }
     }
 
     @objc private func removeKey() {
         do {
             try ProviderSettings.shared.deleteClaudeAPIKey()
-            feedback.stringValue = ""
+            keyCheckGeneration += 1
+            keyField.stringValue = ""
+            workspaceField.stringValue = ""
+            pendingKeyForVerification = nil
+            workspaceRequired = false
+            showFeedback("Claude API key removed from Keychain.")
             refresh()
             onChange?()
-        } catch { feedback.stringValue = error.localizedDescription }
+        } catch { showFeedback(error.localizedDescription, isError: true) }
     }
 
     @objc private func openClaudeConsole() {
@@ -197,9 +342,38 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
         NSWorkspace.shared.open(url)
     }
 
+    @objc private func openClaudeWorkspaces() {
+        guard let url = URL(string: "https://platform.claude.com/settings/workspaces") else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    @objc private func changeWorkspace() {
+        workspaceRequired = true
+        if ProviderSettings.shared.claudeWorkspaceID == nil {
+            ProviderSettings.shared.claudeNeedsWorkspaceID = true
+        }
+        refresh()
+        window?.makeFirstResponder(workspaceField)
+    }
+
     @objc private func done() {
+        keyCheckGeneration += 1
+        keyField.stringValue = ""
+        pendingKeyForVerification = nil
         ProviderSettings.shared.hasCompletedOnboarding = true
         window?.orderOut(nil)
         onChange?()
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        keyCheckGeneration += 1
+        keyField.stringValue = ""
+        pendingKeyForVerification = nil
+    }
+
+    private func showFeedback(_ message: String, isError: Bool = false) {
+        feedback.stringValue = message
+        feedback.isHidden = message.isEmpty
+        feedback.textColor = isError ? .systemRed : .secondaryLabelColor
     }
 }

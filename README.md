@@ -89,7 +89,7 @@ On first launch, **Choose a summarizer** asks for a default. Apple Intelligence 
 
 Codex summaries use **GPT-5.6 Sol with medium reasoning effort**, through your signed-in Codex account. Your account and installed CLI must support that model. Note Ferry uses this explicit selection rather than your CLI’s default model and does not silently switch models if it is unavailable.
 
-For Claude, copy an API key from Anthropic Console and click **Save key from clipboard** in Settings. Note Ferry stores it in this Mac’s Keychain and clears the copied key if it is still on the clipboard after a successful save. Your first Claude summary asks you to confirm sending the text and key to Anthropic. A saved key is not proof that Anthropic will accept it.
+For a one-paste Claude setup, create an API key scoped to Anthropic’s **Default workspace**, then choose **Paste from clipboard** in Settings. That button saves and checks the key in one click. You can also paste into the field and choose **Save key**. The key is visible while editing, cleared from the field after saving, and stored in this Mac’s Keychain. The clipboard is left unchanged. Note Ferry checks the key with Anthropic without sending a transcript. For an organization-wide key, Note Ferry selects the Default workspace when Anthropic makes it available. If Default cannot be determined, Settings asks for a workspace ID and links to the workspace list. The key remains saved, so you only enter the workspace ID. Your first Claude summary asks you to confirm sending the text and key to Anthropic.
 
 ## What’s next
 
