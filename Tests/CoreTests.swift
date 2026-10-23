@@ -189,6 +189,7 @@ final class MockClaudeURLProtocol: URLProtocol {
         check(NoteRenderer.plainText(decodedQuestions) == NoteRenderer.plainText(questions), "Question breaks changed during RTF round trip")
         let markdownSoftWrap = try MarkdownFormatter.render("# Heading\n\nA wrapped\nline")
         check(markdownSoftWrap.string == "Heading\n\nA wrapped line\n", "Markdown soft wrap changed while fixing plain text")
+        try testInlineHardBreaks()
         try testMarkdownPatterns(root: root)
         try testPreviewCopy()
         rejects({ _ = try MarkdownFormatter.render(" \n\t") }, "Blank formatting input accepted")
@@ -441,6 +442,39 @@ final class MockClaudeURLProtocol: URLProtocol {
         let nextRect = layout.lineFragmentRect(forGlyphAt: nextGlyph, effectiveRange: nil)
         let nextX = nextRect.minX + layout.location(forGlyphAt: nextGlyph).x
         check(abs(firstX - nextX) < 1 && nextRect.minY > firstRect.minY, "Wrapped preview bullet text does not align with the first word")
+    }
+
+    static func testInlineHardBreaks() throws {
+        // Numbered recommendations often put a bold heading before a hard break.
+        // Verify both Markdown hard-break forms.
+        for separator in ["  \n   ", "\\\n   "] {
+            let source = "1. **Review the workflow.**" + separator
+                + "Keep *the wording* and [the guide](https://example.com/guide).\n\n"
+                + "2. **Choose a pilot.**" + separator + "Include `literal **markers**`."
+            let rich = try MarkdownFormatter.render(source)
+            let decoded = try NSAttributedString(data: NoteRenderer.rtf(rich), options: [.documentType: NSAttributedString.DocumentType.rtf], documentAttributes: nil)
+            check(decoded.string == "Review the workflow.\u{2028}Keep the wording and the guide.\u{2028}\nChoose a pilot.\u{2028}Include literal **markers**.\n", "List hard break left Markdown markers or changed wording")
+            for phrase in ["Review the workflow.", "Choose a pilot."] {
+                let range = (decoded.string as NSString).range(of: phrase)
+                let font = decoded.attribute(.font, at: range.location, effectiveRange: nil) as! NSFont
+                let style = decoded.attribute(.paragraphStyle, at: range.location, effectiveRange: nil) as! NSParagraphStyle
+                check(NSFontManager.shared.traits(of: font).contains(.boldFontMask), "List heading before a hard break lost bold")
+                check(style.textLists.count == 1, "Hard break lost the native numbered list")
+            }
+            let body = (decoded.string as NSString).range(of: "Keep")
+            check(!NSFontManager.shared.traits(of: decoded.attribute(.font, at: body.location, effectiveRange: nil) as! NSFont).contains(.boldFontMask), "Heading bold leaked into the list body")
+            let emphasis = (decoded.string as NSString).range(of: "the wording")
+            check(NSFontManager.shared.traits(of: decoded.attribute(.font, at: emphasis.location, effectiveRange: nil) as! NSFont).contains(.italicFontMask), "Hard break lost body emphasis")
+            let link = (decoded.string as NSString).range(of: "the guide")
+            check(decoded.attribute(.link, at: link.location, effectiveRange: nil) as? URL == URL(string: "https://example.com/guide"), "Hard break lost the link destination")
+            check(NoteRenderer.plainText(rich).contains("2. Choose a pilot."), "Hard break changed list numbering")
+        }
+        let spanning = try MarkdownFormatter.render("**Bold across  \na break**")
+        check(spanning.string == "Bold across\u{2028}a break\n", "Emphasis spanning a hard break was split")
+        for phrase in ["Bold across", "a break"] {
+            let range = (spanning.string as NSString).range(of: phrase)
+            check(NSFontManager.shared.traits(of: spanning.attribute(.font, at: range.location, effectiveRange: nil) as! NSFont).contains(.boldFontMask), "Spanning emphasis lost bold")
+        }
     }
 
     static func testMarkdownPatterns(root: URL) throws {

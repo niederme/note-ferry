@@ -136,7 +136,11 @@ enum MarkdownFormatter {
 
     private static func inline(_ source: String, size: CGFloat, bold: Bool) -> NSAttributedString {
         // Apple's inline parser preserves links and emphasis without loading URLs or images.
-        guard let parsed = try? AttributedString(markdown: source, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) else {
+        // It does not treat a Unicode soft return as Markdown whitespace: emphasis
+        // ending just before one can remain literal. Parse with newlines, then
+        // restore the Notes-friendly soft returns after inline syntax is resolved.
+        let markdown = source.replacingOccurrences(of: "\u{2028}", with: "\n")
+        guard let parsed = try? AttributedString(markdown: markdown, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)) else {
             return NSAttributedString(string: source, attributes: [.font: NSFont.systemFont(ofSize: size)])
         }
         let result = NSMutableAttributedString(string: "")
@@ -148,7 +152,7 @@ enum MarkdownFormatter {
             var attributes: [NSAttributedString.Key: Any] = [.font: font]
             if intent.contains(.strikethrough) { attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue }
             if let link = run.link ?? run.imageURL { attributes[.link] = link }
-            var text = String(parsed[run.range].characters)
+            var text = String(parsed[run.range].characters).replacingOccurrences(of: "\n", with: "\u{2028}")
             if intent.contains(.inlineHTML), matches("(?i)^<br\\s*/?>$", text) != nil { text = "\u{2028}" }
             if run.imageURL != nil { text = "Image: " + (text.trimmingCharacters(in: .whitespaces).isEmpty ? "image" : text) }
             result.append(NSAttributedString(string: text, attributes: attributes))
