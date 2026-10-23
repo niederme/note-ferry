@@ -6,6 +6,22 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Note Ferry</title>
         <item>
+            <title>1.2.4</title>
+            <pubDate>Fri, 23 Oct 2026 16:12:34 -0400</pubDate>
+            <link>https://github.com/niederme/note-ferry/releases/tag/v1.2.4</link>
+            <sparkle:version>9</sparkle:version>
+            <sparkle:shortVersionString>1.2.4</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[Note Ferry 1.2.4 fixes bold formatting around Markdown line breaks.
+
+- Bold headings in numbered lists now paste into Apple Notes without visible `**` markers when followed by a Markdown hard line break.
+- Emphasis spanning a line break keeps its formatting, while list numbering, links, and inline code are preserved.
+
+Version 1.2.4 is build 9. **Format only** still runs locally without AI.
+]]></description>
+            <enclosure url="https://github.com/niederme/note-ferry/releases/download/v1.2.4/Note-Ferry-1.2.4-universal.zip" length="1692710" type="application/octet-stream" sparkle:edSignature="JbvjmCrvWYDVk+I/MeK57+tKu10BkeZR8wjmnj4yq4tWJw0va3aJSdN4tUSvuwtm5GdebJCun5i/NEdUoJKWBw=="/>
+        </item>
+        <item>
             <title>1.2.3</title>
             <pubDate>Fri, 16 Oct 2026 12:10:23 -0400</pubDate>
             <link>https://github.com/niederme/note-ferry/releases/tag/v1.2.3</link>
@@ -92,6 +108,6 @@ The rest of the app still formats text locally or summarizes it with your Codex 
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: kGdW435kB7E967VIV0b36qE24TICRUx4AjtEY8vW8x7MX9JHQEd1ckTxBBxQx5pmT8QsR0Yecq+pOXxmWtk9BA==
-length: 7936
+edSignature: cEjLGvLOPa4tEsjoHuYOkGxCOaOEjTybhnnYMwr8LJfy9OyPyLYC8mdA9CZVea/m7uvofxl/7lqI3BG5inaVAg==
+length: 9106
 -->
