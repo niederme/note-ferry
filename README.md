@@ -8,9 +8,13 @@ Note Ferry is a small native macOS app that formats text for Apple Notes and put
 
 You choose where to paste. Note Ferry never creates or edits an Apple Note.
 
-<img src="docs/images/app.jpg" width="760" alt="Note Ferry showing a fictional website launch meeting, with spaced bullet points, key takeaways, action items, and a Copy summary button">
+<img src="docs/images/app.jpg" width="760" alt="Note Ferry showing a fictional website launch summary with bold headings, spaced bullet points, key takeaways, action items, and a Copy summary button">
 
-*A sample summary with takeaways, action items, and formatting ready for Apple Notes.*
+*A sample rich-text summary with headings, takeaways, and action items, ready for Apple Notes.*
+
+<img src="docs/images/app-controls.jpg" width="760" alt="Note Ferry input controls showing Format only, Summarize &amp; format, and Codex selected as the summarizer">
+
+*Before processing, choose **Summarize & format** with **Codex**, or **Format only** to keep your wording.*
 
 ## Why Note Ferry?
 

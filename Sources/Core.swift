@@ -81,7 +81,6 @@ enum NoteRenderer {
             }
         }
         append(clean(note.title) + "\n", font: .boldSystemFont(ofSize: 24))
-        append("\n")
         if !note.subtitle.isEmpty { append(clean(note.subtitle) + "\n") }
         section("Key takeaways", note.takeaways)
         section("Action items", note.actions)
