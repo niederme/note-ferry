@@ -61,7 +61,7 @@
 		A2AD86BB78EE511ED2B5E66F /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		B1BD9684F06E243508BFDF32 /* Makefile */ = {isa = PBXFileReference; path = Makefile; sourceTree = "<group>"; };
 		B360DFD0944443B0BFF76F4A /* app-icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "app-icon.png"; sourceTree = "<group>"; };
-		B407FBE4A93AAD0E284F559B /* app.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = app.jpg; sourceTree = "<group>"; };
+		B407FBE4A93AAD0E284F559B /* summary-preview.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = summary-preview.jpg; sourceTree = "<group>"; };
 		B71B5DB84DE7FAB0ABF49FBE /* Sparkle.LICENSE */ = {isa = PBXFileReference; path = Sparkle.LICENSE; sourceTree = "<group>"; };
 		BADCE6A69DF5F2D902F91972 /* SettingsWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindow.swift; sourceTree = "<group>"; };
 		BBB7A072E2DF95001BDE9D94 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
@@ -105,7 +105,7 @@
 			isa = PBXGroup;
 			children = (
 				B360DFD0944443B0BFF76F4A /* app-icon.png */,
-				B407FBE4A93AAD0E284F559B /* app.jpg */,
+				B407FBE4A93AAD0E284F559B /* summary-preview.jpg */,
 			);
 			path = images;
 			sourceTree = "<group>";
