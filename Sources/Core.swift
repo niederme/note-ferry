@@ -234,27 +234,20 @@ final class CodexRunner: @unchecked Sendable {
         }
     }
     static func executable() -> URL? {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        let candidates = [home + "/.local/bin/codex", "/opt/homebrew/bin/codex", "/usr/local/bin/codex", "/Applications/Codex.app/Contents/Resources/codex"]
-        return candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }).map { URL(fileURLWithPath: $0) }
+        try? CodexDiscovery().resolve().executable
     }
-    func run(transcript: String, resources: URL, executable override: URL? = nil) throws -> Summary {
+    func run(transcript: String, resources: URL, executable override: URL? = nil, discovery: CodexDiscovery = CodexDiscovery()) throws -> Summary {
         try Transcript.validate(transcript)
-        guard let executable = override ?? Self.executable() else {
-            throw AppError.message("Codex CLI wasn't found. Install Codex CLI and run ‘codex login’ once in Terminal, then try again.")
-        }
+        let installation = try discovery.resolve(executable: override)
         let prompt = try String(contentsOf: resources.appendingPathComponent("SummaryPrompt.txt"), encoding: .utf8)
         let work = FileManager.default.temporaryDirectory.appendingPathComponent("note-ferry-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         defer { try? FileManager.default.removeItem(at: work) }
         let output = work.appendingPathComponent("summary.json")
         let task = Process()
-        task.executableURL = executable
+        task.executableURL = installation.executable
         task.currentDirectoryURL = work
-        var environment = ProcessInfo.processInfo.environment
-        environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:" + FileManager.default.homeDirectoryForCurrentUser.path + "/.local/bin"
-        for key in ["CODEX_THREAD_ID", "CODEX_INTERNAL_ORIGINATOR_OVERRIDE", "CODEX_MANAGED_BY_NPM", "CODEX_MANAGED_BY_BUN"] { environment.removeValue(forKey: key) }
-        task.environment = environment
+        task.environment = installation.environment
         task.arguments = ["exec", "--model", "gpt-5.6-sol", "--ignore-user-config", "--ephemeral", "--skip-git-repo-check", "--sandbox", "read-only",
             "--color", "never", "--output-schema", resources.appendingPathComponent("Summary.schema.json").path,
             "--output-last-message", output.path, "-c", "approval_policy=\"never\"", "-c", "web_search=\"disabled\"",

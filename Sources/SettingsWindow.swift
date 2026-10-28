@@ -178,8 +178,14 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
         case .claude:
             providerDetail.stringValue = "Uses your API key. Summaries go to Anthropic."
         }
-        connectionDetail.isHidden = chosen != .codex || CodexRunner.executable() != nil
-        connectionDetail.stringValue = "Codex CLI not found. Install it to use Codex."
+        connectionDetail.isHidden = true
+        if chosen == .codex {
+            do { _ = try CodexDiscovery().resolve() }
+            catch {
+                connectionDetail.isHidden = false
+                connectionDetail.stringValue = error.localizedDescription
+            }
+        }
         let claude: String
         let hasKey: Bool
         do {

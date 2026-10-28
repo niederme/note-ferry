@@ -48,7 +48,9 @@ Source builds target your Mac’s architecture and are ad-hoc signed for local u
 
 The app reuses your Codex CLI login. With a ChatGPT login, you do not need a separate API key in Note Ferry. Requests consume your Codex account allowance and remain subject to its limits and terms.
 
-Codex is discovered in `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, or the standard Codex app bundle location. Other installation paths are not currently configurable in the app.
+Codex discovery checks absolute entries in the app's inherited `PATH`, `~/.local/bin`, `~/.npm-global/bin`, `~/.npm/bin`, Homebrew/system locations, installed nvm versions, and the standard Codex app bundle location. nvm discovery checks `NVM_DIR`, `~/.nvm`, and `$XDG_CONFIG_HOME/nvm` (or `~/.config/nvm`). Without a PATH selection it tries nvm versions newest first, choosing the first usable Codex. The launcher keeps the discovered runtime directories in its child PATH, including the matching npm prefix for symlinked launchers, and reports a missing Node.js runtime separately.
+
+Discovery reads the filesystem only: it does not run shell startup files, load nvm aliases, or read npm configuration. Relative and empty PATH entries are ignored. For a custom npm prefix or nvm root outside these locations, its bin directory must be in the app's inherited PATH (or its root in `NVM_DIR`); Finder does not inherit Terminal-only shell configuration. Executable paths are not currently configurable in the app.
 
 Note Ferry explicitly selects `gpt-5.6-sol` with medium reasoning effort for Codex summaries. This keeps the model choice independent of CLI defaults and user preferences. This selection completed a live synthetic summary through the signed-in CLI during release validation; a cached model catalog alone does not verify access. Your signed-in account and CLI must support this model; if unavailable, the request fails without switching models or providers and explains the model-access issue. It deliberately ignores user configuration rather than inheriting custom tools or integrations. Version 1.2 also offers on-device Apple Intelligence on supported Macs running macOS 26 or later, plus Claude through a separately billed Anthropic API key stored in the app's Keychain item. A first-run chooser, Settings default, and per-transcript picker select the provider. No provider silently falls back to another.
 
@@ -76,6 +78,7 @@ make install   # Build and install in ~/Applications
 | `Sources/main.swift` | AppKit interface and clipboard workflow |
 | `Sources/MarkdownFormatter.swift` | Local Markdown parsing and Notes-friendly rich text |
 | `Sources/Core.swift` | Summary model, renderer, clipboard helpers, and Codex runner |
+| `Sources/CodexDiscovery.swift` | Codex and Node runtime discovery for GUI launches |
 | `Sources/LocalSummarizer.swift` | On-device Apple Intelligence summarizer and text chunking |
 | `Sources/ClaudeRunner.swift` | Anthropic Messages API request, response validation, and cancellation |
 | `Sources/ProviderSettings.swift` | Default provider and Claude API key in macOS Keychain |
@@ -137,6 +140,8 @@ This sends the source to Codex and saves `summary.json`, `summary.rtf`, and `sum
 ### Verification
 
 The automated checks cover local Markdown conversion, inline emphasis and links, ordered and nested lists, literal code, whole-answer fences, short text, RTF round trips, native lists, bold headings, soft returns, section spacing, Unicode, plain-text fallback, clipboard conflicts and restoration, input validation, invalid model responses, authentication failures, cancellation, and timeout.
+
+Use `NF_TEST_SKIP_KEYCHAIN=1 make test` to skip the isolated Keychain availability check when Keychain access is out of scope. Codex discovery regression tests use temporary synthetic installations and a mock Node launcher; they make no model calls and do not run shell startup files.
 
 Clipboard tests use a separate named pasteboard, leaving the regular clipboard alone. They require access to the macOS pasteboard service and may fail in a restrictive execution sandbox.
 
