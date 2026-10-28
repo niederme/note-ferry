@@ -28,6 +28,7 @@ final class ProviderSettings {
     static let shared = ProviderSettings()
 
     private enum DefaultsKey {
+        static let codexModel = "codexModel"
         static let defaultProvider = "defaultSummaryProvider"
         static let hasCompletedOnboarding = "hasCompletedProviderOnboarding"
         static let claudeWorkspaceID = "claudeWorkspaceID"
@@ -57,6 +58,27 @@ final class ProviderSettings {
         }
         set {
             defaults.set(newValue.rawValue, forKey: DefaultsKey.defaultProvider)
+        }
+    }
+
+    var codexModel: String? { defaults.string(forKey: DefaultsKey.codexModel) }
+
+    static func validatedCodexModel(_ value: String) throws -> String? {
+        let model = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !model.isEmpty else { return nil }
+        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._/:-")
+        guard model.utf8.count <= 160, model.first != "-",
+              model.unicodeScalars.allSatisfy({ allowed.contains($0) }) else {
+            throw AppError.message("Enter a model ID without spaces, or leave it blank to use Codex's default.")
+        }
+        return model
+    }
+
+    func saveCodexModel(_ value: String) throws {
+        if let model = try Self.validatedCodexModel(value) {
+            defaults.set(model, forKey: DefaultsKey.codexModel)
+        } else {
+            defaults.removeObject(forKey: DefaultsKey.codexModel)
         }
     }
 

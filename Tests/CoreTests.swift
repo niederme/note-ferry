@@ -55,6 +55,14 @@ final class MockClaudeURLProtocol: URLProtocol {
         let restoredSettings = ProviderSettings(defaults: preferences, bundleIdentifier: preferencesSuite)
         check(restoredSettings.defaultProvider == .codex && restoredSettings.hasCompletedOnboarding,
               "Provider choice and onboarding state did not persist")
+        check(providerSettings.codexModel == nil, "New installs forced a Codex model")
+        try providerSettings.saveCodexModel("  enterprise-test-model  ")
+        check(restoredSettings.codexModel == "enterprise-test-model", "Codex model did not normalize and persist")
+        rejects({ try providerSettings.saveCodexModel("--model=other") }, "A flag was accepted as a model ID")
+        rejects({ try providerSettings.saveCodexModel("model with spaces") }, "A model ID with spaces was accepted")
+        check(providerSettings.codexModel == "enterprise-test-model", "Invalid model replaced the saved choice")
+        try providerSettings.saveCodexModel("  ")
+        check(restoredSettings.codexModel == nil, "Clearing the model did not restore the CLI default")
         providerSettings.claudeNeedsWorkspaceID = true
         check(restoredSettings.claudeNeedsWorkspaceID,
               "An unfinished workspace setup was lost when settings reopened")
@@ -234,21 +242,29 @@ final class MockClaudeURLProtocol: URLProtocol {
         check(snapshot.restore(to: board), "Formatted output could not restore clipboard")
         let mock = root.appendingPathComponent("Tests/mock-codex.sh")
         setenv("NF_TEST_MODE", "success", 1)
+        unsetenv("NF_TEST_EXPECTED_MODEL")
         let generated = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock)
         check(generated.title == note.title, "Backend did not decode a valid response")
+        setenv("NF_TEST_EXPECTED_MODEL", "enterprise-test-model", 1)
+        let enterpriseResult = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock, model: "enterprise-test-model")
+        check(enterpriseResult.title == note.title, "Explicit enterprise model was not passed to Codex")
+        unsetenv("NF_TEST_EXPECTED_MODEL")
+        rejects({ _ = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock, model: "--invalid") }, "An invalid model reached the runner")
         for mode in ["fail", "malformed", "empty"] {
             setenv("NF_TEST_MODE", mode, 1)
             rejects({ _ = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock) }, "Invalid response accepted: " + mode)
             check(board.string(forType: .string) == validSource, "Backend failure touched clipboard")
         }
-        setenv("NF_TEST_MODE", "unavailable", 1)
-        do {
-            _ = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock)
-            fatalError("Unavailable Codex model accepted")
-        } catch {
-            check(error.localizedDescription.contains("model isn't available") && error.localizedDescription.contains("choose another summarizer"), "Unavailable model reported as a generic network failure")
+        for mode in ["unavailable", "model_missing", "model_access_denied"] {
+            setenv("NF_TEST_MODE", mode, 1)
+            do {
+                _ = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock)
+                fatalError("Unavailable Codex model accepted")
+            } catch {
+                check(error.localizedDescription.contains("model isn't available") && error.localizedDescription.contains("Settings") && error.localizedDescription.contains("model ID"), "Unavailable model reported as a generic network failure")
+            }
+            check(board.string(forType: .string) == validSource, "Unavailable model touched clipboard")
         }
-        check(board.string(forType: .string) == validSource, "Unavailable model touched clipboard")
         setenv("NF_TEST_MODE", "hang", 1)
         let before = Date()
         rejects({ _ = try CodexRunner(timeout: 0.15).run(transcript: validSource, resources: resources, executable: mock) }, "Timeout not enforced")

@@ -236,8 +236,9 @@ final class CodexRunner: @unchecked Sendable {
     static func executable() -> URL? {
         try? CodexDiscovery().resolve().executable
     }
-    func run(transcript: String, resources: URL, executable override: URL? = nil, discovery: CodexDiscovery = CodexDiscovery()) throws -> Summary {
+    func run(transcript: String, resources: URL, executable override: URL? = nil, discovery: CodexDiscovery = CodexDiscovery(), model: String? = nil) throws -> Summary {
         try Transcript.validate(transcript)
+        let selectedModel = try ProviderSettings.validatedCodexModel(model ?? "")
         let installation = try discovery.resolve(executable: override)
         let prompt = try String(contentsOf: resources.appendingPathComponent("SummaryPrompt.txt"), encoding: .utf8)
         let work = FileManager.default.temporaryDirectory.appendingPathComponent("note-ferry-" + UUID().uuidString)
@@ -248,10 +249,11 @@ final class CodexRunner: @unchecked Sendable {
         task.executableURL = installation.executable
         task.currentDirectoryURL = work
         task.environment = installation.environment
-        task.arguments = ["exec", "--model", "gpt-5.6-sol", "--ignore-user-config", "--ephemeral", "--skip-git-repo-check", "--sandbox", "read-only",
+        task.arguments = ["exec", "--ignore-user-config", "--ephemeral", "--skip-git-repo-check", "--sandbox", "read-only",
             "--color", "never", "--output-schema", resources.appendingPathComponent("Summary.schema.json").path,
             "--output-last-message", output.path, "-c", "approval_policy=\"never\"", "-c", "web_search=\"disabled\"",
-            "-c", "model_reasoning_effort=\"medium\"", "-c", "project_doc_max_bytes=0"]
+            "-c", "project_doc_max_bytes=0"]
+        if let selectedModel { task.arguments! += ["--model", selectedModel] }
         for feature in ["shell_tool", "unified_exec", "apps", "plugins", "hooks", "memories", "multi_agent", "multi_agent_v2", "browser_use", "browser_use_external", "computer_use", "image_generation", "skill_search", "code_mode", "code_mode_host", "goals"] {
             task.arguments! += ["-c", "features.\(feature)=false"]
         }
@@ -303,8 +305,9 @@ final class CodexRunner: @unchecked Sendable {
             if detail.contains("usage limit") || detail.contains("rate limit") || detail.contains("quota") {
                 throw AppError.message("Your Codex account reached a usage limit. Wait for it to reset, then retry. Your clipboard is unchanged.")
             }
-            if detail.contains("model_not_found") || (detail.contains("model") && detail.contains("not supported")) {
-                throw AppError.message("The selected Codex model isn't available to your signed-in account. Update Codex CLI or choose another summarizer. Your transcript and clipboard are unchanged.")
+            if detail.contains("model_not_found") || detail.contains("model_access_denied") ||
+                (detail.contains("model") && (detail.contains("not supported") || detail.contains("not available") || detail.contains("does not exist") || detail.contains("do not have access"))) {
+                throw AppError.message("The Codex model isn't available to your signed-in account. In Note Ferry Settings, enter a model ID your account can use, or clear the model field to let Codex choose its default. Your transcript and clipboard are unchanged.")
             }
             throw AppError.message("Codex couldn't complete the summary. Check your internet connection and Codex login, then retry. Your clipboard is unchanged.")
         }
