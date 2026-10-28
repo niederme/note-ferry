@@ -7,6 +7,11 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
     private let picker = NSPopUpButton(frame: .zero, pullsDown: false)
     private let providerDetail = NSTextField(wrappingLabelWithString: "")
     private let connectionDetail = NSTextField(wrappingLabelWithString: "")
+    private let codexModelLabel = NSTextField(labelWithString: "Codex model")
+    private let codexModelField = NSTextField()
+    private let codexModelHelp = NSTextField(wrappingLabelWithString: "Leave blank for Codex's built-in default, or enter a model ID available to your account.")
+    private let saveCodexModelButton = NSButton(title: "Save model", target: nil, action: nil)
+    private let codexModelRow = NSStackView()
     private let keyField = NSTextField()
     private let workspaceLabel = NSTextField(labelWithString: "Workspace ID")
     private let workspaceField = NSTextField()
@@ -40,6 +45,7 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
         workspaceRequired = ProviderSettings.shared.claudeNeedsWorkspaceID
         pendingKeyForVerification = nil
         keyField.stringValue = ""
+        codexModelField.stringValue = ProviderSettings.shared.codexModel ?? ""
         workspaceField.stringValue = ProviderSettings.shared.claudeWorkspaceID ?? ""
         showFeedback("")
         picker.selectItem(withTag: SummaryProvider.allCases.firstIndex(of: ProviderSettings.shared.defaultProvider) ?? 0)
@@ -94,6 +100,26 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
         connectionDetail.font = .systemFont(ofSize: 12)
         connectionDetail.textColor = .secondaryLabelColor
         root.addArrangedSubview(connectionDetail)
+        codexModelLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+        root.addArrangedSubview(codexModelLabel)
+        codexModelField.placeholderString = "Codex default"
+        codexModelField.setAccessibilityLabel("Codex model ID")
+        codexModelField.isAutomaticTextCompletionEnabled = false
+        codexModelField.target = self
+        codexModelField.action = #selector(saveCodexModel)
+        saveCodexModelButton.bezelStyle = .rounded
+        saveCodexModelButton.target = self
+        saveCodexModelButton.action = #selector(saveCodexModel)
+        codexModelRow.orientation = .horizontal
+        codexModelRow.spacing = 8
+        codexModelRow.addArrangedSubview(codexModelField)
+        codexModelRow.addArrangedSubview(saveCodexModelButton)
+        root.addArrangedSubview(codexModelRow)
+        codexModelRow.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56).isActive = true
+        codexModelHelp.font = .systemFont(ofSize: 12)
+        codexModelHelp.textColor = .secondaryLabelColor
+        root.addArrangedSubview(codexModelHelp)
+        codexModelHelp.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56).isActive = true
         let keyLabel = NSTextField(labelWithString: "Claude API key")
         keyLabel.font = .systemFont(ofSize: 13, weight: .semibold)
         root.addArrangedSubview(keyLabel)
@@ -178,6 +204,7 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
         case .claude:
             providerDetail.stringValue = "Uses your API key. Summaries go to Anthropic."
         }
+        for view in [codexModelLabel, codexModelRow, codexModelHelp] { view.isHidden = chosen != .codex }
         connectionDetail.isHidden = true
         if chosen == .codex {
             do { _ = try CodexDiscovery().resolve() }
@@ -213,7 +240,7 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
         workspaceHelpButton.isHidden = !showWorkspace
         changeWorkspaceButton.title = ProviderSettings.shared.claudeWorkspaceID == nil ? "Add workspace…" : "Change workspace…"
         changeWorkspaceButton.isHidden = showWorkspace || !hasKey
-        window?.setContentSize(NSSize(width: 550, height: showWorkspace ? 565 : 460))
+        window?.setContentSize(NSSize(width: 550, height: (showWorkspace ? 565 : 460) + (chosen == .codex ? 120 : 0)))
     }
 
     @objc private func providerChanged() {
@@ -223,6 +250,15 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
         showFeedback("")
         refresh()
         onChange?()
+    }
+
+    @objc private func saveCodexModel() {
+        do {
+            try ProviderSettings.shared.saveCodexModel(codexModelField.stringValue)
+            codexModelField.stringValue = ProviderSettings.shared.codexModel ?? ""
+            showFeedback(ProviderSettings.shared.codexModel == nil ? "Codex will choose its default model." : "Codex model saved.")
+            onChange?()
+        } catch { showFeedback(error.localizedDescription, isError: true) }
     }
 
     @objc private func pasteKey() {
@@ -363,6 +399,10 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
     }
 
     @objc private func done() {
+        if picker.indexOfSelectedItem == SummaryProvider.allCases.firstIndex(of: .codex) {
+            do { try ProviderSettings.shared.saveCodexModel(codexModelField.stringValue) }
+            catch { showFeedback(error.localizedDescription, isError: true); return }
+        }
         keyCheckGeneration += 1
         keyField.stringValue = ""
         pendingKeyForVerification = nil

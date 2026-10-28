@@ -5,7 +5,7 @@ let arguments = CommandLine.arguments
 if arguments.count == 4 && arguments[1] == "--summarize-file" {
     do {
         let source = try String(contentsOfFile: arguments[2], encoding: .utf8)
-        let summary = try CodexRunner().run(transcript: source, resources: Bundle.main.resourceURL!)
+        let summary = try CodexRunner().run(transcript: source, resources: Bundle.main.resourceURL!, model: ProviderSettings.shared.codexModel)
         let base = URL(fileURLWithPath: arguments[3])
         try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         try JSONEncoder().encode(summary).write(to: base.appendingPathComponent("summary.json"), options: .atomic)
@@ -446,8 +446,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         } else if action == .codex {
             let worker = CodexRunner(); runner = worker
             let resources = Bundle.main.resourceURL!
+            let model = ProviderSettings.shared.codexModel
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                let result = Result { try worker.run(transcript: text, resources: resources) }
+                let result = Result { try worker.run(transcript: text, resources: resources, model: model) }
                 DispatchQueue.main.async { self?.finish(token, result: result) }
             }
         } else if let key = claudeKey {
