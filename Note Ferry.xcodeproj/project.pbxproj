@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5C75E821244935D4D1E4D7F7 /* CodexDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1DB0A2634A266C41CB046B0 /* CodexDiscovery.swift */; };
 		16C791B689A232E47398D396 /* Sparkle.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = CB95A0AFA2462E178E3ECD02 /* Sparkle.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		21A40A696E4C0A9686A3B448 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A2AD86BB78EE511ED2B5E66F /* AppIcon.icns */; };
 		22FE43DBB805BF6BEB09C61F /* Summary.schema.json in Resources */ = {isa = PBXBuildFile; fileRef = 1BA92E188E7F7B21219FA9B4 /* Summary.schema.json */; };
@@ -38,6 +39,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		E1DB0A2634A266C41CB046B0 /* CodexDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexDiscovery.swift; sourceTree = "<group>"; };
+		AABBCCDD0011223344556677 /* CodexDiscoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexDiscoveryTests.swift; sourceTree = "<group>"; };
 		0BC740F27D9249CF7831543F /* ROADMAP.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = ROADMAP.md; sourceTree = "<group>"; };
 		1BA92E188E7F7B21219FA9B4 /* Summary.schema.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Summary.schema.json; sourceTree = "<group>"; };
 		20E40BB7A0D2892512DC8219 /* ClaudeRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeRunner.swift; sourceTree = "<group>"; };
@@ -140,6 +143,7 @@
 			children = (
 				20E40BB7A0D2892512DC8219 /* ClaudeRunner.swift */,
 				99AEB9F31C0DB7834DF5EEDB /* Core.swift */,
+				E1DB0A2634A266C41CB046B0 /* CodexDiscovery.swift */,
 				A0C64FEA22A29A3AA80DD17F /* LocalSummarizer.swift */,
 				43688D7348230BD3C1EF3745 /* main.swift */,
 				3D9D9E5AE8004927DA995386 /* MarkdownFormatter.swift */,
@@ -181,6 +185,7 @@
 			isa = PBXGroup;
 			children = (
 				DBDD592F29FFC028E1BC1554 /* CoreTests.swift */,
+				AABBCCDD0011223344556677 /* CodexDiscoveryTests.swift */,
 				DB53A0A606A7A3248AF34BC6 /* fixture.json */,
 				5F73106FF5C8B2C7A625FAB3 /* format-fixture.md */,
 				9F4B9ABA2C5AF54894A10888 /* mock-codex.sh */,
@@ -289,6 +294,7 @@
 			files = (
 				339A3E0CBAB37A38BC707F59 /* ClaudeRunner.swift in Sources */,
 				B2BABFAC3992A84FC7681E71 /* Core.swift in Sources */,
+				5C75E821244935D4D1E4D7F7 /* CodexDiscovery.swift in Sources */,
 				DA38A5D445647A08B2A13B3B /* LocalSummarizer.swift in Sources */,
 				8A021F19CDDAE3FE887B6021 /* MarkdownFormatter.swift in Sources */,
 				B1458ADBF253659A9F2F9B0A /* ProviderSettings.swift in Sources */,

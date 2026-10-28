@@ -43,6 +43,7 @@ final class MockClaudeURLProtocol: URLProtocol {
     }
     static func main() throws {
         let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        try codexDiscoveryTests(root: root)
         let preferencesSuite = "me.nieder.note-ferry.tests.\(UUID().uuidString)"
         let preferences = UserDefaults(suiteName: preferencesSuite)!
         defer { preferences.removePersistentDomain(forName: preferencesSuite) }
@@ -86,8 +87,12 @@ final class MockClaudeURLProtocol: URLProtocol {
                 "An incomplete API key was accepted")
         rejects({ _ = try ProviderSettings.validatedClaudeAPIKey("sk-ant-api03-example_key_123456🎈") },
                 "Non-ASCII clipboard content was accepted as an API key")
-        let hasTestKey = try providerSettings.hasClaudeAPIKey()
-        check(!hasTestKey, "A fresh test Keychain unexpectedly has a Claude key")
+        if ProcessInfo.processInfo.environment["NF_TEST_SKIP_KEYCHAIN"] != "1" {
+            let hasTestKey = try providerSettings.hasClaudeAPIKey()
+            check(!hasTestKey, "A fresh test Keychain unexpectedly has a Claude key")
+        } else {
+            print("Skipped the Keychain availability check (NF_TEST_SKIP_KEYCHAIN=1).")
+        }
         if #available(macOS 26.0, *) {
             let actions = LocalSummarizer.unique([
                 NoteItem(label: "FAQ drafting", text: "Sam will draft the updated FAQ by Thursday."),
