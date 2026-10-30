@@ -6,6 +6,27 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Note Ferry</title>
         <item>
+            <title>2.0</title>
+            <pubDate>Fri, 30 Oct 2026 17:42:49 -0400</pubDate>
+            <link>https://github.com/niederme/note-ferry/releases/tag/v2.0</link>
+            <sparkle:version>11</sparkle:version>
+            <sparkle:shortVersionString>2.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[Note Ferry 2.0 helps clear up confusing details before they become notes.
+
+- **Clarify before summarizing.** Your selected model reviews the text in the background and asks questions only when an answer could materially improve the summary. Questions include verified source excerpts when useful. Choose a radio-button answer, select Something else to write your own, or leave questions unanswered and finish the summary.
+- **Keep control of the interview.** Continue through useful follow-ups or choose Finish & summarize at any point. The interview is on by default; turn off Ask clarifying questions before summarizing in Settings to skip the extra processing. Interviews use additional tokens and time, and Claude API requests can cost more.
+- **Provide context once.** Add names, terminology, or background separately from the source. Context and your interview answers stay visible under Context used, with their own copy action, without being appended to Copy summary.
+- **A clearer interface.** Summarize & format is now the primary action on the left. Larger, resizable windows fit the available screen, excerpts sit beside their questions with readable spacing, and visible scrollbars show where more content is available. Tab moves through answers, arrow keys change radio choices, and Command-Return continues the interview.
+- **See reported usage.** Results include elapsed summary time and provider-reported token counts, including interview requests when available. Apple Intelligence token reporting requires macOS 27. Missing or cancelled usage is shown as unavailable rather than as a complete total.
+
+Format only still runs locally without AI. The app does not keep a transcript library, edit Apple Notes, or silently switch providers. The clipboard remains unchanged during the interview, and anything you copy while processing is protected when the summary finishes.
+
+Version 2.0 is build 11. The universal app supports Apple silicon and Intel Macs and requires macOS 14 or later. Apple Intelligence requires a compatible Mac running macOS 26 or later with Apple Intelligence enabled. Its smaller context budget may require shorter interview answers or an earlier finish. Review important details in any AI-generated summary.
+]]></description>
+            <enclosure url="https://github.com/niederme/note-ferry/releases/download/v2.0/Note-Ferry-2.0-universal.zip" length="1950717" type="application/octet-stream" sparkle:edSignature="7iAShbO5VuPnSE8s4wPLONcdHrsRu8/TDXyL0pUf3R1dge3amszNJenRwd3dW6bLlFKr3xZexRFZcio5DEywDw=="/>
+        </item>
+        <item>
             <title>1.2.5</title>
             <pubDate>Wed, 28 Oct 2026 17:28:43 -0400</pubDate>
             <link>https://github.com/niederme/note-ferry/releases/tag/v1.2.5</link>
@@ -126,6 +147,6 @@ The rest of the app still formats text locally or summarizes it with your Codex 
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: R33P1X4M6/c0gC3Gjs/1GAA4NEtDKQo55eTzXAAA4YM9GBDa0CIv5vCST3F00e16GcBqC02qmlzn3gj7x9fNCg==
-length: 10664
+edSignature: XKMHnIEmJvfzcsYgVZ3UMEE1h6nBuvZ85DaLmTUwrmQJ1FLcnNTJeiRRYGfcinJX13DCCkj4GcnYgXHAUaIoDQ==
+length: 13679
 -->
