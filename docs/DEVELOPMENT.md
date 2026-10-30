@@ -7,7 +7,7 @@ Build, test, and contribute to Note Ferry. See the [download instructions](../RE
 ## Requirements
 
 - macOS 14 or later. Runtime testing so far has been on Apple silicon with macOS 27.
-- Xcode with the macOS 26 or later SDK, even when building for macOS 14. The source includes an optional Apple Foundation Models path behind a runtime availability check.
+- Xcode with the macOS 27 or later SDK, even when building for macOS 14. The source includes an optional Apple Foundation Models path behind a runtime availability check.
 - For Codex summaries, a signed-in Codex CLI supporting `exec`, `--ephemeral`, `--ignore-user-config`, and `--output-schema`. Local formatting, Apple Intelligence, and Claude do not require Codex.
 
 The app uses AppKit and bundles Sparkle 2.10 for updates. The build downloads Sparkle on first use and checks its pinned SHA-256. Sparkle’s license is in `Resources/Sparkle.LICENSE` and included in the app. Codex is an external runtime dependency and is not bundled.
@@ -54,7 +54,7 @@ Discovery reads the filesystem only: it does not run shell startup files, load n
 
 Note Ferry lets Codex choose its built-in default model unless you enter a model ID in **Note Ferry → Settings… → Codex model**. Enterprise accounts can enter a model available to their workspace instead of relying on a fixed model name. Clear the field to restore the CLI default. The choice is stored in Note Ferry preferences; it does not change your Codex account or CLI configuration. Note Ferry passes no fixed reasoning-effort setting. If a model is unavailable, the request fails with a Settings instruction, without silently switching models or providers.
 
-The runner keeps `--ignore-user-config`: it does not inherit your Terminal model preference, custom tools, hooks, or integrations. See the [official CLI reference](https://developers.openai.com/codex/developer-commands) for the model override and config-isolation flags. Version 1.2 also offers on-device Apple Intelligence on supported Macs running macOS 26 or later, plus Claude through a separately billed Anthropic API key stored in the app's Keychain item. A first-run chooser, Settings default, and per-transcript picker select the provider. No provider silently falls back to another.
+The runner keeps `--ignore-user-config`: it does not inherit your Terminal model preference, custom tools, hooks, or integrations. See the [official CLI reference](https://developers.openai.com/codex/developer-commands) for the model override and config-isolation flags. Version 2.0 also offers on-device Apple Intelligence on supported Macs running macOS 26 or later, plus Claude through a separately billed Anthropic API key stored in the app's Keychain item. A first-run chooser, Settings default, and per-transcript picker select the provider. No provider silently falls back to another.
 
 ## Build in Xcode
 

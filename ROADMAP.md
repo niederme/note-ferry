@@ -2,7 +2,7 @@
 
 [Back to Note Ferry](README.md) · [Development guide](docs/DEVELOPMENT.md)
 
-Version 1.2 offers Apple Intelligence, Codex, and Claude API summarization, with a first-run chooser, a default in Settings, and a per-text provider picker. **Format only** stays local. Other plans have no promised release dates. Keep the core workflow simple: paste text, choose an action, and paste into Apple Notes.
+Version 2.0 adds optional context and adaptive clarification interviews to Apple Intelligence, Codex, and Claude API summarization, with a first-run chooser, a default in Settings, and a per-text provider picker. **Format only** stays local. Other plans have no promised release dates. Keep the core workflow simple: paste text, choose an action, and paste into Apple Notes.
 
 ## More ways to summarize
 
@@ -10,13 +10,13 @@ Version 1.2 offers Apple Intelligence, Codex, and Claude API summarization, with
 | --- | --- | --- |
 | Apple Intelligence | Apple's on-device model through Foundation Models | Initial default on new installs; continue evaluating quality, especially for long transcripts |
 | Codex / OpenAI | Existing Codex login; optional direct OpenAI API connection is still planned | Keep the current subscription-backed workflow and add an explicit API option |
-| Claude | Own separately billed Anthropic API key; subscription integration remains exploratory | API-key access is implemented locally; investigate supported Claude Code subscription access separately |
+| Claude | Own separately billed Anthropic API key; subscription integration remains exploratory | API-key access is available; investigate supported Claude Code subscription access separately |
 
 Subscription access and API billing must be clearly distinguished. A subscription must not be described as including API credits. Use providers' supported sign-in flows and integrations; do not extract or repurpose session tokens. Keep API keys in macOS Keychain. Show whether a selected connection uses a subscription or separately billed API usage before a request starts.
 
 ## Provider selection
 
-- **Settings:** save a preferred provider. Existing Codex users retain their choice. New installs preselect Apple Intelligence and explain when it is unavailable. Model selection may be added later.
+- **Settings:** save a preferred provider. Existing Codex users retain their choice. New installs preselect Apple Intelligence and explain when it is unavailable. Codex supports an optional model ID in Settings; broader model selection can be considered later.
 - **Main window:** a compact provider picker beside Summarize lets someone override their default for this transcript. Changing it does not run a request or change the saved default.
 - **Try another result:** retain the original source in memory so another provider can summarize the same transcript. Keep the previous result available in the current session for comparison, and identify which provider and model produced each result. This does not introduce a persistent transcript library.
 - **Clipboard:** a comparison run should leave the current clipboard alone until the user chooses Copy summary for the result they want. Preserve the existing automatic copy for the first summary and its protection against overwriting newer clipboard content.
@@ -41,14 +41,14 @@ Evaluate invoking the user's unmodified Claude Code installation with their own 
 
 All providers should use the same output structure and Apple Notes formatting. Retain explicit user-triggered processing, cancellation, clipboard protection, and the rule that the app never creates or edits notes.
 
-## Later exploration
-
-### Clarification interview: implemented in development
+## Clarification interview: shipped in 2.0
 
 An optional interview now runs before the final summary. It is on by default, with **Ask clarifying questions before summarizing** in Settings. The model checks the source in the background as part of summarizing; an interview appears only when there are useful questions. Users can skip those questions with **Finish & summarize**. The source may be a transcript, rough notes, or other text; clear material should need no questions.
 
 Each round offers up to three material questions, exact source excerpts when useful, evidence-supported suggestions, and free text. Three is a batch size, not a total limit. Follow-ups use prior answers; users can correct the question’s premise, leave answers blank, or choose **Finish & summarize** at any time. Answers are separate from original source evidence, and missing answers never imply agreement. The app checks quoted excerpts against the original text.
 
-Codex, Claude, and Apple Intelligence use the same interview flow. Token reporting includes interview requests when available, and Settings explains the extra time, tokens, and possible API cost. On-device context limits can end the interview earlier. Further evaluation should focus on question usefulness, repeated or leading questions, long-source coverage, and faithful use of corrections across providers before release.
+Codex, Claude, and Apple Intelligence use the same interview flow. Token reporting includes interview requests when available, and Settings explains the extra time, tokens, and possible API cost. On-device context limits can end the interview earlier. Further evaluation should focus on question usefulness, repeated or leading questions, long-source coverage, and faithful use of corrections across providers as the feature evolves.
+
+## Later exploration
 
 Call recording and closer calendar integration are future ambitions. They are outside the provider work above and need a separate design for capture, permissions, meeting context, and retention.
