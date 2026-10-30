@@ -65,6 +65,8 @@ Summaries include key takeaways, action items, and detailed topic sections, with
 - Before summarizing, use the small **Context (optional)** field beneath the transcript to supply names, terminology, or background. It is open by default and can be collapsed. For example: “NOVA is our planning tool. Jamie leads the project.” Context is limited to 1,000 characters and applies to this summary only. It works with Apple Intelligence, Codex, and Claude. **Format only** ignores it.
 - Context stays available after cancellation or an error. Collapsing the field keeps it included; empty the field to omit it. **Clear**, pasting new text over a result, or quitting discards it. It is not saved as a glossary.
 - **Copy summary** copies the formatted result again.
+- When context was supplied, **Context used** stays visible beneath the summary. It is read-only and selectable. **Copy context** copies it separately; it is never appended to **Copy summary**.
+- Completed summaries show elapsed time and provider-reported input/output token counts when available. Input includes instructions and context. Apple Intelligence reports usage on macOS 27 or later, summed across portions and overview passes; on macOS 26, usage is unavailable. These counts are not costs or remaining subscription limits.
 - **Copy formatted text** copies a locally formatted result again.
 - **Clear** empties the window and leaves your clipboard alone. You can also select all (**⌘A**) and paste another text selection.
 - If you copy something else while processing, the app preserves your newer clipboard. Your summary waits in the window until you choose **Copy summary**.

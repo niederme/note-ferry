@@ -8,10 +8,12 @@ EPHEMERAL=0
 SANDBOX=""
 APPROVAL=""
 SHELL_DISABLED=0
+JSON_EVENTS=0
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --output-last-message) DEST="$2"; shift 2 ;;
         --model) MODEL="$2"; shift 2 ;;
+        --json) JSON_EVENTS=1; shift ;;
         --ignore-user-config) ISOLATED=1; shift ;;
         --ephemeral) EPHEMERAL=1; shift ;;
         --sandbox) SANDBOX="$2"; shift 2 ;;
@@ -25,7 +27,7 @@ while [[ $# -gt 0 ]]; do
         *) shift ;;
     esac
 done
-[[ "$MODEL" == "${NF_TEST_EXPECTED_MODEL:-}" && -z "$EFFORT" && "$ISOLATED" == 1 && "$EPHEMERAL" == 1 && "$SANDBOX" == read-only && "$APPROVAL" == 'approval_policy="never"' && "$SHELL_DISABLED" == 1 ]] || {
+[[ "$MODEL" == "${NF_TEST_EXPECTED_MODEL:-}" && -z "$EFFORT" && "$ISOLATED" == 1 && "$EPHEMERAL" == 1 && "$SANDBOX" == read-only && "$APPROVAL" == 'approval_policy="never"' && "$SHELL_DISABLED" == 1 && "$JSON_EVENTS" == 1 ]] || {
     echo 'Unexpected model, reasoning override, or execution safeguards' >&2
     exit 1
 }
@@ -35,8 +37,10 @@ case "${NF_TEST_MODE:-success}" in
     unavailable) echo 'The selected model is not supported when using Codex with a ChatGPT account.' >&2; exit 1 ;;
     model_missing) echo 'model_not_found: model does not exist or you do not have access' >&2; exit 1 ;;
     model_access_denied) echo 'model_access_denied' >&2; exit 1 ;;
+    json_model_error) printf '%s\n' '{"type":"turn.failed","error":{"message":"model_access_denied"}}'; exit 1 ;;
     malformed) printf '{"title":' > "$DEST" ;;
     empty) printf '{}' > "$DEST" ;;
     hang) exec /bin/sleep 30 ;;
-    *) cp "$(dirname "$0")/fixture.json" "$DEST" ;;
+    *) cp "$(dirname "$0")/fixture.json" "$DEST"
+       printf '%s\n' '{"type":"turn.completed","usage":{"input_tokens":1200,"cached_input_tokens":800,"output_tokens":250}}' ;;
 esac

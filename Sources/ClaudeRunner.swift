@@ -30,7 +30,7 @@ final class ClaudeRunner: @unchecked Sendable {
         active?.cancel()
     }
 
-    func run(transcript: String, context: String = "", resources: URL, apiKey: String, workspaceID: String? = nil) throws -> Summary {
+    func run(transcript: String, context: String = "", resources: URL, apiKey: String, workspaceID: String? = nil, onUsage: (TokenUsage) -> Void = { _ in }) throws -> Summary {
         try Transcript.validate(transcript)
         try SummaryContext.validate(context)
         guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -111,15 +111,38 @@ final class ClaudeRunner: @unchecked Sendable {
             throw AppError.message("Claude didn't return a complete, readable summary. Your clipboard is unchanged. Try again.")
         }
         try summary.validate()
+        if let usage = envelope.usage?.tokens { onUsage(usage) }
         return summary
     }
 }
 
 private struct MessageResponse: Decodable {
+    struct Usage: Decodable {
+        let input_tokens: Int
+        let output_tokens: Int
+        let cache_creation_input_tokens: Int?
+        let cache_read_input_tokens: Int?
+        var tokens: TokenUsage? {
+            guard let base = TokenUsage(input: input_tokens, output: output_tokens),
+                  let cached = TokenUsage(input: cache_read_input_tokens ?? 0, output: 0),
+                  let created = TokenUsage(input: cache_creation_input_tokens ?? 0, output: 0) else { return nil }
+            return base.adding(cached)?.adding(created)
+        }
+    }
     struct Content: Decodable {
         let type: String
         let text: String?
     }
     let content: [Content]
     let stop_reason: String?
+    let usage: Usage?
+
+    private enum CodingKeys: String, CodingKey { case content, stop_reason, usage }
+    init(from decoder: Decoder) throws {
+        let fields = try decoder.container(keyedBy: CodingKeys.self)
+        content = try fields.decode([Content].self, forKey: .content)
+        stop_reason = try fields.decodeIfPresent(String.self, forKey: .stop_reason)
+        // Optional usage must never prevent a valid summary from being displayed.
+        usage = try? fields.decode(Usage.self, forKey: .usage)
+    }
 }

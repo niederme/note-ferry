@@ -79,12 +79,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     let sourceLabel = NSTextField(labelWithString: "Transcript or text")
     let contextSection = NSStackView()
     let contextButton = NSButton(title: "Context (optional)", target: nil, action: nil)
+    let copyContextButton = NSButton(title: "Copy context", target: nil, action: nil)
     let contextEditor = TranscriptTextView(usingTextLayoutManager: false)
     let contextBody = NSStackView()
     let contextHint = NSTextField(wrappingLabelWithString: "Names, terminology, or background for this summary only. Format only ignores context.")
     var contextExpanded = true
     let spinner = NSProgressIndicator()
-    let progress = NSTextField(labelWithString: "")
+    let progress = NSTextField(wrappingLabelWithString: "")
     let formatButton = NSButton(title: "Format only", target: nil, action: nil)
     let summarizeButton = NSButton(title: "Summarize & format", target: nil, action: nil)
     let providerPicker = NSPopUpButton(frame: .zero, pullsDown: false)
@@ -110,6 +111,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     var completedChunks = 0
     var totalChunks = 0
     var raw: String?
+    var resultContext = ""
     var snapshot: ClipboardSnapshot?
     var rich: NSAttributedString?
     var lastWrite: Int?
@@ -192,11 +194,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         contextButton.font = .systemFont(ofSize: 13)
         contextButton.imagePosition = .imageLeading
         contextButton.target = self; contextButton.action = #selector(toggleContext)
-        contextSection.addArrangedSubview(contextButton)
+        let contextSpacer = NSView()
+        contextSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        let contextHeader = NSStackView(views: [contextButton, contextSpacer, copyContextButton])
+        contextHeader.orientation = .horizontal; contextHeader.alignment = .centerY
+        copyContextButton.bezelStyle = .rounded; copyContextButton.controlSize = .small
+        copyContextButton.target = self; copyContextButton.action = #selector(copyContext)
+        copyContextButton.isHidden = true
+        contextSection.addArrangedSubview(contextHeader)
+        contextHeader.widthAnchor.constraint(equalTo: contextSection.widthAnchor).isActive = true
         contextBody.orientation = .vertical; contextBody.alignment = .leading; contextBody.spacing = 6
         let contextScroll = NSScrollView()
         contextScroll.hasVerticalScroller = true; contextScroll.borderType = .bezelBorder
         contextEditor.delegate = self
+        contextEditor.copyFormattedSelection = { [weak self] in
+            guard let self, self.mode == .result else { return false }
+            self.copyContextText(selectionOnly: true)
+            return true
+        }
         contextEditor.isRichText = false; contextEditor.allowsUndo = true
         contextEditor.font = .systemFont(ofSize: 13)
         contextEditor.isAutomaticQuoteSubstitutionEnabled = false
@@ -362,30 +377,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         window?.makeFirstResponder(preview)
     }
     func clearContext() {
+        resultContext = ""
         contextEditor.string = ""
         contextEditor.undoManager?.removeAllActions()
         contextExpanded = true
         refreshContextControls()
     }
     @objc func toggleContext() {
-        guard mode == .input else { return }
+        guard mode != .processing else { return }
         contextExpanded.toggle()
         refreshContextControls()
         window.makeFirstResponder(contextExpanded ? contextEditor : preview)
     }
     func refreshContextControls() {
         let count = SummaryContext.normalized(contextEditor.string).count
-        contextButton.title = contextExpanded || count == 0 ? "Context (optional)" : "Context added"
+        let showingResult = mode == .result
+        contextButton.title = showingResult ? "Context used" : (contextExpanded || count == 0 ? "Context (optional)" : "Context added")
         contextButton.image = NSImage(systemSymbolName: contextExpanded ? "chevron.down" : "chevron.right", accessibilityDescription: nil)
         contextButton.setAccessibilityLabel(contextButton.title)
-        contextButton.toolTip = contextExpanded ? "Hide context. It will still be used when summarizing." : "Add names, terminology, or background for this summary."
+        contextButton.toolTip = showingResult ? "Show or hide the context used for this summary." : (contextExpanded ? "Hide context. It will still be used when summarizing." : "Add names, terminology, or background for this summary.")
         contextBody.isHidden = !contextExpanded
+        contextEditor.isEditable = !showingResult
+        contextEditor.allowsTranscriptPaste = !showingResult
+        copyContextButton.isHidden = !showingResult
+        contextEditor.setAccessibilityLabel(showingResult ? "Context used for this summary, read only" : "Context for this summary")
         contextEditor.needsDisplay = true
-        contextHint.stringValue = "Names, terminology, or background for this summary only. Format only ignores context. \(count)/1,000"
+        contextHint.stringValue = showingResult ? "Background used for this summary. Copy it separately to reuse later." : "Names, terminology, or background for this summary only. Format only ignores context. \(count)/1,000"
         contextHint.textColor = count > SummaryContext.maximumCharacters ? .systemRed : .secondaryLabelColor
     }
     func showInputControls() {
         mode = .input
+        resultContext = ""
+        progress.isHidden = true
         privacy.isHidden = true
         providerInfoButton.isHidden = false
         providerInfoButton.toolTip = "How \(selectedProvider.displayName) handles your text"
@@ -448,6 +471,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     func textDidChange(_ notification: Notification) {
         guard !updatingText, mode != .processing else { return }
         if notification.object as? NSTextView === contextEditor {
+            guard mode == .input else { return }
             showInputControls()
             return
         }
@@ -522,6 +546,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         }
         snapshot = ClipboardSnapshot(.general)
         raw = text; rich = nil; lastWrite = nil
+        resultContext = SummaryContext.normalized(context)
         let token = UUID(); jobID = token
         mode = .processing; preview.isEditable = false; preview.allowsTranscriptPaste = false
         providerInfoPopover.close(); providerInfoButton.isHidden = true
@@ -551,11 +576,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             if #available(macOS 26.0, *) {
                 localTask = Task { @MainActor [weak self] in
                     do {
-                        let note = try await LocalSummarizer.run(text, context: context) { [weak self] completed, total in
+                        var usage: TokenUsage?
+                        let note = try await LocalSummarizer.run(text, context: context, onUsage: { usage = $0 }) { [weak self] completed, total in
                             guard let self, self.jobID == token else { return }
                             self.completedChunks = completed; self.totalChunks = total
                         }
-                        self?.finish(token, result: .success(note))
+                        self?.finish(token, result: .success(note), usage: usage)
                     } catch {
                         self?.finish(token, result: .failure(error))
                     }
@@ -568,20 +594,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             let resources = Bundle.main.resourceURL!
             let model = ProviderSettings.shared.codexModel
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                let result = Result { try worker.run(transcript: text, context: context, resources: resources, model: model) }
-                DispatchQueue.main.async { self?.finish(token, result: result) }
+                var usage: TokenUsage?
+                let result = Result { try worker.run(transcript: text, context: context, resources: resources, model: model, onUsage: { usage = $0 }) }
+                let reportedUsage = usage
+                DispatchQueue.main.async { self?.finish(token, result: result, usage: reportedUsage) }
             }
         } else if let key = claudeKey {
             let worker = ClaudeRunner(); claudeRunner = worker
             let resources = Bundle.main.resourceURL!
             let workspaceID = claudeWorkspaceID
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                let result = Result { try worker.run(transcript: text, context: context, resources: resources, apiKey: key, workspaceID: workspaceID) }
-                DispatchQueue.main.async { self?.finish(token, result: result) }
+                var usage: TokenUsage?
+                let result = Result { try worker.run(transcript: text, context: context, resources: resources, apiKey: key, workspaceID: workspaceID, onUsage: { usage = $0 }) }
+                let reportedUsage = usage
+                DispatchQueue.main.async { self?.finish(token, result: result, usage: reportedUsage) }
             }
         }
     }
-    func finish(_ token: UUID, result: Result<Summary, Error>) {
+    func finish(_ token: UUID, result: Result<Summary, Error>, usage: TokenUsage? = nil) {
         guard jobID == token else { return }
         timer?.invalidate(); timer = nil; runner = nil; claudeRunner = nil; localTask = nil; jobID = nil
         completedChunks = 0; totalChunks = 0
@@ -590,6 +620,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         switch result {
         case .success(let note):
             display(note)
+            let elapsed = Int(Date().timeIntervalSince(started))
+            let words = raw?.split(whereSeparator: \.isWhitespace).count ?? 0
+            let tokens = usage.map { "\($0.input.formatted()) input / \($0.output.formatted()) output tokens" } ?? "Token usage unavailable"
+            progress.stringValue = "\(words.formatted()) words · \(elapsed / 60):\(String(format: "%02d", elapsed % 60)) elapsed · \(tokens)"
+            progress.toolTip = "Provider-reported usage includes instructions and context. For on-device summaries, counts include all portions and overview passes. Token counts are not prices or remaining account limits."
+            progress.isHidden = false
             copyWhenReady()
             NSSound(named: "Glass")?.play(); NSApp.requestUserAttention(.informationalRequest)
         case .failure(let error):
@@ -627,6 +663,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         } catch { showError(error) }
     }
     func displayRich(_ rendered: NSAttributedString) {
+        progress.isHidden = true
         providerInfoPopover.close(); providerInfoButton.isHidden = true
         privacy.isHidden = false
         preview.isEditable = false
@@ -649,7 +686,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         updatingText = false
         mode = .result; preview.isEditable = false; preview.allowsTranscriptPaste = true
         window.makeFirstResponder(preview)
-        contextSection.isHidden = true
+        contextSection.isHidden = operation == .format || resultContext.isEmpty
+        if !contextSection.isHidden {
+            contextEditor.string = resultContext
+            contextExpanded = true
+        }
+        refreshContextControls()
         formatButton.isHidden = true; formatButton.keyEquivalent = ""
         providerPicker.isHidden = true
         copyButton.isHidden = false; copyButton.keyEquivalent = "\r"
@@ -658,6 +700,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         newButton.isHidden = false; newButton.isEnabled = true
     }
     func showError(_ error: Error) { detail.stringValue = error.localizedDescription }
+    @objc func copyContext() { copyContextText(selectionOnly: false) }
+    func copyContextText(selectionOnly: Bool) {
+        guard mode == .result, operation != .format, !resultContext.isEmpty else { return }
+        var text = resultContext
+        if selectionOnly {
+            let range = contextEditor.selectedRange()
+            guard range.length > 0, NSMaxRange(range) <= (text as NSString).length else { return }
+            text = (text as NSString).substring(with: range)
+        }
+        do {
+            let beforeCopy = ClipboardSnapshot(.general)
+            let backup = lastWrite == beforeCopy.changeCount ? snapshot : beforeCopy
+            guard try ClipboardOutput.writePlainText(text, to: .general, expectedChange: beforeCopy.changeCount) else {
+                detail.stringValue = "Your clipboard changed while copying. Choose Copy context to try again."
+                return
+            }
+            snapshot = backup
+            lastWrite = NSPasteboard.general.changeCount; restoreButton.isHidden = false
+            detail.stringValue = "Context copied. Choose Copy summary to copy your notes."
+        } catch { showError(error) }
+    }
     @objc func cancel() {
         runner?.cancel(); claudeRunner?.cancel(); localTask?.cancel()
         cancelButton.isEnabled = false; detail.stringValue = "Cancelling…"
