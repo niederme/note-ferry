@@ -118,6 +118,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     var totalChunks = 0
     var raw: String?
     var resultContext = ""
+    var interview: InterviewWindow?
+    var interviewUsage = InterviewUsage()
+    var clarificationRetry: (source: String, context: String, provider: SummaryProvider, answers: [Clarification], usage: InterviewUsage)?
     var snapshot: ClipboardSnapshot?
     var rich: NSAttributedString?
     var lastWrite: Int?
@@ -131,9 +134,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         makeMenu()
-        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 790), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 980, height: 880), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         window.title = isDevelopmentBuild ? "Note Ferry (Development)" : "Note Ferry"
-        window.minSize = NSSize(width: 620, height: 560)
+        if let screen = window.screen ?? NSScreen.main {
+            window.setContentSize(AppWindowSizing.contentSize(preferred: NSSize(width: 980, height: 880), visibleFrame: screen.visibleFrame, styleMask: window.styleMask))
+        }
+        window.minSize = NSSize(width: min(620, window.frame.width), height: min(560, window.frame.height))
         window.delegate = self
         window.isReleasedWhenClosed = false
         window.center()
@@ -256,7 +262,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         buttonSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
         buttonSpacer.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         let buttons = actionButtons
-        for view in [copyButton, formatButton, summarizeButton, providerPicker, providerInfoButton, restoreButton, cancelButton, buttonSpacer, newButton] { buttons.addArrangedSubview(view) }
+        for view in [copyButton, summarizeButton, formatButton, providerPicker, providerInfoButton, restoreButton, cancelButton, buttonSpacer, newButton] { buttons.addArrangedSubview(view) }
         buttons.orientation = .horizontal; buttons.alignment = .centerY; buttons.spacing = 10
         buttons.setCustomSpacing(4, after: providerPicker)
         root.addArrangedSubview(buttons)
@@ -384,7 +390,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         NSWorkspace.shared.open(URL(string: "https://github.com/niederme/note-ferry")!)
     }
     @objc func newTranscript() {
-        guard runner == nil, claudeRunner == nil, localTask == nil else { return }
+        guard runner == nil, claudeRunner == nil, localTask == nil, interview == nil else { return }
         updatingText = true
         preview.textStorage?.setAttributedString(NSAttributedString(string: "", attributes: inputAttributes))
         preview.typingAttributes = inputAttributes
@@ -396,6 +402,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         window?.makeFirstResponder(preview)
     }
     func clearContext() {
+        clarificationRetry = nil
         resultContext = ""
         contextEditor.string = ""
         contextEditor.undoManager?.removeAllActions()
@@ -457,13 +464,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         }
         preview.placeholder = "Paste your text here (⌘V)."
         let hasText = !preview.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        formatButton.isHidden = false; formatButton.isEnabled = hasText; formatButton.keyEquivalent = "\r"
-        summarizeButton.isHidden = false; summarizeButton.isEnabled = hasText; summarizeButton.keyEquivalent = ""
+        formatButton.isHidden = false; formatButton.isEnabled = hasText; formatButton.keyEquivalent = ""
+        summarizeButton.isHidden = false; summarizeButton.isEnabled = hasText; summarizeButton.keyEquivalent = "\r"
         summarizeButton.toolTip = "Summarize with \(selectedProvider.displayName), then format and copy the result."
         providerPicker.isHidden = false; providerPicker.isEnabled = true
         providerPicker.selectItem(withTag: SummaryProvider.allCases.firstIndex(of: selectedProvider) ?? 0)
         copyButton.isHidden = true; copyButton.keyEquivalent = ""
-        window.defaultButtonCell = formatButton.cell as? NSButtonCell
+        window.defaultButtonCell = summarizeButton.cell as? NSButtonCell
         newButton.isHidden = false; newButton.isEnabled = hasText || !contextEditor.string.isEmpty
         restoreButton.isHidden = true; cancelButton.isHidden = true
     }
@@ -518,6 +525,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     @objc func openSettings() { providerSettingsWindow.show() }
     func textDidChange(_ notification: Notification) {
         guard !updatingText, mode != .processing else { return }
+        clarificationRetry = nil
         if notification.object as? NSTextView === contextEditor {
             guard mode == .input else { return }
             showInputControls()
@@ -553,7 +561,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         return true
     }
     func processInput(_ action: Operation) {
-        guard runner == nil, claudeRunner == nil, localTask == nil, mode == .input else { return }
+        guard runner == nil, claudeRunner == nil, localTask == nil, interview == nil, mode == .input else { return }
         operation = action
         let text = preview.string
         if action == .format {
@@ -592,11 +600,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             }
             guard confirmClaudeTransfer() else { return }
         }
-        snapshot = ClipboardSnapshot(.general)
-        raw = text; rich = nil; lastWrite = nil
-        resultContext = SummaryContext.normalized(context)
-        let token = UUID(); jobID = token
-        mode = .processing; preview.isEditable = false; preview.allowsTranscriptPaste = false
+        let initialClipboard = ClipboardSnapshot(.general)
+        let model = ProviderSettings.shared.codexModel
+        if let retry = clarificationRetry, retry.source == text, retry.context == context, retry.provider == selectedProvider {
+            beginSummary(action, text: text, context: context, clarifications: retry.answers, interviewUsage: retry.usage, initialClipboard: initialClipboard, claudeKey: claudeKey, claudeWorkspaceID: claudeWorkspaceID, codexModel: model)
+            return
+        }
+        if ProviderSettings.shared.clarificationInterviewEnabled {
+            let provider = selectedProvider
+            let sheet = InterviewWindow(source: text, context: context, provider: provider, model: model, apiKey: claudeKey, workspaceID: claudeWorkspaceID, resources: Bundle.main.resourceURL!)
+            interview = sheet
+            mode = .processing; preview.isEditable = false; preview.allowsTranscriptPaste = false
+            contextEditor.isEditable = false
+            showProcessing(action, text: text)
+            sheet.onPresent = { [weak self] in self?.stopInterviewProgress() }
+            sheet.onInitialFailure = { [weak self] error in
+                guard let self else { return }
+                self.interview = nil
+                self.stopInterviewProgress()
+                self.showInputControls()
+                self.showError(error)
+            }
+            sheet.onFinish = { [weak self] answers, usage in
+                guard let self else { return }
+                self.interview = nil
+                self.stopInterviewProgress()
+                self.clarificationRetry = (text, context, provider, answers, usage)
+                self.beginSummary(action, text: text, context: context, clarifications: answers, interviewUsage: usage, initialClipboard: initialClipboard, claudeKey: claudeKey, claudeWorkspaceID: claudeWorkspaceID, codexModel: model)
+            }
+            sheet.onCancel = { [weak self] in
+                guard let self else { return }
+                self.interview = nil
+                self.stopInterviewProgress()
+                self.showInputControls()
+                self.detail.stringValue = "Cancelled. Your original text and clipboard are unchanged."
+            }
+            sheet.start(on: window)
+            return
+        }
+        beginSummary(action, text: text, context: context, clarifications: [], interviewUsage: InterviewUsage(), initialClipboard: initialClipboard, claudeKey: claudeKey, claudeWorkspaceID: claudeWorkspaceID, codexModel: model)
+    }
+
+    func stopInterviewProgress() {
+        timer?.invalidate(); timer = nil
+        spinner.stopAnimation(nil); spinner.isHidden = true
+        progress.isHidden = true
+        cancelButton.isHidden = true
+    }
+
+    func showProcessing(_ action: Operation, text: String) {
         providerInfoPopover.close(); providerInfoButton.isHidden = true
         window.makeFirstResponder(preview)
         contextSection.isHidden = true
@@ -620,12 +672,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
                 ? " · \(self.completedChunks)/\(self.totalChunks) parts" : ""
             self.progress.stringValue = "\(words.formatted()) words · \(elapsed / 60):\(String(format: "%02d", elapsed % 60)) elapsed\(parts)"
         }
+    }
+
+    func beginSummary(_ action: Operation, text: String, context: String, clarifications: [Clarification], interviewUsage: InterviewUsage, initialClipboard: ClipboardSnapshot, claudeKey: String?, claudeWorkspaceID: String?, codexModel: String?) {
+        self.interviewUsage = interviewUsage
+        snapshot = initialClipboard
+        raw = text; rich = nil; lastWrite = nil
+        let answers = InterviewSession.summaryText(clarifications)
+        resultContext = [SummaryContext.normalized(context), answers.isEmpty ? "" : "Clarifications\n" + answers].filter { !$0.isEmpty }.joined(separator: "\n\n")
+        let token = UUID(); jobID = token
+        mode = .processing; preview.isEditable = false; preview.allowsTranscriptPaste = false
+        showProcessing(action, text: text)
         if action == .local {
             if #available(macOS 26.0, *) {
                 localTask = Task { @MainActor [weak self] in
                     do {
                         var usage: TokenUsage?
-                        let note = try await LocalSummarizer.run(text, context: context, onUsage: { usage = $0 }) { [weak self] completed, total in
+                        let note = try await LocalSummarizer.run(text, context: context, clarifications: clarifications, onUsage: { usage = $0 }) { [weak self] completed, total in
                             guard let self, self.jobID == token else { return }
                             self.completedChunks = completed; self.totalChunks = total
                         }
@@ -640,10 +703,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         } else if action == .codex {
             let worker = CodexRunner(); runner = worker
             let resources = Bundle.main.resourceURL!
-            let model = ProviderSettings.shared.codexModel
+            let model = codexModel
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 var usage: TokenUsage?
-                let result = Result { try worker.run(transcript: text, context: context, resources: resources, model: model, onUsage: { usage = $0 }) }
+                let result = Result { try worker.run(transcript: text, context: context, clarifications: clarifications, resources: resources, model: model, onUsage: { usage = $0 }) }
                 let reportedUsage = usage
                 DispatchQueue.main.async { self?.finish(token, result: result, usage: reportedUsage) }
             }
@@ -653,7 +716,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             let workspaceID = claudeWorkspaceID
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 var usage: TokenUsage?
-                let result = Result { try worker.run(transcript: text, context: context, resources: resources, apiKey: key, workspaceID: workspaceID, onUsage: { usage = $0 }) }
+                let result = Result { try worker.run(transcript: text, context: context, clarifications: clarifications, resources: resources, apiKey: key, workspaceID: workspaceID, onUsage: { usage = $0 }) }
                 let reportedUsage = usage
                 DispatchQueue.main.async { self?.finish(token, result: result, usage: reportedUsage) }
             }
@@ -670,13 +733,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             display(note)
             let elapsed = Int(Date().timeIntervalSince(started))
             let words = raw?.split(whereSeparator: \.isWhitespace).count ?? 0
-            let tokens = usage.map { "\($0.input.formatted()) input / \($0.output.formatted()) output tokens" } ?? "Token usage unavailable"
+            let tokens = interviewUsage.including(usage).map { "\($0.input.formatted()) input / \($0.output.formatted()) output tokens" } ?? "Complete token usage unavailable"
             progress.stringValue = "\(words.formatted()) words · \(elapsed / 60):\(String(format: "%02d", elapsed % 60)) elapsed · \(tokens)"
-            progress.toolTip = "Provider-reported usage includes instructions and context. For on-device summaries, counts include all portions and overview passes. Token counts are not prices or remaining account limits."
+            progress.toolTip = "Provider-reported usage includes interview requests, instructions, context, and the summary. Elapsed time covers summary generation only. Cancelled or unreported requests make the total unavailable. For on-device summaries, counts include all portions and overview passes. Token counts are not prices or remaining account limits."
             progress.isHidden = false
             copyWhenReady()
             NSSound(named: "Glass")?.play(); NSApp.requestUserAttention(.informationalRequest)
         case .failure(let error):
+            if var retry = clarificationRetry {
+                retry.usage.record(usage)
+                clarificationRetry = retry
+            }
             showInputControls()
             if error is CancellationError { detail.stringValue = "Cancelled. Your transcript is still here and your clipboard is unchanged." }
             else if operation == .local && !(error is AppError) {
@@ -780,6 +847,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         } catch { showError(error) }
     }
     @objc func cancel() {
+        if let interview { interview.cancel(); return }
         runner?.cancel(); claudeRunner?.cancel(); localTask?.cancel()
         cancelButton.isEnabled = false; detail.stringValue = "Cancelling…"
     }
@@ -833,7 +901,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         sender.orderOut(nil)
         return false
     }
-    func applicationWillTerminate(_ notification: Notification) { runner?.cancel(); claudeRunner?.cancel(); localTask?.cancel() }
+    func applicationWillTerminate(_ notification: Notification) { interview?.stop(); runner?.cancel(); claudeRunner?.cancel(); localTask?.cancel() }
 }
 
 let app = NSApplication.shared

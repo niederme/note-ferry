@@ -4,6 +4,7 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
     var onChange: (() -> Void)?
     private var window: NSWindow?
     private var onboarding = false
+    private let interviewToggle = NSButton(checkboxWithTitle: "Ask clarifying questions before summarizing", target: nil, action: nil)
     private let picker = NSPopUpButton(frame: .zero, pullsDown: false)
     private let providerDetail = NSTextField(wrappingLabelWithString: "")
     private let connectionDetail = NSTextField(wrappingLabelWithString: "")
@@ -49,6 +50,7 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
         workspaceField.stringValue = ProviderSettings.shared.claudeWorkspaceID ?? ""
         showFeedback("")
         picker.selectItem(withTag: SummaryProvider.allCases.firstIndex(of: ProviderSettings.shared.defaultProvider) ?? 0)
+        interviewToggle.state = ProviderSettings.shared.clarificationInterviewEnabled ? .on : .off
         refresh()
         window?.center()
         window?.makeKeyAndOrderFront(nil)
@@ -94,6 +96,14 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
         providerDetail.font = .systemFont(ofSize: 12)
         providerDetail.textColor = .secondaryLabelColor
         root.addArrangedSubview(providerDetail)
+        interviewToggle.target = self
+        interviewToggle.action = #selector(interviewChanged)
+        root.addArrangedSubview(interviewToggle)
+        let interviewHelp = NSTextField(wrappingLabelWithString: "An optional interview can resolve confusing names, details, or commitments before the summary. It takes longer, uses more tokens, and may increase API costs. You can skip it for any text.")
+        interviewHelp.font = .systemFont(ofSize: 12)
+        interviewHelp.textColor = .secondaryLabelColor
+        root.addArrangedSubview(interviewHelp)
+        interviewHelp.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56).isActive = true
         let separator = NSBox()
         separator.boxType = .separator
         root.addArrangedSubview(separator)
@@ -240,7 +250,12 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
         workspaceHelpButton.isHidden = !showWorkspace
         changeWorkspaceButton.title = ProviderSettings.shared.claudeWorkspaceID == nil ? "Add workspace…" : "Change workspace…"
         changeWorkspaceButton.isHidden = showWorkspace || !hasKey
-        window?.setContentSize(NSSize(width: 550, height: (showWorkspace ? 565 : 460) + (chosen == .codex ? 120 : 0)))
+        window?.setContentSize(NSSize(width: 550, height: (showWorkspace ? 675 : 570) + (chosen == .codex ? 120 : 0)))
+    }
+
+    @objc private func interviewChanged() {
+        ProviderSettings.shared.clarificationInterviewEnabled = interviewToggle.state == .on
+        onChange?()
     }
 
     @objc private func providerChanged() {

@@ -20,6 +20,8 @@ targets:
       - path: Sources
       - path: Resources/SummaryPrompt.txt
         buildPhase: resources
+      - path: Resources/Interview.schema.json
+        buildPhase: resources
       - path: Resources/Summary.schema.json
         buildPhase: resources
       - path: Resources/Sparkle.LICENSE

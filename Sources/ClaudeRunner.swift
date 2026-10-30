@@ -30,21 +30,19 @@ final class ClaudeRunner: @unchecked Sendable {
         active?.cancel()
     }
 
-    func run(transcript: String, context: String = "", resources: URL, apiKey: String, workspaceID: String? = nil, onUsage: (TokenUsage) -> Void = { _ in }) throws -> Summary {
-        try Transcript.validate(transcript)
-        try SummaryContext.validate(context)
+    func execute(_ modelRequest: ModelRequest, apiKey: String, workspaceID: String? = nil, onUsage: (TokenUsage) -> Void = { _ in }) throws -> Data {
         guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw AppError.message("Add your Claude API key in Settings before summarizing. Your clipboard is unchanged.")
         }
 
-        let prompt = try String(contentsOf: resources.appendingPathComponent("SummaryPrompt.txt"), encoding: .utf8) + "\n\n" + SummaryContext.instructions
-        let schemaData = try Data(contentsOf: resources.appendingPathComponent("Summary.schema.json"))
+        let prompt = modelRequest.instructions
+        let schemaData = try Data(contentsOf: modelRequest.schema)
         let schema = try JSONSerialization.jsonObject(with: schemaData)
         let body: [String: Any] = [
             "model": Self.modelID,
             "max_tokens": 8192,
             "system": prompt,
-            "messages": [["role": "user", "content": "Summarize the transcript in this JSON object using the required schema.\n\n" + (try SummaryContext.payload(transcript: transcript, context: context))]],
+            "messages": [["role": "user", "content": modelRequest.payload]],
             "output_config": ["format": ["type": "json_schema", "schema": schema]]
         ]
         var request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
@@ -106,13 +104,11 @@ final class ClaudeRunner: @unchecked Sendable {
         guard data.count <= 2_000_000,
               let envelope = try? JSONDecoder().decode(MessageResponse.self, from: data),
               envelope.stop_reason != "max_tokens",
-              let text = envelope.content.first(where: { $0.type == "text" })?.text,
-              let summary = try? JSONDecoder().decode(Summary.self, from: Data(text.utf8)) else {
+              let text = envelope.content.first(where: { $0.type == "text" })?.text else {
             throw AppError.message("Claude didn't return a complete, readable summary. Your clipboard is unchanged. Try again.")
         }
-        try summary.validate()
         if let usage = envelope.usage?.tokens { onUsage(usage) }
-        return summary
+        return Data(text.utf8)
     }
 }
 

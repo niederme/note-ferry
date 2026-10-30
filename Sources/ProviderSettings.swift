@@ -61,6 +61,11 @@ final class ProviderSettings {
         }
     }
 
+    var clarificationInterviewEnabled: Bool {
+        get { defaults.object(forKey: "clarificationInterviewEnabled") as? Bool ?? true }
+        set { defaults.set(newValue, forKey: "clarificationInterviewEnabled") }
+    }
+
     var codexModel: String? { defaults.string(forKey: DefaultsKey.codexModel) }
 
     static func validatedCodexModel(_ value: String) throws -> String? {

@@ -44,6 +44,7 @@ final class MockClaudeURLProtocol: URLProtocol {
     static func main() throws {
         let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
         try codexDiscoveryTests(root: root)
+        try interviewTests(root: root)
         let preferencesSuite = "me.nieder.note-ferry.tests.\(UUID().uuidString)"
         let preferences = UserDefaults(suiteName: preferencesSuite)!
         defer { preferences.removePersistentDomain(forName: preferencesSuite) }

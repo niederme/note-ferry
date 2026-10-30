@@ -8,13 +8,17 @@ Note Ferry is a small native macOS app that formats text for Apple Notes and put
 
 You choose where to paste. Note Ferry never creates or edits an Apple Note.
 
-<img src="docs/images/summary-preview.jpg" width="760" alt="Note Ferry showing a fictional website launch summary with bold headings, spaced bullet points, key takeaways, action items, and a Copy summary button">
+<img src="docs/images/2.0-summary.png" width="860" alt="Note Ferry 2.0 showing a fictional project summary with key takeaways, action items, and the context used">
 
-*A sample rich-text summary with headings, takeaways, and action items, ready for Apple Notes.*
+*Your text becomes structured notes, ready to paste into Apple Notes. All examples below are fictional.*
 
-<img src="docs/images/app-controls.jpg" width="760" alt="Note Ferry input controls showing Format only, Summarize &amp; format, and Codex selected as the summarizer">
+## New in 2.0
 
-*Before processing, choose **Summarize & format** with **Codex**, or **Format only** to keep your wording.*
+**Clear up confusing details before they become notes.** Note Ferry can ask focused questions about unclear names, dates, ownership, or commitments before it finishes a summary. The model checks in the background and asks only when clarification would help. You can answer, skip the questions, or turn the interview off in Settings.
+
+**Add the context the transcript is missing.** Supply names, terminology, or background once for the current text. Context and your interview answers stay separate from the original source, and remain visible with the result.
+
+**Keep the workflow quick.** Summarize & format is now the primary action. Larger, resizable windows, visible scrollbars, radio choices, and keyboard navigation make the interview easier to work through. Format only still runs locally without AI.
 
 ## Why Note Ferry?
 
@@ -34,17 +38,29 @@ Paste your text and click **Format only**. Paste into Apple Notes with **⌘V**.
 
 Both options use spaced native lists, preserve a newer clipboard, and offer **Restore clipboard** after copying. Common Markdown is supported, including numbered and nested lists, checklists, quotes, divider lines, code blocks, and tables. Tables retain a grid with wrapped cells in rich text and HTML clipboard formats; how they paste depends on the receiving app. Checklist states remain visible checkbox symbols. Images become links using their description and are not downloaded. Formatting is not a complete Markdown publishing engine.
 
+## Clarify before summarizing
+
+Before writing a summary, Note Ferry can interview you about meaningful ambiguities in a transcript, rough notes, or other text. The interview is on by default. When you choose **Summarize & format**, the selected model first checks the text in the background. The interview appears only if it returns useful questions; clear text goes straight to the summary. Leave answers blank and choose **Finish & summarize** to skip the questions. In **Settings**, turn off **Ask clarifying questions before summarizing** to always go straight to summarization.
+
+Questions arrive in small batches, with exact source excerpts when useful and visible radio-button suggestions when supported. Selecting **Something else** reveals a free-text field; questions without suggestions show that field immediately. Answer what you can, including corrections to a question’s premise. **Continue interview** lets the model ask useful follow-ups; **Finish & summarize** uses your answers immediately. There is no fixed three-question total. A clear source proceeds directly to the summary without questions.
+
+Interviews use more tokens and time, and Claude API requests can cost more. Requests stay with the provider you selected. Apple Intelligence has a smaller context budget and may ask you to shorten answers or finish earlier; nothing is silently truncated. Answers remain in memory for the current text and appear under **Context used** with the result. The clipboard stays unchanged throughout the interview, and a newer clipboard is protected when the summary finishes.
+
+<img src="docs/images/2.0-interview.png" width="840" alt="Note Ferry clarification interview with source excerpts, radio-button answers, Something else, and a primary Continue interview button">
+
+*The interview appears only when the model has useful questions. Choose an answer, write your own, or finish with unanswered details left uncertain.*
+
 ## Download
 
-Download Note Ferry 1.2.5 (build 10), signed with Developer ID and notarized by Apple:
+Download Note Ferry 2.0 (build 11), signed with Developer ID and notarized by Apple:
 
-**[Download Note Ferry 1.2.5 for Mac](https://github.com/niederme/note-ferry/releases/download/v1.2.5/Note-Ferry-1.2.5-universal.zip)**
+**[Download Note Ferry 2.0 for Mac](https://github.com/niederme/note-ferry/releases/download/v2.0/Note-Ferry-2.0-universal.zip)**
 
 Unzip the download and move **Note Ferry.app** to Applications, replacing an earlier copy. If you already have Note Ferry installed, you can instead choose **Note Ferry → Check for Updates…**. The universal app includes Apple silicon and Intel versions. Xcode is not required.
 
 **Apple Intelligence** needs macOS 26 or later, a compatible Mac, and Apple Intelligence enabled. **Codex** needs the [Codex CLI](https://developers.openai.com/codex/cli/), a signed-in Codex account, and internet access; run `codex login` in Terminal. **Claude** needs an Anthropic API key and internet access; API use is billed separately from a Claude subscription. **Format only** needs no account or internet connection.
 
-The app requires macOS 14 or later. Runtime testing has been on Apple silicon with macOS 27; Intel hardware and older macOS versions have not been tested. See the [release notes and checksum](https://github.com/niederme/note-ferry/releases/tag/v1.2.5).
+The app requires macOS 14 or later. Runtime testing has been on Apple silicon with macOS 27; Intel hardware and older macOS versions have not been tested. See the [release notes and checksum](https://github.com/niederme/note-ferry/releases/tag/v2.0).
 
 ## Updates
 
@@ -54,7 +70,12 @@ Choose **Note Ferry → Check for Updates…** whenever you want to check. On th
 
 1. Copy the text you want to keep, such as an AI reply, your own notes, or a meeting transcript.
 2. Open Note Ferry, paste the text, and choose **Summarize & format** with the provider you want, or **Format only** to preserve the wording.
-3. When the result is ready and copied, paste it into Apple Notes with **⌘V**.
+3. If clarification questions appear, answer what you can and choose **Continue interview**, or **Finish & summarize** to proceed now.
+4. When the result is ready and copied, paste it into Apple Notes with **⌘V**.
+
+<img src="docs/images/2.0-input.png" width="860" alt="Note Ferry input screen with fictional source text, optional context, and Summarize & format as the primary leftmost action">
+
+*Paste text, add optional context, and choose your summarizer. Nothing runs merely because you paste.*
 
 Use normal Paste to keep the formatting. **Paste and Match Style** removes it.
 
@@ -65,8 +86,8 @@ Summaries include key takeaways, action items, and detailed topic sections, with
 - Before summarizing, use the small **Context (optional)** field beneath the transcript to supply names, terminology, or background. It is open by default and can be collapsed. For example: “NOVA is our planning tool. Jamie leads the project.” Context is limited to 1,000 characters and applies to this summary only. It works with Apple Intelligence, Codex, and Claude. **Format only** ignores it.
 - Context stays available after cancellation or an error. Collapsing the field keeps it included; empty the field to omit it. **Clear**, pasting new text over a result, or quitting discards it. It is not saved as a glossary.
 - **Copy summary** copies the formatted result again.
-- When context was supplied, **Context used** stays visible beneath the summary. It is read-only and selectable. **Copy context** copies it separately; it is never appended to **Copy summary**.
-- Completed summaries show elapsed time and provider-reported input/output token counts when available. Input includes instructions and context. Apple Intelligence reports usage on macOS 27 or later, summed across portions and overview passes; on macOS 26, usage is unavailable. These counts are not costs or remaining subscription limits.
+- When context or interview answers were supplied, **Context used** stays visible beneath the summary. It is read-only and selectable. **Copy context** copies it separately; it is never appended to **Copy summary**.
+- Completed summaries show elapsed time and provider-reported input/output token counts when available. Usage includes reported interview requests, instructions, context, and summary generation. Complete totals are unavailable when a request is cancelled or a provider does not report usage. Apple Intelligence reports usage on macOS 27 or later, summed across portions and overview passes; on macOS 26, usage is unavailable. These counts are not costs or remaining subscription limits.
 - **Copy formatted text** copies a locally formatted result again.
 - **Clear** empties the window and leaves your clipboard alone. You can also select all (**⌘A**) and paste another text selection.
 - If you copy something else while processing, the app preserves your newer clipboard. Your summary waits in the window until you choose **Copy summary**.
@@ -95,7 +116,7 @@ Text to summarize must contain at least 100 characters. Codex and Claude accept 
 
 On first launch, **Choose a summarizer** asks for a default. Apple Intelligence is preselected on a new install, even if it is unavailable on that Mac; choose Codex or Claude instead if needed. Change your default later in **Note Ferry → Settings…**, or use the picker beside **Summarize & format** for one piece of text. The picker never starts processing by itself. **Format only** stays local regardless of the selected summarizer.
 
-Codex summaries use **GPT-5.6 Sol with medium reasoning effort**, through your signed-in Codex account. Your account and installed CLI must support that model. Note Ferry uses this explicit selection rather than your CLI’s default model and does not silently switch models if it is unavailable.
+Codex uses your signed-in account and lets the CLI choose its built-in default model. To use another model available to your account, enter its ID in **Settings → Codex model**. Note Ferry does not force a reasoning-effort setting or silently switch models if your selected model is unavailable. It keeps requests isolated from your personal CLI configuration and tools.
 
 For a one-paste Claude setup, create an API key scoped to Anthropic’s **Default workspace**, then choose **Paste from clipboard** in Settings. That button saves and checks the key in one click. You can also paste into the field and choose **Save key**. The key is visible while editing, cleared from the field after saving, and stored in this Mac’s Keychain. The clipboard is left unchanged. Note Ferry checks the key with Anthropic without sending a transcript. For an organization-wide key, Note Ferry selects the Default workspace when Anthropic makes it available. If Default cannot be determined, Settings asks for a workspace ID and links to the workspace list. The key remains saved, so you only enter the workspace ID. Your first Claude summary asks you to confirm sending the text and key to Anthropic.
 

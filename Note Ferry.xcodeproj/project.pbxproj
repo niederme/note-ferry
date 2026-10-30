@@ -22,6 +22,9 @@
 		D18C6FA2CC0B56D9848148F3 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43688D7348230BD3C1EF3745 /* main.swift */; };
 		DA38A5D445647A08B2A13B3B /* LocalSummarizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0C64FEA22A29A3AA80DD17F /* LocalSummarizer.swift */; };
 		F9EA68AEF4AC2029CC5069F8 /* Sparkle.LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = B71B5DB84DE7FAB0ABF49FBE /* Sparkle.LICENSE */; };
+		62B1CB4A1EAFFB03F02EDA46 /* Interview.schema.json in Resources */ = {isa = PBXBuildFile; fileRef = B12E0718A4F50E1295702C73 /* Interview.schema.json */; };
+		7374780715785074B33CCF37 /* InterviewWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAB0CDFAFD81D68E2EA9AE82 /* InterviewWindow.swift */; };
+		A937BBF1071EB78DEEC083D7 /* Interview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EC8E0E24899E44B72AB3DC5 /* Interview.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -74,6 +77,9 @@
 		DB53A0A606A7A3248AF34BC6 /* fixture.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = fixture.json; sourceTree = "<group>"; };
 		DBDD592F29FFC028E1BC1554 /* CoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreTests.swift; sourceTree = "<group>"; };
 		E36D88D9B94D6AEB64DA880E /* test.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = test.sh; sourceTree = "<group>"; };
+		6EC8E0E24899E44B72AB3DC5 /* Interview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Interview.swift; sourceTree = "<group>"; };
+		B12E0718A4F50E1295702C73 /* Interview.schema.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Interview.schema.json; sourceTree = "<group>"; };
+		DAB0CDFAFD81D68E2EA9AE82 /* InterviewWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterviewWindow.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -121,6 +127,7 @@
 				4410C731E0887634F0BEDA7A /* Info.plist */,
 				B71B5DB84DE7FAB0ABF49FBE /* Sparkle.LICENSE */,
 				1BA92E188E7F7B21219FA9B4 /* Summary.schema.json */,
+				B12E0718A4F50E1295702C73 /* Interview.schema.json */,
 				7E28FFB786781A82528C4282 /* SummaryPrompt.txt */,
 			);
 			path = Resources;
@@ -143,6 +150,8 @@
 			children = (
 				20E40BB7A0D2892512DC8219 /* ClaudeRunner.swift */,
 				99AEB9F31C0DB7834DF5EEDB /* Core.swift */,
+				6EC8E0E24899E44B72AB3DC5 /* Interview.swift */,
+				DAB0CDFAFD81D68E2EA9AE82 /* InterviewWindow.swift */,
 				E1DB0A2634A266C41CB046B0 /* CodexDiscovery.swift */,
 				A0C64FEA22A29A3AA80DD17F /* LocalSummarizer.swift */,
 				43688D7348230BD3C1EF3745 /* main.swift */,
@@ -259,6 +268,7 @@
 				6D67FE4B4DD607CB998A446A /* LICENSE in Resources */,
 				F9EA68AEF4AC2029CC5069F8 /* Sparkle.LICENSE in Resources */,
 				22FE43DBB805BF6BEB09C61F /* Summary.schema.json in Resources */,
+				62B1CB4A1EAFFB03F02EDA46 /* Interview.schema.json in Resources */,
 				BD377A239D9DF28C02CCFF2D /* SummaryPrompt.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -294,6 +304,8 @@
 			files = (
 				339A3E0CBAB37A38BC707F59 /* ClaudeRunner.swift in Sources */,
 				B2BABFAC3992A84FC7681E71 /* Core.swift in Sources */,
+				A937BBF1071EB78DEEC083D7 /* Interview.swift in Sources */,
+				7374780715785074B33CCF37 /* InterviewWindow.swift in Sources */,
 				5C75E821244935D4D1E4D7F7 /* CodexDiscovery.swift in Sources */,
 				DA38A5D445647A08B2A13B3B /* LocalSummarizer.swift in Sources */,
 				8A021F19CDDAE3FE887B6021 /* MarkdownFormatter.swift in Sources */,

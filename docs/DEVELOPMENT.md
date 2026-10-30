@@ -7,7 +7,7 @@ Build, test, and contribute to Note Ferry. See the [download instructions](../RE
 ## Requirements
 
 - macOS 14 or later. Runtime testing so far has been on Apple silicon with macOS 27.
-- Xcode with the macOS 26 or later SDK, even when building for macOS 14. The source includes an optional Apple Foundation Models path behind a runtime availability check.
+- Xcode with the macOS 27 or later SDK, even when building for macOS 14. The source includes an optional Apple Foundation Models path behind a runtime availability check.
 - For Codex summaries, a signed-in Codex CLI supporting `exec`, `--ephemeral`, `--ignore-user-config`, and `--output-schema`. Local formatting, Apple Intelligence, and Claude do not require Codex.
 
 The app uses AppKit and bundles Sparkle 2.10 for updates. The build downloads Sparkle on first use and checks its pinned SHA-256. Sparkle’s license is in `Resources/Sparkle.LICENSE` and included in the app. Codex is an external runtime dependency and is not bundled.
@@ -54,7 +54,7 @@ Discovery reads the filesystem only: it does not run shell startup files, load n
 
 Note Ferry lets Codex choose its built-in default model unless you enter a model ID in **Note Ferry → Settings… → Codex model**. Enterprise accounts can enter a model available to their workspace instead of relying on a fixed model name. Clear the field to restore the CLI default. The choice is stored in Note Ferry preferences; it does not change your Codex account or CLI configuration. Note Ferry passes no fixed reasoning-effort setting. If a model is unavailable, the request fails with a Settings instruction, without silently switching models or providers.
 
-The runner keeps `--ignore-user-config`: it does not inherit your Terminal model preference, custom tools, hooks, or integrations. See the [official CLI reference](https://developers.openai.com/codex/developer-commands) for the model override and config-isolation flags. Version 1.2 also offers on-device Apple Intelligence on supported Macs running macOS 26 or later, plus Claude through a separately billed Anthropic API key stored in the app's Keychain item. A first-run chooser, Settings default, and per-transcript picker select the provider. No provider silently falls back to another.
+The runner keeps `--ignore-user-config`: it does not inherit your Terminal model preference, custom tools, hooks, or integrations. See the [official CLI reference](https://developers.openai.com/codex/developer-commands) for the model override and config-isolation flags. Version 2.0 also offers on-device Apple Intelligence on supported Macs running macOS 26 or later, plus Claude through a separately billed Anthropic API key stored in the app's Keychain item. A first-run chooser, Settings default, and per-transcript picker select the provider. No provider silently falls back to another.
 
 ## Build in Xcode
 
@@ -72,6 +72,7 @@ iconutil -c icns .build/AppIcon.iconset -o Resources/AppIcon.icns
 ```sh
 make build     # Build build/Note Ferry.app
 make test      # Run the automated checks
+./scripts/test-interview-ui.sh  # Exercise the interview sheet with synthetic model responses
 make install   # Build and install in ~/Applications
 ```
 
@@ -98,6 +99,14 @@ The default ad-hoc `make build` marks the local app as **Development** in its wi
 | `scripts/` | Build, installation, test, and icon-generation tools |
 
 The model supplies structured content. The app owns typography, lists, spacing, and clipboard handling, so these do not depend on how the model formats Markdown. The on-device path accepts up to 100 KB, uses fresh sessions for roughly 4,000-character portions, and consolidates takeaways separately. It can take longer and may be less detailed than Codex. Model availability depends on macOS, hardware, Apple Intelligence settings, and model readiness.
+
+### Build the interview without replacing a running app
+
+```sh
+BUILD_APP_PATH="$PWD/.build/interview-preview/Note Ferry.app" make build
+```
+
+The interview uses `Sources/Interview.swift` for the request contract, stable question/answer state, validation, and token aggregation, and `Sources/InterviewWindow.swift` for its session-only sheet. `Resources/Interview.schema.json` is bundled by both build paths. Backend tests cover opt-out persistence, multiple rounds, unanswered questions, source provenance, invalid excerpts, provider payloads, cancellation, and usage totals. The UI harness uses a mock Codex executable, makes no real model calls, and does not copy or paste. Command-line `--summarize-file` exports remain non-interactive and bypass the interview.
 
 ### Preview without a model call
 
