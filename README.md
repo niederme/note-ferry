@@ -8,7 +8,7 @@ Note Ferry is a small native macOS app that formats text for Apple Notes and put
 
 You choose where to paste. Note Ferry never creates or edits an Apple Note.
 
-<img src="docs/images/2.0-summary.png" width="860" alt="Note Ferry 2.0 showing a fictional project summary with key takeaways, action items, and the context used">
+<img src="docs/images/2.0-summary.jpg" width="860" alt="Note Ferry 2.0 showing a fictional project summary with key takeaways, action items, and the context used">
 
 *Your text becomes structured notes, ready to paste into Apple Notes. All examples below are fictional.*
 
@@ -46,7 +46,7 @@ Questions arrive in small batches, with exact source excerpts when useful and vi
 
 Interviews use more tokens and time, and Claude API requests can cost more. Requests stay with the provider you selected. Apple Intelligence has a smaller context budget and may ask you to shorten answers or finish earlier; nothing is silently truncated. Answers remain in memory for the current text and appear under **Context used** with the result. The clipboard stays unchanged throughout the interview, and a newer clipboard is protected when the summary finishes.
 
-<img src="docs/images/2.0-interview.png" width="840" alt="Note Ferry clarification interview with source excerpts, radio-button answers, Something else, and a primary Continue interview button">
+<img src="docs/images/2.0-interview.jpg" width="840" alt="Note Ferry clarification interview with source excerpts, radio-button answers, Something else, and a primary Continue interview button">
 
 *The interview appears only when the model has useful questions. Choose an answer, write your own, or finish with unanswered details left uncertain.*
 
@@ -73,7 +73,7 @@ Choose **Note Ferry → Check for Updates…** whenever you want to check. On th
 3. If clarification questions appear, answer what you can and choose **Continue interview**, or **Finish & summarize** to proceed now.
 4. When the result is ready and copied, paste it into Apple Notes with **⌘V**.
 
-<img src="docs/images/2.0-input.png" width="860" alt="Note Ferry input screen with fictional source text, optional context, and Summarize & format as the primary leftmost action">
+<img src="docs/images/2.0-input.jpg" width="860" alt="Note Ferry input screen with fictional source text, optional context, and Summarize & format as the primary leftmost action">
 
 *Paste text, add optional context, and choose your summarizer. Nothing runs merely because you paste.*
 
