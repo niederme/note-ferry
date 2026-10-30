@@ -134,9 +134,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         makeMenu()
-        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 790), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+        window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 980, height: 880), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         window.title = isDevelopmentBuild ? "Note Ferry (Development)" : "Note Ferry"
-        window.minSize = NSSize(width: 620, height: 560)
+        if let screen = window.screen ?? NSScreen.main {
+            window.setContentSize(AppWindowSizing.contentSize(preferred: NSSize(width: 980, height: 880), visibleFrame: screen.visibleFrame, styleMask: window.styleMask))
+        }
+        window.minSize = NSSize(width: min(620, window.frame.width), height: min(560, window.frame.height))
         window.delegate = self
         window.isReleasedWhenClosed = false
         window.center()
@@ -609,32 +612,43 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             interview = sheet
             mode = .processing; preview.isEditable = false; preview.allowsTranscriptPaste = false
             contextEditor.isEditable = false
+            showProcessing(action, text: text)
+            sheet.onPresent = { [weak self] in self?.stopInterviewProgress() }
+            sheet.onInitialFailure = { [weak self] error in
+                guard let self else { return }
+                self.interview = nil
+                self.stopInterviewProgress()
+                self.showInputControls()
+                self.showError(error)
+            }
             sheet.onFinish = { [weak self] answers, usage in
                 guard let self else { return }
                 self.interview = nil
+                self.stopInterviewProgress()
                 self.clarificationRetry = (text, context, provider, answers, usage)
                 self.beginSummary(action, text: text, context: context, clarifications: answers, interviewUsage: usage, initialClipboard: initialClipboard, claudeKey: claudeKey, claudeWorkspaceID: claudeWorkspaceID, codexModel: model)
             }
             sheet.onCancel = { [weak self] in
                 guard let self else { return }
                 self.interview = nil
+                self.stopInterviewProgress()
                 self.showInputControls()
-                self.detail.stringValue = "Interview cancelled. Your original text and clipboard are unchanged."
+                self.detail.stringValue = "Cancelled. Your original text and clipboard are unchanged."
             }
-            sheet.show(on: window)
+            sheet.start(on: window)
             return
         }
         beginSummary(action, text: text, context: context, clarifications: [], interviewUsage: InterviewUsage(), initialClipboard: initialClipboard, claudeKey: claudeKey, claudeWorkspaceID: claudeWorkspaceID, codexModel: model)
     }
 
-    func beginSummary(_ action: Operation, text: String, context: String, clarifications: [Clarification], interviewUsage: InterviewUsage, initialClipboard: ClipboardSnapshot, claudeKey: String?, claudeWorkspaceID: String?, codexModel: String?) {
-        self.interviewUsage = interviewUsage
-        snapshot = initialClipboard
-        raw = text; rich = nil; lastWrite = nil
-        let answers = InterviewSession.summaryText(clarifications)
-        resultContext = [SummaryContext.normalized(context), answers.isEmpty ? "" : "Clarifications\n" + answers].filter { !$0.isEmpty }.joined(separator: "\n\n")
-        let token = UUID(); jobID = token
-        mode = .processing; preview.isEditable = false; preview.allowsTranscriptPaste = false
+    func stopInterviewProgress() {
+        timer?.invalidate(); timer = nil
+        spinner.stopAnimation(nil); spinner.isHidden = true
+        progress.isHidden = true
+        cancelButton.isHidden = true
+    }
+
+    func showProcessing(_ action: Operation, text: String) {
         providerInfoPopover.close(); providerInfoButton.isHidden = true
         window.makeFirstResponder(preview)
         contextSection.isHidden = true
@@ -658,6 +672,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
                 ? " · \(self.completedChunks)/\(self.totalChunks) parts" : ""
             self.progress.stringValue = "\(words.formatted()) words · \(elapsed / 60):\(String(format: "%02d", elapsed % 60)) elapsed\(parts)"
         }
+    }
+
+    func beginSummary(_ action: Operation, text: String, context: String, clarifications: [Clarification], interviewUsage: InterviewUsage, initialClipboard: ClipboardSnapshot, claudeKey: String?, claudeWorkspaceID: String?, codexModel: String?) {
+        self.interviewUsage = interviewUsage
+        snapshot = initialClipboard
+        raw = text; rich = nil; lastWrite = nil
+        let answers = InterviewSession.summaryText(clarifications)
+        resultContext = [SummaryContext.normalized(context), answers.isEmpty ? "" : "Clarifications\n" + answers].filter { !$0.isEmpty }.joined(separator: "\n\n")
+        let token = UUID(); jobID = token
+        mode = .processing; preview.isEditable = false; preview.allowsTranscriptPaste = false
+        showProcessing(action, text: text)
         if action == .local {
             if #available(macOS 26.0, *) {
                 localTask = Task { @MainActor [weak self] in
@@ -822,6 +847,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         } catch { showError(error) }
     }
     @objc func cancel() {
+        if let interview { interview.cancel(); return }
         runner?.cancel(); claudeRunner?.cancel(); localTask?.cancel()
         cancelButton.isEnabled = false; detail.stringValue = "Cancelling…"
     }

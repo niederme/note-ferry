@@ -45,7 +45,7 @@ All providers should use the same output structure and Apple Notes formatting. R
 
 ### Clarification interview: implemented in development
 
-An optional interview now runs before the final summary. It is on by default, with **Ask clarifying questions before summarizing** in Settings and **Skip interview** before the first additional request. The source may be a transcript, rough notes, or other text; clear material should need no questions.
+An optional interview now runs before the final summary. It is on by default, with **Ask clarifying questions before summarizing** in Settings. The model checks the source in the background as part of summarizing; an interview appears only when there are useful questions. Users can skip those questions with **Finish & summarize**. The source may be a transcript, rough notes, or other text; clear material should need no questions.
 
 Each round offers up to three material questions, exact source excerpts when useful, evidence-supported suggestions, and free text. Three is a batch size, not a total limit. Follow-ups use prior answers; users can correct the question’s premise, leave answers blank, or choose **Finish & summarize** at any time. Answers are separate from original source evidence, and missing answers never imply agreement. The app checks quoted excerpts against the original text.
 

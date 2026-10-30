@@ -36,7 +36,7 @@ Both options use spaced native lists, preserve a newer clipboard, and offer **Re
 
 ## Clarification interview (development build)
 
-Before writing a summary, Note Ferry can interview you about meaningful ambiguities in a transcript, rough notes, or other text. The interview is on by default. Choose **Start interview** to begin or **Skip interview** to summarize directly without an extra model call. In **Settings**, turn off **Ask clarifying questions before summarizing** to always go straight to summarization.
+Before writing a summary, Note Ferry can interview you about meaningful ambiguities in a transcript, rough notes, or other text. The interview is on by default. When you choose **Summarize & format**, the selected model first checks the text in the background. The interview appears only if it returns useful questions; clear text goes straight to the summary. Leave answers blank and choose **Finish & summarize** to skip the questions. In **Settings**, turn off **Ask clarifying questions before summarizing** to always go straight to summarization.
 
 Questions arrive in small batches, with exact source excerpts when useful, suggested answers when supported, and editable free-text answers. Answer what you can, including corrections to a question’s premise. **Continue interview** lets the model ask useful follow-ups; **Finish & summarize** uses your answers immediately. There is no fixed three-question total. A clear source proceeds directly to the summary without questions.
 

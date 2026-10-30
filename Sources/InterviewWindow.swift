@@ -1,5 +1,29 @@
 import AppKit
 
+enum AppWindowSizing {
+    static func contentSize(preferred: NSSize, visibleFrame: NSRect, styleMask: NSWindow.StyleMask) -> NSSize {
+        let available = NSWindow.contentRect(forFrameRect: visibleFrame.insetBy(dx: 24, dy: 24), styleMask: styleMask)
+        return NSSize(width: min(preferred.width, max(1, available.width)),
+                      height: min(preferred.height, max(1, available.height)))
+    }
+}
+
+private final class InterviewPanel: NSPanel {
+    weak var primaryButton: NSButton?
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        // AppKit clears a default button's Return equivalent while a text view is editing.
+        // Keep an explicit shortcut without intercepting ordinary multiline Return.
+        if event.keyCode == 36,
+           event.modifierFlags.intersection(.deviceIndependentFlagsMask) == [.command],
+           let primaryButton, primaryButton.isEnabled {
+            primaryButton.performClick(nil)
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
 private final class InterviewClipView: NSClipView {
     override var isFlipped: Bool { true }
 }
@@ -8,7 +32,7 @@ private final class InterviewStackView: NSStackView {
 }
 
 /// A session-only sheet. No clipboard or preference writes happen during the interview.
-final class InterviewWindow: NSObject {
+final class InterviewWindow: NSObject, NSWindowDelegate {
     let source: String
     let context: String
     let provider: SummaryProvider
@@ -19,15 +43,19 @@ final class InterviewWindow: NSObject {
     let resources: URL
     var onFinish: (([Clarification], InterviewUsage) -> Void)?
     var onCancel: (() -> Void)?
+    var onPresent: (() -> Void)?
+    var onInitialFailure: ((Error) -> Void)?
+    private weak var parent: NSWindow?
+    private var presented = false
     private(set) var session = InterviewSession()
     private(set) var usage = InterviewUsage()
-    private let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 690, height: 630), styleMask: [.titled], backing: .buffered, defer: false)
+    private let panel = InterviewPanel(contentRect: NSRect(x: 0, y: 0, width: 840, height: 760), styleMask: [.titled, .resizable], backing: .buffered, defer: false)
     private let heading = NSTextField(labelWithString: "Clarify before summarizing")
     private let detail = NSTextField(wrappingLabelWithString: "")
     private let status = NSTextField(wrappingLabelWithString: "")
     private let content = InterviewStackView()
     private let scroll = NSScrollView()
-    private let nextButton = NSButton(title: "Start interview", target: nil, action: nil)
+    private let nextButton = NSButton(title: "Continue interview", target: nil, action: nil)
     private let finishButton = NSButton(title: "Skip interview", target: nil, action: nil)
     private let cancelButton = NSButton(title: "Cancel", target: nil, action: nil)
     private let spinner = NSProgressIndicator()
@@ -46,9 +74,21 @@ final class InterviewWindow: NSObject {
         super.init()
     }
 
-    func show(on parent: NSWindow) {
+    func start(on parent: NSWindow) {
+        guard self.parent == nil, !closed else { return }
+        self.parent = parent
+        next()
+    }
+
+    private func makeWindow() {
         panel.isReleasedWhenClosed = false
         panel.title = "Clarification interview"
+        panel.delegate = self
+        if let screen = parent?.screen ?? NSScreen.main {
+            let preferred = NSSize(width: min(840, (parent?.frame.width ?? 872) - 32), height: 760)
+            panel.setContentSize(AppWindowSizing.contentSize(preferred: preferred, visibleFrame: screen.visibleFrame, styleMask: panel.styleMask))
+        }
+        panel.contentMinSize = NSSize(width: min(620, panel.contentLayoutRect.width), height: min(540, panel.contentLayoutRect.height))
         let root = NSStackView()
         root.orientation = .vertical; root.alignment = .leading; root.spacing = 16
         root.edgeInsets = NSEdgeInsets(top: 24, left: 24, bottom: 20, right: 24)
@@ -63,17 +103,17 @@ final class InterviewWindow: NSObject {
         heading.font = .systemFont(ofSize: 22, weight: .semibold)
         root.addArrangedSubview(heading)
         detail.font = .systemFont(ofSize: 13); detail.textColor = .secondaryLabelColor
-        detail.stringValue = "\(provider.displayName) can ask about confusing names, details, or commitments before writing your summary. This uses extra tokens and time\(provider == .claude ? ", with additional API costs" : ""). Turn it off in Settings whenever you like."
         root.addArrangedSubview(detail)
         content.orientation = .vertical; content.alignment = .leading; content.spacing = 20
         content.edgeInsets = NSEdgeInsets(top: 4, left: 0, bottom: 12, right: 12)
         content.translatesAutoresizingMaskIntoConstraints = false
         scroll.contentView = InterviewClipView()
-        scroll.hasVerticalScroller = true; scroll.borderType = .noBorder
+        scroll.hasVerticalScroller = true; scroll.autohidesScrollers = false; scroll.scrollerStyle = .legacy
+        scroll.borderType = .noBorder
         scroll.drawsBackground = false; scroll.documentView = content
         content.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor).isActive = true
         root.addArrangedSubview(scroll)
-        scroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 280).isActive = true
+        scroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 150).isActive = true
         status.font = .systemFont(ofSize: 12); status.textColor = .secondaryLabelColor
         root.addArrangedSubview(status)
         spinner.style = .spinning; spinner.controlSize = .small; spinner.isDisplayedWhenStopped = false
@@ -86,22 +126,38 @@ final class InterviewWindow: NSObject {
         }
         for button in [nextButton, finishButton, cancelButton] { button.target = self; button.bezelStyle = .rounded }
         nextButton.action = #selector(next)
+        panel.defaultButtonCell = nextButton.cell as? NSButtonCell
+        panel.primaryButton = nextButton
+        nextButton.bezelColor = .controlAccentColor
+        nextButton.contentTintColor = .white
+        nextButton.keyEquivalent = "\r"
+        nextButton.keyEquivalentModifierMask = [.command]
+        nextButton.toolTip = "Submit your answers and continue (⌘Return)."
         finishButton.action = #selector(finish)
         cancelButton.action = #selector(cancel)
         cancelButton.keyEquivalent = "\u{1b}"
-        addLabel("A short conversation, only where it helps", bold: true)
-        addLabel("You’ll see a few questions at a time, with source excerpts when useful. Choose a suggestion or write your own answer, including corrections to the question itself. Leave anything you don’t know blank.")
-        addLabel("You can finish at any point. If the text is already clear, Note Ferry will go straight to the summary.")
-        parent.beginSheet(panel)
     }
 
-    private func addLabel(_ text: String, bold: Bool = false, secondary: Bool = false) {
+    private func presentQuestions() {
+        if !presented { makeWindow() }
+        renderQuestions()
+        if !presented, let parent {
+            presented = true
+            parent.beginSheet(panel)
+            onPresent?()
+            if let first = answerFields.first { panel.makeFirstResponder(first) }
+        }
+    }
+
+    @discardableResult
+    private func addLabel(_ text: String, bold: Bool = false, secondary: Bool = false) -> NSTextField {
         let label = NSTextField(wrappingLabelWithString: text)
-        label.font = .systemFont(ofSize: bold ? 14 : 13, weight: bold ? .semibold : .regular)
+        label.font = .systemFont(ofSize: 14, weight: bold ? .semibold : .regular)
         label.textColor = secondary ? .secondaryLabelColor : .labelColor
         label.isSelectable = true
         content.addArrangedSubview(label)
         label.widthAnchor.constraint(equalTo: content.widthAnchor, constant: -12).isActive = true
+        return label
     }
 
     private func clearContent() {
@@ -114,8 +170,12 @@ final class InterviewWindow: NSObject {
         heading.stringValue = "Let’s clarify a few things"
         detail.stringValue = "Round \(session.round) · Answer what you can. Correct any mistaken assumptions. Blank answers stay uncertain."
         for (index, item) in session.pending.enumerated() {
-            addLabel("\(index + 1). \(item.question.question)", bold: true)
-            if !item.question.excerpt.isEmpty { addLabel("“\(item.question.excerpt)”", secondary: true) }
+            let questionLabel = addLabel("\(index + 1). \(item.question.question)", bold: true)
+            content.setCustomSpacing(item.question.excerpt.isEmpty ? 10 : 6, after: questionLabel)
+            if !item.question.excerpt.isEmpty {
+                let excerptLabel = addLabel("“\(item.question.excerpt)”", secondary: true)
+                content.setCustomSpacing(12, after: excerptLabel)
+            }
             if !item.question.options.isEmpty {
                 let picker = NSPopUpButton(frame: .zero, pullsDown: false)
                 picker.addItem(withTitle: "Choose a suggestion, or write below")
@@ -134,6 +194,7 @@ final class InterviewWindow: NSObject {
             field.setAccessibilityLabel("Your answer to question \(index + 1): \(item.question.question)")
             let fieldScroll = NSScrollView()
             fieldScroll.borderType = .bezelBorder; fieldScroll.hasVerticalScroller = true
+            fieldScroll.autohidesScrollers = false; fieldScroll.scrollerStyle = .legacy
             fieldScroll.documentView = field
             content.addArrangedSubview(fieldScroll)
             fieldScroll.widthAnchor.constraint(equalTo: content.widthAnchor, constant: -12).isActive = true
@@ -143,9 +204,24 @@ final class InterviewWindow: NSObject {
         nextButton.title = "Continue interview"
         finishButton.title = "Finish & summarize"
         status.stringValue = "Answers stay in this session and go only to \(provider.displayName). Continue may make another model request."
+        panel.contentView?.layoutSubtreeIfNeeded()
         content.layoutSubtreeIfNeeded()
+        updateScrollHint()
         content.scroll(.zero)
         if let first = answerFields.first { panel.makeFirstResponder(first) }
+    }
+
+    private func updateScrollHint() {
+        guard !session.pending.isEmpty else { return }
+        detail.stringValue = "Round \(session.round) · Answer what you can. Correct any mistaken assumptions. Blank answers stay uncertain."
+        if content.fittingSize.height > scroll.contentSize.height {
+            detail.stringValue += " Scroll down for more questions."
+        }
+    }
+
+    func windowDidResize(_ notification: Notification) {
+        panel.contentView?.layoutSubtreeIfNeeded()
+        updateScrollHint()
     }
 
     @objc private func optionChosen(_ picker: NSPopUpButton) {
@@ -158,6 +234,7 @@ final class InterviewWindow: NSObject {
     private func collectAnswers() throws {
         guard !session.pending.isEmpty else { return }
         try session.answer(answerFields.map(\.string), provider: provider)
+        for field in answerFields { field.isEditable = false }
         answerFields = []
     }
 
@@ -166,11 +243,10 @@ final class InterviewWindow: NSObject {
         do { try collectAnswers() } catch { status.stringValue = error.localizedDescription; return }
         busy = true; nextButton.isEnabled = false
         spinner.startAnimation(nil)
-        clearContent()
-        addLabel("Looking for meaningful ambiguities…", bold: true)
-        addLabel("Your summary will use the original text, context, and any answers you provide. You can finish now if you have enough clarity.")
-        status.stringValue = "Checking with \(provider.displayName)…"
-        finishButton.title = session.history.isEmpty ? "Skip interview" : "Finish & summarize"
+        if presented {
+            status.stringValue = ""
+            finishButton.title = "Finish & summarize"
+        }
         generation += 1
         let requestGeneration = generation
         let history = session.history
@@ -214,8 +290,13 @@ final class InterviewWindow: NSObject {
             let batch = try result.get()
             try session.receive(batch, source: source)
             if session.pending.isEmpty { finish(); return }
-            renderQuestions()
+            presentQuestions()
         } catch {
+            if !presented {
+                close()
+                onInitialFailure?(error)
+                return
+            }
             clearContent()
             addLabel("The interview couldn’t continue", bold: true)
             addLabel(error.localizedDescription)
@@ -233,7 +314,7 @@ final class InterviewWindow: NSObject {
         close()
         onFinish?(session.history, usage)
     }
-    @objc private func cancel() {
+    @objc func cancel() {
         guard !closed else { return }
         close()
         onCancel?()
