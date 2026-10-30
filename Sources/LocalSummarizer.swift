@@ -59,6 +59,24 @@ private struct LocalOverview {
 }
 
 @available(macOS 26.0, *)
+@Generable
+private struct LocalClarificationQuestion {
+    @Guide(description: "A concise, neutral question about a consequential ambiguity. Maximum 400 characters")
+    var question: String
+    @Guide(description: "Exact contiguous source excerpt, maximum 600 characters. Empty if no useful excerpt. Never paraphrase")
+    var excerpt: String
+    @Guide(description: "Zero to four evidence-supported suggested answers, each at most 180 characters")
+    var options: [String]
+}
+
+@available(macOS 26.0, *)
+@Generable
+private struct LocalInterviewBatch {
+    @Guide(description: "Zero to three useful clarification questions. Empty when the source is clear or prior questions suffice")
+    var questions: [LocalClarificationQuestion]
+}
+
+@available(macOS 26.0, *)
 enum LocalSummarizer {
     private final class UsageTracker {
         var tokens: TokenUsage?
@@ -82,16 +100,20 @@ enum LocalSummarizer {
     // guided-output schema, and a detailed response. Failed chunks are halved and retried.
     static let chunkCharacters = 4_000
 
-    static func run(_ source: String, context: String = "", onUsage: @MainActor (TokenUsage) -> Void = { _ in }, progress: @MainActor @escaping (Int, Int) -> Void = { _, _ in }) async throws -> Summary {
+    static func run(_ source: String, context: String = "", clarifications: [Clarification] = [], onUsage: @MainActor (TokenUsage) -> Void = { _ in }, progress: @MainActor @escaping (Int, Int) -> Void = { _, _ in }) async throws -> Summary {
         if let message = LocalModelAvailability.message { throw AppError.message(message) }
         try Transcript.validate(source)
         try SummaryContext.validate(context)
-        let background = SummaryContext.normalized(context)
+        try InterviewSession.validateAnswers(clarifications, provider: .apple)
+        let answers = InterviewSession.summaryText(clarifications)
+        let unresolved = clarifications.contains { $0.answer.isEmpty }
+            ? "\nSome clarification questions were left unanswered. Preserve all unresolved ambiguity in the source; do not infer agreement or certainty." : ""
+        let background = SummaryContext.normalized(context) + (answers.isEmpty ? "" : "\n\nUser clarifications (not original source statements):\n" + answers) + unresolved
         let usage = UsageTracker()
         guard source.utf8.count <= maximumBytes else {
             throw AppError.message("On-device summaries currently support up to 100 KB of text. Split this text into parts, or choose Codex for up to 400 KB. Nothing was sent or copied.")
         }
-        let chunks = TextChunker.split(source, maxCharacters: chunkCharacters - background.count)
+        let chunks = TextChunker.split(source, maxCharacters: max(500, chunkCharacters - background.count))
         var notes: [LocalChunk] = []
         for (index, chunk) in chunks.enumerated() {
             try Task.checkCancellation()
@@ -115,6 +137,43 @@ enum LocalSummarizer {
         try summary.validate()
         if let tokens = usage.tokens { await onUsage(tokens) }
         return summary
+    }
+
+    static func interview(_ source: String, context: String, history: [Clarification], onUsage: @MainActor (TokenUsage) -> Void = { _ in }) async throws -> InterviewBatch {
+        if let message = LocalModelAvailability.message { throw AppError.message(message) }
+        try Transcript.validate(source)
+        try SummaryContext.validate(context)
+        try InterviewSession.validateAnswers(history, provider: .apple)
+        guard source.utf8.count <= maximumBytes else {
+            throw AppError.message("On-device interviews support up to 100 KB of text. Split the text or choose another provider.")
+        }
+        // Excerpts/options are already visible to the user; the model needs question/answer history.
+        let compactHistory = history.map { Clarification(id: $0.id, question: ClarificationQuestion(question: $0.question.question, excerpt: "", options: []), answer: $0.answer) }
+        let overhead = try InterviewSession.payload(source: "", context: context, history: compactHistory).count
+        guard overhead <= 3_000 else {
+            throw AppError.message("This interview has reached the on-device context limit. Finish the interview to summarize with your existing answers.")
+        }
+        let usage = UsageTracker()
+        var questions: [ClarificationQuestion] = []
+        let chunks = TextChunker.split(source, maxCharacters: max(400, 3_800 - overhead))
+        for chunk in chunks {
+            try Task.checkCancellation()
+            let session = LanguageModelSession(instructions: InterviewSession.instructions)
+            let payload = try InterviewSession.payload(source: chunk, context: context, history: compactHistory)
+            let response = try await session.respond(to: payload, generating: LocalInterviewBatch.self)
+            usage.record(session)
+            let batch = InterviewBatch(questions: response.content.questions.map {
+                ClarificationQuestion(question: $0.question, excerpt: $0.excerpt, options: $0.options)
+            })
+            let valid = try batch.validated(source: source, history: history)
+            for question in valid.questions where !questions.contains(where: { $0.identity == question.identity }) {
+                questions.append(question)
+                if questions.count == 3 { break }
+            }
+            if questions.count == 3 { break }
+        }
+        if let tokens = usage.tokens { await onUsage(tokens) }
+        return InterviewBatch(questions: questions)
     }
 
     private static func summarizeChunk(_ text: String, context: String, precedingContext: String = "", usage: UsageTracker) async throws -> [LocalChunk] {
@@ -164,7 +223,7 @@ enum LocalSummarizer {
             guard passes < 8 else {
                 throw AppError.message("The on-device model could not consolidate this long text. Your clipboard is unchanged. Try smaller parts or Codex.")
             }
-            if highlights.count > 2_500 - context.count {
+            if highlights.count > max(500, 3_500 - context.count) {
                 highlights = try await condenseHighlights(highlights, context: context, usage: usage)
                 passes += 1
                 continue
@@ -185,7 +244,7 @@ enum LocalSummarizer {
 
     private static func condenseHighlights(_ text: String, context: String, usage: UsageTracker) async throws -> String {
         var parts: [String] = []
-        for part in TextChunker.split(text, maxCharacters: 1_600) {
+        for part in TextChunker.split(text, maxCharacters: max(350, 2_500 - context.count)) {
             try Task.checkCancellation()
             parts.append(try await condensePart(part, context: context, usage: usage))
         }

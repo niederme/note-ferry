@@ -34,6 +34,16 @@ Paste your text and click **Format only**. Paste into Apple Notes with **⌘V**.
 
 Both options use spaced native lists, preserve a newer clipboard, and offer **Restore clipboard** after copying. Common Markdown is supported, including numbered and nested lists, checklists, quotes, divider lines, code blocks, and tables. Tables retain a grid with wrapped cells in rich text and HTML clipboard formats; how they paste depends on the receiving app. Checklist states remain visible checkbox symbols. Images become links using their description and are not downloaded. Formatting is not a complete Markdown publishing engine.
 
+## Clarification interview (development build)
+
+Before writing a summary, Note Ferry can interview you about meaningful ambiguities in a transcript, rough notes, or other text. The interview is on by default. Choose **Start interview** to begin or **Skip interview** to summarize directly without an extra model call. In **Settings**, turn off **Ask clarifying questions before summarizing** to always go straight to summarization.
+
+Questions arrive in small batches, with exact source excerpts when useful, suggested answers when supported, and editable free-text answers. Answer what you can, including corrections to a question’s premise. **Continue interview** lets the model ask useful follow-ups; **Finish & summarize** uses your answers immediately. There is no fixed three-question total. A clear source proceeds directly to the summary without questions.
+
+Interviews use more tokens and time, and Claude API requests can cost more. Requests stay with the provider you selected. Apple Intelligence has a smaller context budget and may ask you to shorten answers or finish earlier; nothing is silently truncated. Answers remain in memory for the current text and appear under **Context used** with the result. The clipboard stays unchanged throughout the interview, and a newer clipboard is protected when the summary finishes.
+
+This feature is in the development source, not the downloadable 1.2.5 release.
+
 ## Download
 
 Download Note Ferry 1.2.5 (build 10), signed with Developer ID and notarized by Apple:

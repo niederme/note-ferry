@@ -118,6 +118,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     var totalChunks = 0
     var raw: String?
     var resultContext = ""
+    var interview: InterviewWindow?
+    var interviewUsage = InterviewUsage()
+    var clarificationRetry: (source: String, context: String, provider: SummaryProvider, answers: [Clarification], usage: InterviewUsage)?
     var snapshot: ClipboardSnapshot?
     var rich: NSAttributedString?
     var lastWrite: Int?
@@ -384,7 +387,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         NSWorkspace.shared.open(URL(string: "https://github.com/niederme/note-ferry")!)
     }
     @objc func newTranscript() {
-        guard runner == nil, claudeRunner == nil, localTask == nil else { return }
+        guard runner == nil, claudeRunner == nil, localTask == nil, interview == nil else { return }
         updatingText = true
         preview.textStorage?.setAttributedString(NSAttributedString(string: "", attributes: inputAttributes))
         preview.typingAttributes = inputAttributes
@@ -396,6 +399,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         window?.makeFirstResponder(preview)
     }
     func clearContext() {
+        clarificationRetry = nil
         resultContext = ""
         contextEditor.string = ""
         contextEditor.undoManager?.removeAllActions()
@@ -518,6 +522,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     @objc func openSettings() { providerSettingsWindow.show() }
     func textDidChange(_ notification: Notification) {
         guard !updatingText, mode != .processing else { return }
+        clarificationRetry = nil
         if notification.object as? NSTextView === contextEditor {
             guard mode == .input else { return }
             showInputControls()
@@ -553,7 +558,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         return true
     }
     func processInput(_ action: Operation) {
-        guard runner == nil, claudeRunner == nil, localTask == nil, mode == .input else { return }
+        guard runner == nil, claudeRunner == nil, localTask == nil, interview == nil, mode == .input else { return }
         operation = action
         let text = preview.string
         if action == .format {
@@ -592,9 +597,42 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             }
             guard confirmClaudeTransfer() else { return }
         }
-        snapshot = ClipboardSnapshot(.general)
+        let initialClipboard = ClipboardSnapshot(.general)
+        let model = ProviderSettings.shared.codexModel
+        if let retry = clarificationRetry, retry.source == text, retry.context == context, retry.provider == selectedProvider {
+            beginSummary(action, text: text, context: context, clarifications: retry.answers, interviewUsage: retry.usage, initialClipboard: initialClipboard, claudeKey: claudeKey, claudeWorkspaceID: claudeWorkspaceID, codexModel: model)
+            return
+        }
+        if ProviderSettings.shared.clarificationInterviewEnabled {
+            let provider = selectedProvider
+            let sheet = InterviewWindow(source: text, context: context, provider: provider, model: model, apiKey: claudeKey, workspaceID: claudeWorkspaceID, resources: Bundle.main.resourceURL!)
+            interview = sheet
+            mode = .processing; preview.isEditable = false; preview.allowsTranscriptPaste = false
+            contextEditor.isEditable = false
+            sheet.onFinish = { [weak self] answers, usage in
+                guard let self else { return }
+                self.interview = nil
+                self.clarificationRetry = (text, context, provider, answers, usage)
+                self.beginSummary(action, text: text, context: context, clarifications: answers, interviewUsage: usage, initialClipboard: initialClipboard, claudeKey: claudeKey, claudeWorkspaceID: claudeWorkspaceID, codexModel: model)
+            }
+            sheet.onCancel = { [weak self] in
+                guard let self else { return }
+                self.interview = nil
+                self.showInputControls()
+                self.detail.stringValue = "Interview cancelled. Your original text and clipboard are unchanged."
+            }
+            sheet.show(on: window)
+            return
+        }
+        beginSummary(action, text: text, context: context, clarifications: [], interviewUsage: InterviewUsage(), initialClipboard: initialClipboard, claudeKey: claudeKey, claudeWorkspaceID: claudeWorkspaceID, codexModel: model)
+    }
+
+    func beginSummary(_ action: Operation, text: String, context: String, clarifications: [Clarification], interviewUsage: InterviewUsage, initialClipboard: ClipboardSnapshot, claudeKey: String?, claudeWorkspaceID: String?, codexModel: String?) {
+        self.interviewUsage = interviewUsage
+        snapshot = initialClipboard
         raw = text; rich = nil; lastWrite = nil
-        resultContext = SummaryContext.normalized(context)
+        let answers = InterviewSession.summaryText(clarifications)
+        resultContext = [SummaryContext.normalized(context), answers.isEmpty ? "" : "Clarifications\n" + answers].filter { !$0.isEmpty }.joined(separator: "\n\n")
         let token = UUID(); jobID = token
         mode = .processing; preview.isEditable = false; preview.allowsTranscriptPaste = false
         providerInfoPopover.close(); providerInfoButton.isHidden = true
@@ -625,7 +663,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
                 localTask = Task { @MainActor [weak self] in
                     do {
                         var usage: TokenUsage?
-                        let note = try await LocalSummarizer.run(text, context: context, onUsage: { usage = $0 }) { [weak self] completed, total in
+                        let note = try await LocalSummarizer.run(text, context: context, clarifications: clarifications, onUsage: { usage = $0 }) { [weak self] completed, total in
                             guard let self, self.jobID == token else { return }
                             self.completedChunks = completed; self.totalChunks = total
                         }
@@ -640,10 +678,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         } else if action == .codex {
             let worker = CodexRunner(); runner = worker
             let resources = Bundle.main.resourceURL!
-            let model = ProviderSettings.shared.codexModel
+            let model = codexModel
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 var usage: TokenUsage?
-                let result = Result { try worker.run(transcript: text, context: context, resources: resources, model: model, onUsage: { usage = $0 }) }
+                let result = Result { try worker.run(transcript: text, context: context, clarifications: clarifications, resources: resources, model: model, onUsage: { usage = $0 }) }
                 let reportedUsage = usage
                 DispatchQueue.main.async { self?.finish(token, result: result, usage: reportedUsage) }
             }
@@ -653,7 +691,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             let workspaceID = claudeWorkspaceID
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 var usage: TokenUsage?
-                let result = Result { try worker.run(transcript: text, context: context, resources: resources, apiKey: key, workspaceID: workspaceID, onUsage: { usage = $0 }) }
+                let result = Result { try worker.run(transcript: text, context: context, clarifications: clarifications, resources: resources, apiKey: key, workspaceID: workspaceID, onUsage: { usage = $0 }) }
                 let reportedUsage = usage
                 DispatchQueue.main.async { self?.finish(token, result: result, usage: reportedUsage) }
             }
@@ -670,13 +708,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             display(note)
             let elapsed = Int(Date().timeIntervalSince(started))
             let words = raw?.split(whereSeparator: \.isWhitespace).count ?? 0
-            let tokens = usage.map { "\($0.input.formatted()) input / \($0.output.formatted()) output tokens" } ?? "Token usage unavailable"
+            let tokens = interviewUsage.including(usage).map { "\($0.input.formatted()) input / \($0.output.formatted()) output tokens" } ?? "Complete token usage unavailable"
             progress.stringValue = "\(words.formatted()) words · \(elapsed / 60):\(String(format: "%02d", elapsed % 60)) elapsed · \(tokens)"
-            progress.toolTip = "Provider-reported usage includes instructions and context. For on-device summaries, counts include all portions and overview passes. Token counts are not prices or remaining account limits."
+            progress.toolTip = "Provider-reported usage includes interview requests, instructions, context, and the summary. Elapsed time covers summary generation only. Cancelled or unreported requests make the total unavailable. For on-device summaries, counts include all portions and overview passes. Token counts are not prices or remaining account limits."
             progress.isHidden = false
             copyWhenReady()
             NSSound(named: "Glass")?.play(); NSApp.requestUserAttention(.informationalRequest)
         case .failure(let error):
+            if var retry = clarificationRetry {
+                retry.usage.record(usage)
+                clarificationRetry = retry
+            }
             showInputControls()
             if error is CancellationError { detail.stringValue = "Cancelled. Your transcript is still here and your clipboard is unchanged." }
             else if operation == .local && !(error is AppError) {
@@ -833,7 +875,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         sender.orderOut(nil)
         return false
     }
-    func applicationWillTerminate(_ notification: Notification) { runner?.cancel(); claudeRunner?.cancel(); localTask?.cancel() }
+    func applicationWillTerminate(_ notification: Notification) { interview?.stop(); runner?.cancel(); claudeRunner?.cancel(); localTask?.cancel() }
 }
 
 let app = NSApplication.shared

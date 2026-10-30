@@ -72,6 +72,7 @@ iconutil -c icns .build/AppIcon.iconset -o Resources/AppIcon.icns
 ```sh
 make build     # Build build/Note Ferry.app
 make test      # Run the automated checks
+./scripts/test-interview-ui.sh  # Exercise the interview sheet with synthetic model responses
 make install   # Build and install in ~/Applications
 ```
 
@@ -98,6 +99,14 @@ The default ad-hoc `make build` marks the local app as **Development** in its wi
 | `scripts/` | Build, installation, test, and icon-generation tools |
 
 The model supplies structured content. The app owns typography, lists, spacing, and clipboard handling, so these do not depend on how the model formats Markdown. The on-device path accepts up to 100 KB, uses fresh sessions for roughly 4,000-character portions, and consolidates takeaways separately. It can take longer and may be less detailed than Codex. Model availability depends on macOS, hardware, Apple Intelligence settings, and model readiness.
+
+### Build the interview without replacing a running app
+
+```sh
+BUILD_APP_PATH="$PWD/.build/interview-preview/Note Ferry.app" make build
+```
+
+The interview uses `Sources/Interview.swift` for the request contract, stable question/answer state, validation, and token aggregation, and `Sources/InterviewWindow.swift` for its session-only sheet. `Resources/Interview.schema.json` is bundled by both build paths. Backend tests cover opt-out persistence, multiple rounds, unanswered questions, source provenance, invalid excerpts, provider payloads, cancellation, and usage totals. The UI harness uses a mock Codex executable, makes no real model calls, and does not copy or paste. Command-line `--summarize-file` exports remain non-interactive and bypass the interview.
 
 ### Preview without a model call
 

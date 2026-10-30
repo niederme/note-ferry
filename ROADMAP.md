@@ -43,10 +43,12 @@ All providers should use the same output structure and Apple Notes formatting. R
 
 ## Later exploration
 
-### Clarification review: a direction for 2.0
+### Clarification interview: implemented in development
 
-After summarizing, offer an optional **Things to clarify** panel for material uncertainties in terminology, attribution, commitments, or dates. Show the relevant transcript excerpts with each question. Use multiple choice when the source supports a few possibilities, free text for names and background, and editable suggested corrections when supported by evidence. Always allow a written answer, “Not sure,” or skipping a question.
+An optional interview now runs before the final summary. It is on by default, with **Ask clarifying questions before summarizing** in Settings and **Skip interview** before the first additional request. The source may be a transcript, rough notes, or other text; clear material should need no questions.
 
-Start with at most three useful questions together. The summary remains available; users can answer any subset and choose **Update summary** once, or **Keep as is**. Unanswered ambiguities remain uncertain. Keep these separate from unresolved questions discussed during the meeting. Associate questions, evidence, and answers through stable IDs. Evaluate question quality and revision behavior for Apple Intelligence as well as Codex and Claude before claiming parity. This loop is planned, not implemented; the optional context field is its first building block.
+Each round offers up to three material questions, exact source excerpts when useful, evidence-supported suggestions, and free text. Three is a batch size, not a total limit. Follow-ups use prior answers; users can correct the question’s premise, leave answers blank, or choose **Finish & summarize** at any time. Answers are separate from original source evidence, and missing answers never imply agreement. The app checks quoted excerpts against the original text.
+
+Codex, Claude, and Apple Intelligence use the same interview flow. Token reporting includes interview requests when available, and Settings explains the extra time, tokens, and possible API cost. On-device context limits can end the interview earlier. Further evaluation should focus on question usefulness, repeated or leading questions, long-source coverage, and faithful use of corrections across providers before release.
 
 Call recording and closer calendar integration are future ambitions. They are outside the provider work above and need a separate design for capture, permissions, meeting context, and retention.

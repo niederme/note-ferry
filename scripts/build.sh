@@ -1,7 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-APP="$PWD/build/Note Ferry.app"
+APP="${BUILD_APP_PATH:-$PWD/build/Note Ferry.app}"
+case "$APP" in
+    /*.app) ;;
+    *) printf 'BUILD_APP_PATH must be an absolute path ending in .app\n' >&2; exit 1 ;;
+esac
 ./scripts/fetch-sparkle.sh
 SPARKLE_ROOT="$PWD/.build/sparkle/2.10.0"
 rm -rf "$APP"
@@ -11,11 +15,11 @@ binaries=()
 for architecture in "${architectures[@]}"; do
     case "$architecture" in arm64|x86_64) ;; *) printf 'Unsupported architecture: %s\n' "$architecture" >&2; exit 1 ;; esac
     binary="$PWD/.build/NoteFerry-$architecture"
-    xcrun swiftc -swift-version 5 -O -target "$architecture-apple-macos14.0" -module-cache-path "$PWD/.build/module-cache" -framework AppKit -F "$SPARKLE_ROOT" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks Sources/Core.swift Sources/CodexDiscovery.swift Sources/MarkdownFormatter.swift Sources/LocalSummarizer.swift Sources/ProviderSettings.swift Sources/SettingsWindow.swift Sources/ClaudeRunner.swift Sources/main.swift -o "$binary"
+    xcrun swiftc -swift-version 5 -O -target "$architecture-apple-macos14.0" -module-cache-path "$PWD/.build/module-cache" -framework AppKit -F "$SPARKLE_ROOT" -framework Sparkle -Xlinker -rpath -Xlinker @executable_path/../Frameworks Sources/Interview.swift Sources/Core.swift Sources/CodexDiscovery.swift Sources/MarkdownFormatter.swift Sources/LocalSummarizer.swift Sources/ProviderSettings.swift Sources/SettingsWindow.swift Sources/ClaudeRunner.swift Sources/InterviewWindow.swift Sources/main.swift -o "$binary"
     binaries+=("$binary")
 done
 xcrun lipo -create "${binaries[@]}" -output "$APP/Contents/MacOS/Note Ferry"
-cp Resources/SummaryPrompt.txt Resources/Summary.schema.json "$APP/Contents/Resources/"
+cp Resources/SummaryPrompt.txt Resources/Summary.schema.json Resources/Interview.schema.json "$APP/Contents/Resources/"
 cp LICENSE "$APP/Contents/Resources/LICENSE"
 cp Resources/Sparkle.LICENSE "$APP/Contents/Resources/Sparkle.LICENSE"
 ditto "$SPARKLE_ROOT/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
