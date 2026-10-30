@@ -24,6 +24,13 @@ private final class InterviewPanel: NSPanel {
     }
 }
 
+private final class InterviewAnswerTextView: NSTextView {
+    var moveFocus: ((Bool) -> Void)?
+
+    override func insertTab(_ sender: Any?) { moveFocus?(true) }
+    override func insertBacktab(_ sender: Any?) { moveFocus?(false) }
+}
+
 private final class InterviewClipView: NSClipView {
     override var isFlipped: Bool { true }
 }
@@ -185,7 +192,11 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
                 content.addArrangedSubview(picker)
                 picker.widthAnchor.constraint(equalTo: content.widthAnchor, constant: -12).isActive = true
             }
-            let field = NSTextView(usingTextLayoutManager: false)
+            let field = InterviewAnswerTextView(usingTextLayoutManager: false)
+            field.moveFocus = { [weak self, weak field] forward in
+                guard let self, let field else { return }
+                self.moveAnswerFocus(from: field, forward: forward)
+            }
             field.isRichText = false; field.font = .systemFont(ofSize: 13)
             field.textContainerInset = NSSize(width: 8, height: 8)
             field.isVerticallyResizable = true; field.isHorizontallyResizable = false
@@ -201,6 +212,12 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
             fieldScroll.heightAnchor.constraint(equalToConstant: 76).isActive = true
             answerFields.append(field)
         }
+        for (index, field) in answerFields.enumerated() {
+            field.nextKeyView = index + 1 < answerFields.count ? answerFields[index + 1] : nextButton
+        }
+        nextButton.nextKeyView = finishButton
+        finishButton.nextKeyView = cancelButton
+        cancelButton.nextKeyView = answerFields.first
         nextButton.title = "Continue interview"
         finishButton.title = "Finish & summarize"
         status.stringValue = "Answers stay in this session and go only to \(provider.displayName). Continue may make another model request."
@@ -209,6 +226,20 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
         updateScrollHint()
         content.scroll(.zero)
         if let first = answerFields.first { panel.makeFirstResponder(first) }
+    }
+
+    private func moveAnswerFocus(from field: NSTextView, forward: Bool) {
+        guard !busy, let index = answerFields.firstIndex(where: { $0 === field }) else { return }
+        let nextIndex = index + (forward ? 1 : -1)
+        if answerFields.indices.contains(nextIndex) {
+            let target = answerFields[nextIndex]
+            if let answerScroll = target.enclosingScrollView {
+                content.scrollToVisible(answerScroll.convert(answerScroll.bounds, to: content))
+            }
+            panel.makeFirstResponder(target)
+        } else {
+            panel.makeFirstResponder(forward ? nextButton : cancelButton)
+        }
     }
 
     private func updateScrollHint() {

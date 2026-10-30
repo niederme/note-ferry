@@ -107,6 +107,29 @@ import AppKit
         check(threeScroll.scrollerStyle == .legacy && !threeScroll.autohidesScrollers, "Question scrolling has no persistent scrollbar")
         check(threeFields.allSatisfy { $0.enclosingScrollView?.scrollerStyle == .legacy && $0.enclosingScrollView?.autohidesScrollers == false }, "Answer scrolling has no persistent scrollbar")
         check(threeViews.compactMap { $0 as? NSTextField }.contains { $0.stringValue.contains("Scroll down for more questions") }, "Long interview has no scrolling hint")
+        func press(_ field: NSTextView, keyCode: UInt16, characters: String, modifiers: NSEvent.ModifierFlags = []) {
+            let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: modifiers, timestamp: 0, windowNumber: threePanel.windowNumber, context: nil, characters: characters, charactersIgnoringModifiers: characters, isARepeat: false, keyCode: keyCode)!
+            field.keyDown(with: event)
+        }
+        threeFields[0].string = "First answer"
+        threePanel.makeFirstResponder(threeFields[0])
+        press(threeFields[0], keyCode: 48, characters: "\t")
+        check(threePanel.firstResponder === threeFields[1], "Tab did not focus the next answer")
+        check(threeFields[0].string == "First answer", "Tab inserted text into the answer")
+        press(threeFields[1], keyCode: 48, characters: "\u{19}", modifiers: [.shift])
+        check(threePanel.firstResponder === threeFields[0], "Shift-Tab did not return to the previous answer")
+        threeFields[0].setSelectedRange(NSRange(location: threeFields[0].string.utf16.count, length: 0))
+        press(threeFields[0], keyCode: 36, characters: "\r")
+        check(threeFields[0].string == "First answer\n" && threePanel.firstResponder === threeFields[0], "Return no longer inserts a newline")
+        threePanel.makeFirstResponder(threeFields[1])
+        press(threeFields[1], keyCode: 48, characters: "\t")
+        check(threePanel.firstResponder === threeFields[2], "Tab did not reach the last answer")
+        let lastAnswerFrame = threeFields[2].enclosingScrollView!.convert(threeFields[2].enclosingScrollView!.bounds, to: threeScroll.documentView!)
+        check(threeScroll.documentVisibleRect.intersects(lastAnswerFrame), "Tab left the focused answer outside the scroll viewport")
+        press(threeFields[2], keyCode: 48, characters: "\t")
+        check(threePanel.firstResponder === button("Continue interview", in: threePanel), "Tab from last answer did not reach the primary action")
+        threePanel.selectPreviousKeyView(nil)
+        check(threePanel.firstResponder === threeFields[2], "Backtab from the primary action did not return to the last answer")
         button("Cancel", in: threePanel).performClick(nil)
         pump { parent.attachedSheet == nil }
 
