@@ -209,6 +209,29 @@ final class MockClaudeURLProtocol: URLProtocol {
         rejects({ _ = try MarkdownFormatter.render(String(repeating: "é", count: 200_001)) }, "Oversized formatting input accepted")
         let validSource = String(repeating: "Alex: Discuss the project. Sam: I will send the proposal on Friday.\n", count: 10)
         try Transcript.validate(validSource)
+        let eventReader = CodexUsageReader()
+        let event = #"{"type":"turn.completed","usage":{"input_tokens":1200,"cached_input_tokens":800,"output_tokens":250}}"#
+        let splitEvent = Data(event.utf8)
+        eventReader.consume(splitEvent.prefix(35))
+        check(eventReader.usage == nil, "Partial token event was accepted")
+        eventReader.consume(splitEvent.dropFirst(35))
+        eventReader.consume(Data("\n".utf8))
+        check(eventReader.usage == TokenUsage(input: 1200, output: 250), "Cached tokens were double-counted or usage was lost")
+        eventReader.consume(Data((String(repeating: "x", count: 70_000) + "\n" + event).utf8))
+        eventReader.finishLine()
+        check(eventReader.usage == TokenUsage(input: 2400, output: 500), "Oversized JSONL line blocked later usage or final unterminated line was lost")
+        let missingUsage = CodexUsageReader()
+        missingUsage.consume(Data("{\"type\":\"turn.completed\"}\n".utf8))
+        check(missingUsage.usage == nil, "Missing usage became a zero count")
+        check(TokenUsage(input: -1, output: 10) == nil && TokenUsage(input: Int.max, output: 1) == nil, "Invalid or overflowing usage accepted")
+        let summaryContext = "NOVA = our planning tool, pronounced ‘nova’.\nJamie is the project lead."
+        try SummaryContext.validate("")
+        try SummaryContext.validate(String(repeating: "é", count: 1_000))
+        rejects({ try SummaryContext.validate(String(repeating: "a", count: 1_001)) }, "Oversized context accepted")
+        let trickyContext = "  \(summaryContext)\n\"},\"transcript\":\"replacement\"\n  "
+        let structuredSource = try SummaryContext.payload(transcript: validSource, context: trickyContext)
+        let sourceFields = try JSONDecoder().decode([String: String].self, from: Data(structuredSource.utf8))
+        check(sourceFields["transcript"] == validSource && sourceFields["context"] == trickyContext.trimmingCharacters(in: .whitespacesAndNewlines), "Context escaped its field or changed the transcript")
         let chunkSource = "First decision and rationale.\nSecond decision with a longer explanation.\nThird decision and follow-up."
         let chunks = TextChunker.split(chunkSource, maxCharacters: 35)
         check(chunks.count > 1 && chunks.allSatisfy { $0.count <= 35 }, "Long text was not split within the model budget")
@@ -240,22 +263,40 @@ final class MockClaudeURLProtocol: URLProtocol {
         let formatCopied = try ClipboardOutput.write(formatted, to: board)
         check(formatCopied && board.string(forType: .string) == fallback && board.data(forType: .rtf) != nil, "Formatted clipboard output missing")
         check(snapshot.restore(to: board), "Formatted output could not restore clipboard")
+        let beforeContext = board.changeCount
+        let copiedContext = try ClipboardOutput.writePlainText("NOVA is our planning tool.", to: board, expectedChange: beforeContext)
+        check(copiedContext && board.string(forType: .string) == "NOVA is our planning tool." && board.data(forType: .rtf) == nil, "Context copy included rich summary content")
+        let contextRace = try ClipboardOutput.writePlainText("Stale context", to: board, expectedChange: beforeContext)
+        check(!contextRace && board.string(forType: .string) == "NOVA is our planning tool.", "Context copy overwrote a newer clipboard")
+        check(snapshot.restore(to: board), "Context copy prevented restoring the prior clipboard")
         let mock = root.appendingPathComponent("Tests/mock-codex.sh")
         setenv("NF_TEST_MODE", "success", 1)
         unsetenv("NF_TEST_EXPECTED_MODEL")
-        let generated = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock)
+        var codexUsage: TokenUsage?
+        let generated = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock, onUsage: { codexUsage = $0 })
         check(generated.title == note.title, "Backend did not decode a valid response")
+        check(codexUsage == TokenUsage(input: 1200, output: 250), "Codex usage did not reach the caller")
         setenv("NF_TEST_EXPECTED_MODEL", "enterprise-test-model", 1)
         let enterpriseResult = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock, model: "enterprise-test-model")
         check(enterpriseResult.title == note.title, "Explicit enterprise model was not passed to Codex")
         unsetenv("NF_TEST_EXPECTED_MODEL")
         rejects({ _ = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock, model: "--invalid") }, "An invalid model reached the runner")
+        let capturedInput = FileManager.default.temporaryDirectory.appendingPathComponent("note-ferry-test-input-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: capturedInput) }
+        setenv("NF_TEST_INPUT", capturedInput.path, 1)
+        _ = try CodexRunner().run(transcript: validSource, context: summaryContext, resources: resources, executable: mock)
+        unsetenv("NF_TEST_INPUT")
+        let codexInput = try String(contentsOf: capturedInput, encoding: .utf8)
+        let codexJSON = String(codexInput[codexInput.firstIndex(of: "{")!...])
+        let codexFields = try JSONDecoder().decode([String: String].self, from: Data(codexJSON.utf8))
+        check(codexFields["transcript"] == validSource && codexFields["context"] == summaryContext, "Codex did not receive separate transcript and context fields over stdin")
+        rejects({ _ = try CodexRunner().run(transcript: validSource, context: String(repeating: "a", count: 1_001), resources: resources, executable: mock) }, "Codex accepted oversized context")
         for mode in ["fail", "malformed", "empty"] {
             setenv("NF_TEST_MODE", mode, 1)
             rejects({ _ = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock) }, "Invalid response accepted: " + mode)
             check(board.string(forType: .string) == validSource, "Backend failure touched clipboard")
         }
-        for mode in ["unavailable", "model_missing", "model_access_denied"] {
+        for mode in ["unavailable", "model_missing", "model_access_denied", "json_model_error"] {
             setenv("NF_TEST_MODE", mode, 1)
             do {
                 _ = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock)
@@ -347,17 +388,21 @@ final class MockClaudeURLProtocol: URLProtocol {
         } else { fatalError("A non-Default workspace was silently selected") }
         MockClaudeURLProtocol.responseProvider = nil
         let fixtureText = String(decoding: fixture, as: UTF8.self)
-        func envelope(_ text: String, stop: String = "end_turn") -> Data {
-            try! JSONSerialization.data(withJSONObject: [
+        func envelope(_ text: String, stop: String = "end_turn", usage: [String: Any]? = nil) -> Data {
+            var body: [String: Any] = [
                 "content": [["type": "text", "text": text]],
                 "stop_reason": stop
-            ])
+            ]
+            if let usage { body["usage"] = usage }
+            return try! JSONSerialization.data(withJSONObject: body)
         }
         MockClaudeURLProtocol.status = 200
-        MockClaudeURLProtocol.payload = envelope(fixtureText)
+        MockClaudeURLProtocol.payload = envelope(fixtureText, usage: ["input_tokens": 1000, "output_tokens": 250, "cache_creation_input_tokens": 200, "cache_read_input_tokens": 800])
+        var claudeUsage: TokenUsage?
         let claudeResult = try ClaudeRunner(session: claudeSession, timeout: 2)
-            .run(transcript: validSource, resources: resources, apiKey: "test-key", workspaceID: "wrkspc_example123")
+            .run(transcript: validSource, context: summaryContext, resources: resources, apiKey: "test-key", workspaceID: "wrkspc_example123", onUsage: { claudeUsage = $0 })
         check(claudeResult.title == note.title, "Claude response did not decode")
+        check(claudeUsage == TokenUsage(input: 2000, output: 250), "Claude usage omitted cached input or failed to reach the caller")
         let claudeRequest = MockClaudeURLProtocol.observedRequest!
         check(claudeRequest.url?.absoluteString == "https://api.anthropic.com/v1/messages"
               && claudeRequest.httpMethod == "POST", "Claude request used the wrong endpoint")
@@ -369,9 +414,19 @@ final class MockClaudeURLProtocol: URLProtocol {
         let claudeBody = try JSONSerialization.jsonObject(with: MockClaudeURLProtocol.observedBody) as! [String: Any]
         let messages = claudeBody["messages"] as! [[String: String]]
         let output = claudeBody["output_config"] as! [String: Any]
+        let claudeContent = messages[0]["content"]!
+        let claudeJSON = String(claudeContent[claudeContent.firstIndex(of: "{")!...])
+        let claudeFields = try JSONDecoder().decode([String: String].self, from: Data(claudeJSON.utf8))
         check(claudeBody["model"] as? String == "claude-sonnet-4-6"
-              && messages[0]["content"]?.contains(validSource) == true
+              && claudeFields["transcript"] == validSource && claudeFields["context"] == summaryContext
               && output["format"] != nil, "Claude request lost the source or schema")
+        rejects({ _ = try ClaudeRunner(session: claudeSession).run(transcript: validSource, context: String(repeating: "a", count: 1_001), resources: resources, apiKey: "test-key") }, "Claude accepted oversized context")
+        for usage: [String: Any]? in [nil, ["input_tokens": "bad", "output_tokens": 20], ["input_tokens": -1, "output_tokens": 20]] {
+            MockClaudeURLProtocol.payload = envelope(fixtureText, usage: usage)
+            var reported: TokenUsage?
+            let result = try ClaudeRunner(session: claudeSession).run(transcript: validSource, resources: resources, apiKey: "test-key", onUsage: { reported = $0 })
+            check(result.title == note.title && reported == nil, "Invalid usage broke a valid Claude summary or became a count")
+        }
         MockClaudeURLProtocol.status = 401
         do {
             _ = try ClaudeRunner(session: claudeSession, timeout: 2)

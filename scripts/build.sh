@@ -23,6 +23,9 @@ xcrun swift -module-cache-path "$PWD/.build/module-cache" scripts/Icon.swift "$P
 iconutil -c icns .build/AppIcon.iconset -o "$APP/Contents/Resources/AppIcon.icns"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 SIGNING_IDENTITY="${SIGNING_IDENTITY:--}"
+if [[ "$SIGNING_IDENTITY" == "-" ]]; then
+    /usr/libexec/PlistBuddy -c 'Add :NFDevelopmentBuild bool true' "$APP/Contents/Info.plist"
+fi
 FRAMEWORK="$APP/Contents/Frameworks/Sparkle.framework"
 SIGN_ARGS=(--force --sign "$SIGNING_IDENTITY")
 # Hardened runtime requires a common Developer ID team for the app and Sparkle.
