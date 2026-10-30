@@ -6,8 +6,9 @@ In version 1.2, **Summarize & format** uses the provider you select: Apple Intel
 
 Apple Intelligence uses Apple's on-device Foundation Models framework on eligible Macs. Claude uses your own Anthropic API key. The chosen provider is shown before you summarize; failure never silently switches providers. Apple Intelligence may need to download its model before it is available.
 
-- The app holds the source, preview, and clipboard backup in memory. It has no saved transcript library.
-- For Codex, the transcript is passed over standard input, not in command-line arguments or a source file.
+- The app holds the source, optional context, preview, and clipboard backup in memory. It has no saved transcript library or glossary. Context is discarded when you clear the window, replace a result with new text, or quit.
+- Optional context follows the selected summarizer: it stays on the Mac with Apple Intelligence, is sent to OpenAI with Codex, or is sent to Anthropic with Claude. **Format only** ignores context.
+- For Codex, the transcript and context are passed over standard input, not in command-line arguments or a source file.
 - For Codex, the result is temporarily written into a randomly named directory accessible to the current user. The worker removes that directory when it exits normally. A forced exit, app termination before cleanup finishes, or power loss can leave a temporary result behind.
 - Codex runs with `--ephemeral`, a read-only sandbox, approval prompts disabled, and user configuration ignored. The integration disables shell execution, app connectors, plugins, hooks, memory, browser, computer, image, and multi-agent features. It reuses saved authentication without copying credentials.
 - For Codex, ephemeral mode disables normal session rollout persistence. It does not change OpenAI’s service-side data handling or guarantee that the CLI produces no operational metadata. See [Codex non-interactive mode](https://learn.chatgpt.com/docs/non-interactive-mode).

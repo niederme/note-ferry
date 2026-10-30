@@ -43,4 +43,10 @@ All providers should use the same output structure and Apple Notes formatting. R
 
 ## Later exploration
 
+### Clarification review: a direction for 2.0
+
+After summarizing, offer an optional **Things to clarify** panel for material uncertainties in terminology, attribution, commitments, or dates. Show the relevant transcript excerpts with each question. Use multiple choice when the source supports a few possibilities, free text for names and background, and editable suggested corrections when supported by evidence. Always allow a written answer, “Not sure,” or skipping a question.
+
+Start with at most three useful questions together. The summary remains available; users can answer any subset and choose **Update summary** once, or **Keep as is**. Unanswered ambiguities remain uncertain. Keep these separate from unresolved questions discussed during the meeting. Associate questions, evidence, and answers through stable IDs. Evaluate question quality and revision behavior for Apple Intelligence as well as Codex and Claude before claiming parity. This loop is planned, not implemented; the optional context field is its first building block.
+
 Call recording and closer calendar integration are future ambitions. They are outside the provider work above and need a separate design for capture, permissions, meeting context, and retention.

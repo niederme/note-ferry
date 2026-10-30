@@ -75,6 +75,8 @@ make test      # Run the automated checks
 make install   # Build and install in ~/Applications
 ```
 
+The default ad-hoc `make build` marks the local app as **Development** in its window title and About panel while retaining the base version number. Developer ID release builds do not receive this label.
+
 | Path | Purpose |
 | --- | --- |
 | `Sources/main.swift` | AppKit interface and clipboard workflow |

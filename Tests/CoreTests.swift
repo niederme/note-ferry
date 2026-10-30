@@ -209,6 +209,14 @@ final class MockClaudeURLProtocol: URLProtocol {
         rejects({ _ = try MarkdownFormatter.render(String(repeating: "é", count: 200_001)) }, "Oversized formatting input accepted")
         let validSource = String(repeating: "Alex: Discuss the project. Sam: I will send the proposal on Friday.\n", count: 10)
         try Transcript.validate(validSource)
+        let summaryContext = "NOVA = our planning tool, pronounced ‘nova’.\nJamie is the project lead."
+        try SummaryContext.validate("")
+        try SummaryContext.validate(String(repeating: "é", count: 1_000))
+        rejects({ try SummaryContext.validate(String(repeating: "a", count: 1_001)) }, "Oversized context accepted")
+        let trickyContext = "  \(summaryContext)\n\"},\"transcript\":\"replacement\"\n  "
+        let structuredSource = try SummaryContext.payload(transcript: validSource, context: trickyContext)
+        let sourceFields = try JSONDecoder().decode([String: String].self, from: Data(structuredSource.utf8))
+        check(sourceFields["transcript"] == validSource && sourceFields["context"] == trickyContext.trimmingCharacters(in: .whitespacesAndNewlines), "Context escaped its field or changed the transcript")
         let chunkSource = "First decision and rationale.\nSecond decision with a longer explanation.\nThird decision and follow-up."
         let chunks = TextChunker.split(chunkSource, maxCharacters: 35)
         check(chunks.count > 1 && chunks.allSatisfy { $0.count <= 35 }, "Long text was not split within the model budget")
@@ -250,6 +258,16 @@ final class MockClaudeURLProtocol: URLProtocol {
         check(enterpriseResult.title == note.title, "Explicit enterprise model was not passed to Codex")
         unsetenv("NF_TEST_EXPECTED_MODEL")
         rejects({ _ = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock, model: "--invalid") }, "An invalid model reached the runner")
+        let capturedInput = FileManager.default.temporaryDirectory.appendingPathComponent("note-ferry-test-input-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: capturedInput) }
+        setenv("NF_TEST_INPUT", capturedInput.path, 1)
+        _ = try CodexRunner().run(transcript: validSource, context: summaryContext, resources: resources, executable: mock)
+        unsetenv("NF_TEST_INPUT")
+        let codexInput = try String(contentsOf: capturedInput, encoding: .utf8)
+        let codexJSON = String(codexInput[codexInput.firstIndex(of: "{")!...])
+        let codexFields = try JSONDecoder().decode([String: String].self, from: Data(codexJSON.utf8))
+        check(codexFields["transcript"] == validSource && codexFields["context"] == summaryContext, "Codex did not receive separate transcript and context fields over stdin")
+        rejects({ _ = try CodexRunner().run(transcript: validSource, context: String(repeating: "a", count: 1_001), resources: resources, executable: mock) }, "Codex accepted oversized context")
         for mode in ["fail", "malformed", "empty"] {
             setenv("NF_TEST_MODE", mode, 1)
             rejects({ _ = try CodexRunner().run(transcript: validSource, resources: resources, executable: mock) }, "Invalid response accepted: " + mode)
@@ -356,7 +374,7 @@ final class MockClaudeURLProtocol: URLProtocol {
         MockClaudeURLProtocol.status = 200
         MockClaudeURLProtocol.payload = envelope(fixtureText)
         let claudeResult = try ClaudeRunner(session: claudeSession, timeout: 2)
-            .run(transcript: validSource, resources: resources, apiKey: "test-key", workspaceID: "wrkspc_example123")
+            .run(transcript: validSource, context: summaryContext, resources: resources, apiKey: "test-key", workspaceID: "wrkspc_example123")
         check(claudeResult.title == note.title, "Claude response did not decode")
         let claudeRequest = MockClaudeURLProtocol.observedRequest!
         check(claudeRequest.url?.absoluteString == "https://api.anthropic.com/v1/messages"
@@ -369,9 +387,13 @@ final class MockClaudeURLProtocol: URLProtocol {
         let claudeBody = try JSONSerialization.jsonObject(with: MockClaudeURLProtocol.observedBody) as! [String: Any]
         let messages = claudeBody["messages"] as! [[String: String]]
         let output = claudeBody["output_config"] as! [String: Any]
+        let claudeContent = messages[0]["content"]!
+        let claudeJSON = String(claudeContent[claudeContent.firstIndex(of: "{")!...])
+        let claudeFields = try JSONDecoder().decode([String: String].self, from: Data(claudeJSON.utf8))
         check(claudeBody["model"] as? String == "claude-sonnet-4-6"
-              && messages[0]["content"]?.contains(validSource) == true
+              && claudeFields["transcript"] == validSource && claudeFields["context"] == summaryContext
               && output["format"] != nil, "Claude request lost the source or schema")
+        rejects({ _ = try ClaudeRunner(session: claudeSession).run(transcript: validSource, context: String(repeating: "a", count: 1_001), resources: resources, apiKey: "test-key") }, "Claude accepted oversized context")
         MockClaudeURLProtocol.status = 401
         do {
             _ = try ClaudeRunner(session: claudeSession, timeout: 2)

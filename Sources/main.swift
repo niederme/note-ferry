@@ -2,6 +2,7 @@ import AppKit
 import Sparkle
 
 let arguments = CommandLine.arguments
+let isDevelopmentBuild = Bundle.main.object(forInfoDictionaryKey: "NFDevelopmentBuild") as? Bool ?? false
 if arguments.count == 4 && arguments[1] == "--summarize-file" {
     do {
         let source = try String(contentsOfFile: arguments[2], encoding: .utf8)
@@ -55,7 +56,7 @@ final class TranscriptTextView: NSTextView {
         if string.isEmpty {
             (placeholder as NSString).draw(
                 at: NSPoint(x: textContainerInset.width + 5, y: textContainerInset.height),
-                withAttributes: [.font: NSFont.systemFont(ofSize: 15), .foregroundColor: NSColor.placeholderTextColor])
+                withAttributes: [.font: font ?? NSFont.systemFont(ofSize: 15), .foregroundColor: NSColor.placeholderTextColor])
         }
     }
 }
@@ -75,11 +76,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     let privacy = NSTextField(wrappingLabelWithString: "Uses your Codex account to process the transcript with OpenAI. Formatting happens on your Mac.")
     // NSTextTable grids need the classic AppKit layout manager.
     let preview = TranscriptTextView(usingTextLayoutManager: false)
+    let sourceLabel = NSTextField(labelWithString: "Transcript or text")
+    let contextSection = NSStackView()
+    let contextButton = NSButton(title: "Context (optional)", target: nil, action: nil)
+    let contextEditor = TranscriptTextView(usingTextLayoutManager: false)
+    let contextBody = NSStackView()
+    let contextHint = NSTextField(wrappingLabelWithString: "Names, terminology, or background for this summary only. Format only ignores context.")
+    var contextExpanded = true
     let spinner = NSProgressIndicator()
     let progress = NSTextField(labelWithString: "")
     let formatButton = NSButton(title: "Format only", target: nil, action: nil)
     let summarizeButton = NSButton(title: "Summarize & format", target: nil, action: nil)
     let providerPicker = NSPopUpButton(frame: .zero, pullsDown: false)
+    let providerInfoButton = NSButton(title: "", target: nil, action: nil)
+    let providerInfoPopover = NSPopover()
     var selectedProvider = ProviderSettings.shared.defaultProvider
     lazy var providerSettingsWindow: ProviderSettingsWindow = {
         let controller = ProviderSettingsWindow()
@@ -114,7 +124,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     func applicationDidFinishLaunching(_ notification: Notification) {
         makeMenu()
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 760, height: 790), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        window.title = "Note Ferry"
+        window.title = isDevelopmentBuild ? "Note Ferry (Development)" : "Note Ferry"
         window.minSize = NSSize(width: 620, height: 560)
         window.delegate = self
         window.isReleasedWhenClosed = false
@@ -148,12 +158,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         root.addArrangedSubview(progress)
         spinner.style = .bar; spinner.isIndeterminate = true; spinner.isHidden = true
         root.addArrangedSubview(spinner)
+        sourceLabel.font = .systemFont(ofSize: 13, weight: .medium)
+        root.addArrangedSubview(sourceLabel)
+        root.setCustomSpacing(8, after: sourceLabel)
         let scroll = NSScrollView()
         scroll.hasVerticalScroller = true; scroll.borderType = .bezelBorder
         preview.delegate = self
         preview.copyFormattedSelection = { [weak self] in self?.copySelection() ?? false }
         preview.prepareForPaste = { [weak self] in
             guard let self, self.mode == .result else { return }
+            self.clearContext()
             self.preview.isEditable = true
             self.preview.selectAll(nil)
             self.preview.typingAttributes = self.inputAttributes
@@ -170,14 +184,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         preview.textContainer?.containerSize = NSSize(width: 680, height: CGFloat.greatestFiniteMagnitude)
         scroll.documentView = preview
         root.addArrangedSubview(scroll)
-        scroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 250).isActive = true
+        scroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 100).isActive = true
+        let preferredHeight = scroll.heightAnchor.constraint(greaterThanOrEqualToConstant: 250)
+        preferredHeight.priority = .defaultHigh; preferredHeight.isActive = true
+        contextSection.orientation = .vertical; contextSection.alignment = .leading; contextSection.spacing = 8
+        contextButton.isBordered = false
+        contextButton.font = .systemFont(ofSize: 13)
+        contextButton.imagePosition = .imageLeading
+        contextButton.target = self; contextButton.action = #selector(toggleContext)
+        contextSection.addArrangedSubview(contextButton)
+        contextBody.orientation = .vertical; contextBody.alignment = .leading; contextBody.spacing = 6
+        let contextScroll = NSScrollView()
+        contextScroll.hasVerticalScroller = true; contextScroll.borderType = .bezelBorder
+        contextEditor.delegate = self
+        contextEditor.isRichText = false; contextEditor.allowsUndo = true
+        contextEditor.font = .systemFont(ofSize: 13)
+        contextEditor.isAutomaticQuoteSubstitutionEnabled = false
+        contextEditor.isAutomaticDashSubstitutionEnabled = false
+        contextEditor.isAutomaticSpellingCorrectionEnabled = false
+        contextEditor.textContainerInset = NSSize(width: 10, height: 10)
+        contextEditor.isVerticallyResizable = true; contextEditor.isHorizontallyResizable = false
+        contextEditor.autoresizingMask = [.width]
+        contextEditor.textContainer?.widthTracksTextView = true
+        contextEditor.placeholder = "e.g. NOVA is our planning tool. Jamie leads the project."
+        contextEditor.setAccessibilityLabel("Context for this summary")
+        contextScroll.documentView = contextEditor
+        contextScroll.heightAnchor.constraint(equalToConstant: 64).isActive = true
+        contextBody.addArrangedSubview(contextScroll)
+        contextHint.font = .systemFont(ofSize: 11); contextHint.textColor = .secondaryLabelColor
+        contextBody.addArrangedSubview(contextHint)
+        contextSection.addArrangedSubview(contextBody)
+        root.addArrangedSubview(contextSection)
+        for view in [contextBody, contextScroll, contextHint] {
+            view.widthAnchor.constraint(equalTo: contextSection.widthAnchor).isActive = true
+        }
         privacy.font = .systemFont(ofSize: 11); privacy.textColor = .secondaryLabelColor
         root.addArrangedSubview(privacy)
         let buttonSpacer = NSView()
         buttonSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
         buttonSpacer.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        let buttons = NSStackView(views: [copyButton, formatButton, summarizeButton, providerPicker, restoreButton, cancelButton, buttonSpacer, newButton])
+        let buttons = NSStackView(views: [copyButton, formatButton, summarizeButton, providerPicker, providerInfoButton, restoreButton, cancelButton, buttonSpacer, newButton])
         buttons.orientation = .horizontal; buttons.alignment = .centerY; buttons.spacing = 10
+        buttons.setCustomSpacing(4, after: providerPicker)
         root.addArrangedSubview(buttons)
         buttons.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56).isActive = true
         for button in [formatButton, summarizeButton, copyButton, newButton, restoreButton, cancelButton] { button.bezelStyle = .rounded; button.target = self }
@@ -191,13 +239,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         providerPicker.target = self
         providerPicker.action = #selector(providerPickerChanged)
         providerPicker.setAccessibilityLabel("Summarizer for this text")
+        providerInfoButton.image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: nil)
+        providerInfoButton.isBordered = false
+        providerInfoButton.contentTintColor = .secondaryLabelColor
+        providerInfoButton.widthAnchor.constraint(equalToConstant: 22).isActive = true
+        providerInfoButton.heightAnchor.constraint(equalToConstant: 22).isActive = true
+        providerInfoButton.target = self; providerInfoButton.action = #selector(showProviderInfo)
+        providerInfoPopover.behavior = .transient
         copyButton.action = #selector(copySummary)
         copyButton.toolTip = "Copy the formatted result to your clipboard again."
         newButton.action = #selector(newTranscript)
         newButton.toolTip = "Clear this window so you can paste new text."
         restoreButton.action = #selector(restoreClipboard)
         cancelButton.action = #selector(cancel); cancelButton.keyEquivalent = "\u{1b}"
-        for view in [header, progress, spinner, scroll, privacy] { view.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56).isActive = true }
+        for view in [header, progress, spinner, sourceLabel, scroll, contextSection, privacy] { view.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56).isActive = true }
         newTranscript()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -261,7 +316,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         name.font = .systemFont(ofSize: 24, weight: .semibold)
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
-        let versionLabel = NSTextField(labelWithString: "Version \(version) (\(build))")
+        let versionText = "Version \(version) (\(build))" + (isDevelopmentBuild ? " · Development build" : "")
+        let versionLabel = NSTextField(labelWithString: versionText)
         versionLabel.font = .systemFont(ofSize: 12)
         versionLabel.textColor = .secondaryLabelColor
         let description = NSTextField(wrappingLabelWithString: "Your text, formatted for pasting into Apple Notes.\n\nFormat Markdown on your Mac, summarize locally with Apple Intelligence on eligible Macs, or use Codex or your Claude API key. Copy the result and paste it where you want it.")
@@ -299,22 +355,53 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         preview.textStorage?.setAttributedString(NSAttributedString(string: "", attributes: inputAttributes))
         preview.typingAttributes = inputAttributes
         preview.undoManager?.removeAllActions()
+        clearContext()
         updatingText = false
         raw = nil; rich = nil; snapshot = nil; lastWrite = nil
         showInputControls()
         window?.makeFirstResponder(preview)
     }
+    func clearContext() {
+        contextEditor.string = ""
+        contextEditor.undoManager?.removeAllActions()
+        contextExpanded = true
+        refreshContextControls()
+    }
+    @objc func toggleContext() {
+        guard mode == .input else { return }
+        contextExpanded.toggle()
+        refreshContextControls()
+        window.makeFirstResponder(contextExpanded ? contextEditor : preview)
+    }
+    func refreshContextControls() {
+        let count = SummaryContext.normalized(contextEditor.string).count
+        contextButton.title = contextExpanded || count == 0 ? "Context (optional)" : "Context added"
+        contextButton.image = NSImage(systemSymbolName: contextExpanded ? "chevron.down" : "chevron.right", accessibilityDescription: nil)
+        contextButton.setAccessibilityLabel(contextButton.title)
+        contextButton.toolTip = contextExpanded ? "Hide context. It will still be used when summarizing." : "Add names, terminology, or background for this summary."
+        contextBody.isHidden = !contextExpanded
+        contextEditor.needsDisplay = true
+        contextHint.stringValue = "Names, terminology, or background for this summary only. Format only ignores context. \(count)/1,000"
+        contextHint.textColor = count > SummaryContext.maximumCharacters ? .systemRed : .secondaryLabelColor
+    }
     func showInputControls() {
         mode = .input
+        privacy.isHidden = true
+        providerInfoButton.isHidden = false
+        providerInfoButton.toolTip = "How \(selectedProvider.displayName) handles your text"
+        providerInfoButton.setAccessibilityLabel(providerInfoButton.toolTip)
+        sourceLabel.stringValue = "Transcript or text"
+        contextSection.isHidden = false
+        refreshContextControls()
         preview.isEditable = true; preview.allowsTranscriptPaste = true; preview.needsDisplay = true
         detail.stringValue = "Your text, formatted for pasting into Apple Notes."
         switch selectedProvider {
         case .apple:
             privacy.stringValue = (LocalModelAvailability.message ?? "Apple Intelligence summarizes on this Mac.") + " Experimental: review names and follow-ups."
         case .codex:
-            privacy.stringValue = "Codex sends text to OpenAI using your Codex account. Formatting happens on your Mac."
+            privacy.stringValue = "Codex sends text and any context to OpenAI using your Codex account. Formatting happens on your Mac."
         case .claude:
-            privacy.stringValue = "Claude sends text to Anthropic using your API key. API use is billed separately."
+            privacy.stringValue = "Claude sends text and any context to Anthropic using your API key. API use is billed separately."
         }
         preview.placeholder = "Paste your text here (⌘V)."
         let hasText = !preview.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -325,7 +412,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         providerPicker.selectItem(withTag: SummaryProvider.allCases.firstIndex(of: selectedProvider) ?? 0)
         copyButton.isHidden = true; copyButton.keyEquivalent = ""
         window.defaultButtonCell = formatButton.cell as? NSButtonCell
-        newButton.isHidden = false; newButton.isEnabled = hasText
+        newButton.isHidden = false; newButton.isEnabled = hasText || !contextEditor.string.isEmpty
         restoreButton.isHidden = true; cancelButton.isHidden = true
     }
     func refreshProviderControls() {
@@ -333,13 +420,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     }
     @objc func providerPickerChanged() {
         guard mode == .input, SummaryProvider.allCases.indices.contains(providerPicker.indexOfSelectedItem) else { return }
+        providerInfoPopover.close()
         selectedProvider = SummaryProvider.allCases[providerPicker.indexOfSelectedItem]
         showInputControls()
+    }
+    @objc func showProviderInfo() {
+        guard mode == .input else { return }
+        if providerInfoPopover.isShown { providerInfoPopover.close(); return }
+        let label = NSTextField(wrappingLabelWithString: privacy.stringValue)
+        label.font = .systemFont(ofSize: 13)
+        label.isSelectable = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        let controller = NSViewController()
+        controller.view = NSView()
+        controller.view.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.widthAnchor.constraint(equalToConstant: 300),
+            label.leadingAnchor.constraint(equalTo: controller.view.leadingAnchor, constant: 16),
+            label.trailingAnchor.constraint(equalTo: controller.view.trailingAnchor, constant: -16),
+            label.topAnchor.constraint(equalTo: controller.view.topAnchor, constant: 16),
+            label.bottomAnchor.constraint(equalTo: controller.view.bottomAnchor, constant: -16)
+        ])
+        providerInfoPopover.contentViewController = controller
+        providerInfoPopover.show(relativeTo: providerInfoButton.bounds, of: providerInfoButton, preferredEdge: .maxY)
     }
     @objc func openSettings() { providerSettingsWindow.show() }
     func textDidChange(_ notification: Notification) {
         guard !updatingText, mode != .processing else { return }
+        if notification.object as? NSTextView === contextEditor {
+            showInputControls()
+            return
+        }
         if mode == .result {
+            clearContext()
             updatingText = true
             preview.textStorage?.setAttributes(inputAttributes, range: NSRange(location: 0, length: preview.textStorage?.length ?? 0))
             preview.typingAttributes = inputAttributes
@@ -360,7 +473,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         if UserDefaults.standard.bool(forKey: "approvedClaudeAPITransfer") { return true }
         let alert = NSAlert()
         alert.messageText = "Send this text to Anthropic?"
-        alert.informativeText = "Note Ferry will send the text in this window and your saved API key directly to Anthropic’s Messages API when you choose Send & summarize. API usage is billed separately from a Claude subscription. Future requests only run when you choose Summarize & format with Claude selected."
+        alert.informativeText = "Note Ferry will send the text and any context in this window and your saved API key directly to Anthropic’s Messages API when you choose Send & summarize. API usage is billed separately from a Claude subscription. Future requests only run when you choose Summarize & format with Claude selected."
         alert.addButton(withTitle: "Send & summarize")
         alert.addButton(withTitle: "Cancel")
         guard alert.runModal() == .alertFirstButtonReturn else { return false }
@@ -382,7 +495,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             } catch { showError(error) }
             return
         }
-        do { try Transcript.validate(text) } catch { showError(error); return }
+        let context = contextEditor.string
+        do {
+            try Transcript.validate(text)
+            try SummaryContext.validate(context)
+        } catch { showError(error); return }
         if action == .local, let message = LocalModelAvailability.message { showError(AppError.message(message)); return }
         var claudeKey: String?
         var claudeWorkspaceID: String?
@@ -407,6 +524,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         raw = text; rich = nil; lastWrite = nil
         let token = UUID(); jobID = token
         mode = .processing; preview.isEditable = false; preview.allowsTranscriptPaste = false
+        providerInfoPopover.close(); providerInfoButton.isHidden = true
+        window.makeFirstResponder(preview)
+        contextSection.isHidden = true
         started = Date()
         let words = text.split(whereSeparator: \.isWhitespace).count
         switch action {
@@ -431,7 +551,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             if #available(macOS 26.0, *) {
                 localTask = Task { @MainActor [weak self] in
                     do {
-                        let note = try await LocalSummarizer.run(text) { [weak self] completed, total in
+                        let note = try await LocalSummarizer.run(text, context: context) { [weak self] completed, total in
                             guard let self, self.jobID == token else { return }
                             self.completedChunks = completed; self.totalChunks = total
                         }
@@ -448,7 +568,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             let resources = Bundle.main.resourceURL!
             let model = ProviderSettings.shared.codexModel
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                let result = Result { try worker.run(transcript: text, resources: resources, model: model) }
+                let result = Result { try worker.run(transcript: text, context: context, resources: resources, model: model) }
                 DispatchQueue.main.async { self?.finish(token, result: result) }
             }
         } else if let key = claudeKey {
@@ -456,7 +576,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             let resources = Bundle.main.resourceURL!
             let workspaceID = claudeWorkspaceID
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                let result = Result { try worker.run(transcript: text, resources: resources, apiKey: key, workspaceID: workspaceID) }
+                let result = Result { try worker.run(transcript: text, context: context, resources: resources, apiKey: key, workspaceID: workspaceID) }
                 DispatchQueue.main.async { self?.finish(token, result: result) }
             }
         }
@@ -507,6 +627,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         } catch { showError(error) }
     }
     func displayRich(_ rendered: NSAttributedString) {
+        providerInfoPopover.close(); providerInfoButton.isHidden = true
+        privacy.isHidden = false
         preview.isEditable = false
         rich = rendered
         switch operation {
@@ -516,6 +638,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         case .claude: privacy.stringValue = "Summarized with your API key through Anthropic. Formatting happened on your Mac."
         }
         copyButton.title = operation == .format ? "Copy formatted text" : "Copy summary"
+        sourceLabel.stringValue = operation == .format ? "Formatted text" : "Summary"
         let screen = NSMutableAttributedString(attributedString: NoteRenderer.previewText(rich!))
         screen.addAttribute(.foregroundColor, value: NSColor.textColor, range: NSRange(location: 0, length: screen.length))
         updatingText = true
@@ -525,6 +648,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         preview.undoManager?.removeAllActions()
         updatingText = false
         mode = .result; preview.isEditable = false; preview.allowsTranscriptPaste = true
+        window.makeFirstResponder(preview)
+        contextSection.isHidden = true
         formatButton.isHidden = true; formatButton.keyEquivalent = ""
         providerPicker.isHidden = true
         copyButton.isHidden = false; copyButton.keyEquivalent = "\r"

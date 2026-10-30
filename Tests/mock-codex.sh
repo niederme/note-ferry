@@ -29,7 +29,7 @@ done
     echo 'Unexpected model, reasoning override, or execution safeguards' >&2
     exit 1
 }
-cat >/dev/null
+cat >"${NF_TEST_INPUT:-/dev/null}"
 case "${NF_TEST_MODE:-success}" in
     fail) echo 'authentication failed: 401' >&2; exit 1 ;;
     unavailable) echo 'The selected model is not supported when using Codex with a ChatGPT account.' >&2; exit 1 ;;
