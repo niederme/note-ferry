@@ -31,6 +31,22 @@ private final class InterviewAnswerTextView: NSTextView {
     override func insertBacktab(_ sender: Any?) { moveFocus?(false) }
 }
 
+private final class InterviewChoiceButton: NSButton {
+    var moveFocus: ((Bool) -> Void)?
+    var moveChoice: ((Int) -> Void)?
+    override var acceptsFirstResponder: Bool { isEnabled }
+
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 48 {
+            moveFocus?(!event.modifierFlags.contains(.shift))
+            return
+        }
+        if [123, 126].contains(event.keyCode) { moveChoice?(-1); return }
+        if [124, 125].contains(event.keyCode) { moveChoice?(1); return }
+        super.keyDown(with: event)
+    }
+}
+
 private final class InterviewClipView: NSClipView {
     override var isFlipped: Bool { true }
 }
@@ -67,6 +83,9 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
     private let cancelButton = NSButton(title: "Cancel", target: nil, action: nil)
     private let spinner = NSProgressIndicator()
     private var answerFields: [NSTextView] = []
+    private var choiceButtons: [[NSButton]] = []
+    private var choiceHeights: [[NSLayoutConstraint]] = []
+    private var selectedOptions: [Int?] = []
     private var busy = false
     private var closed = false
     private var generation = 0
@@ -152,7 +171,7 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
             presented = true
             parent.beginSheet(panel)
             onPresent?()
-            if let first = answerFields.first { panel.makeFirstResponder(first) }
+            focusQuestion(0)
         }
     }
 
@@ -170,6 +189,7 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
     private func clearContent() {
         for view in content.arrangedSubviews { content.removeArrangedSubview(view); view.removeFromSuperview() }
         answerFields = []
+        choiceButtons = []; choiceHeights = []; selectedOptions = []
     }
 
     private func renderQuestions() {
@@ -183,15 +203,44 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
                 let excerptLabel = addLabel("“\(item.question.excerpt)”", secondary: true)
                 content.setCustomSpacing(12, after: excerptLabel)
             }
+            var buttons: [NSButton] = []
+            var heights: [NSLayoutConstraint] = []
             if !item.question.options.isEmpty {
-                let picker = NSPopUpButton(frame: .zero, pullsDown: false)
-                picker.addItem(withTitle: "Choose a suggestion, or write below")
-                for option in item.question.options { picker.addItem(withTitle: option) }
-                picker.tag = index; picker.target = self; picker.action = #selector(optionChosen(_:))
-                picker.setAccessibilityLabel("Suggested answers for question \(index + 1)")
-                content.addArrangedSubview(picker)
-                picker.widthAnchor.constraint(equalTo: content.widthAnchor, constant: -12).isActive = true
+                let choices = NSStackView()
+                choices.orientation = .vertical; choices.alignment = .leading; choices.spacing = 6
+                choices.setAccessibilityLabel("Suggested answers for question \(index + 1)")
+                content.addArrangedSubview(choices)
+                choices.widthAnchor.constraint(equalTo: content.widthAnchor, constant: -12).isActive = true
+                content.setCustomSpacing(10, after: choices)
+                for title in item.question.options + ["Something else"] {
+                    let button = InterviewChoiceButton(title: title, target: self, action: #selector(optionChosen(_:)))
+                    button.setButtonType(.radio)
+                    button.font = .systemFont(ofSize: 14)
+                    button.alignment = .left
+                    button.cell?.wraps = true
+                    button.cell?.isScrollable = false
+                    button.cell?.lineBreakMode = .byWordWrapping
+                    button.state = .off
+                    button.moveFocus = { [weak self] forward in
+                        guard let self, !self.busy else { return }
+                        if forward, self.selectedOptions[index] == item.question.options.count {
+                            self.focusQuestion(index)
+                        } else { self.focusQuestion(index + (forward ? 1 : -1)) }
+                    }
+                    let optionIndex = buttons.count
+                    button.moveChoice = { [weak self] direction in
+                        guard let self, !self.busy else { return }
+                        let group = self.choiceButtons[index]
+                        group[(optionIndex + direction + group.count) % group.count].performClick(nil)
+                    }
+                    choices.addArrangedSubview(button)
+                    button.widthAnchor.constraint(equalTo: choices.widthAnchor).isActive = true
+                    let height = button.heightAnchor.constraint(equalToConstant: 22)
+                    height.isActive = true
+                    buttons.append(button); heights.append(height)
+                }
             }
+            choiceButtons.append(buttons); choiceHeights.append(heights); selectedOptions.append(nil)
             let field = InterviewAnswerTextView(usingTextLayoutManager: false)
             field.moveFocus = { [weak self, weak field] forward in
                 guard let self, let field else { return }
@@ -207,39 +256,74 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
             fieldScroll.borderType = .bezelBorder; fieldScroll.hasVerticalScroller = true
             fieldScroll.autohidesScrollers = false; fieldScroll.scrollerStyle = .legacy
             fieldScroll.documentView = field
+            fieldScroll.isHidden = !item.question.options.isEmpty
             content.addArrangedSubview(fieldScroll)
             fieldScroll.widthAnchor.constraint(equalTo: content.widthAnchor, constant: -12).isActive = true
             fieldScroll.heightAnchor.constraint(equalToConstant: 76).isActive = true
             answerFields.append(field)
         }
-        for (index, field) in answerFields.enumerated() {
-            field.nextKeyView = index + 1 < answerFields.count ? answerFields[index + 1] : nextButton
-        }
-        nextButton.nextKeyView = finishButton
-        finishButton.nextKeyView = cancelButton
-        cancelButton.nextKeyView = answerFields.first
+        updateKeyLoop()
         nextButton.title = "Continue interview"
         finishButton.title = "Finish & summarize"
         status.stringValue = "Answers stay in this session and go only to \(provider.displayName). Continue may make another model request."
         panel.contentView?.layoutSubtreeIfNeeded()
+        layoutChoices()
         content.layoutSubtreeIfNeeded()
         updateScrollHint()
         content.scroll(.zero)
-        if let first = answerFields.first { panel.makeFirstResponder(first) }
+        focusQuestion(0)
     }
 
     private func moveAnswerFocus(from field: NSTextView, forward: Bool) {
         guard !busy, let index = answerFields.firstIndex(where: { $0 === field }) else { return }
-        let nextIndex = index + (forward ? 1 : -1)
-        if answerFields.indices.contains(nextIndex) {
-            let target = answerFields[nextIndex]
-            if let answerScroll = target.enclosingScrollView {
-                content.scrollToVisible(answerScroll.convert(answerScroll.bounds, to: content))
-            }
-            panel.makeFirstResponder(target)
-        } else {
-            panel.makeFirstResponder(forward ? nextButton : cancelButton)
+        if !forward, !choiceButtons[index].isEmpty {
+            let selected = choiceButtons[index][selectedOptions[index] ?? 0]
+            content.scrollToVisible(selected.convert(selected.bounds, to: content))
+            panel.makeFirstResponder(selected)
+            return
         }
+        focusQuestion(index + (forward ? 1 : -1))
+    }
+
+    private func focusQuestion(_ index: Int) {
+        guard answerFields.indices.contains(index) else {
+            panel.makeFirstResponder(index < 0 ? cancelButton : nextButton)
+            return
+        }
+        let field = answerFields[index]
+        let target: NSView
+        if field.enclosingScrollView?.isHidden == false {
+            target = field
+        } else {
+            target = choiceButtons[index][selectedOptions[index] ?? 0]
+        }
+        let visibleTarget = (target as? NSTextView)?.enclosingScrollView ?? target
+        content.scrollToVisible(visibleTarget.convert(visibleTarget.bounds, to: content))
+        panel.makeFirstResponder(target)
+    }
+
+    private func updateKeyLoop() {
+        var controls: [NSView] = []
+        for (index, field) in answerFields.enumerated() {
+            controls += choiceButtons[index]
+            if field.enclosingScrollView?.isHidden == false { controls.append(field) }
+        }
+        controls += [nextButton, finishButton, cancelButton]
+        for (index, control) in controls.enumerated() {
+            control.nextKeyView = controls[(index + 1) % controls.count]
+        }
+    }
+
+    private func layoutChoices() {
+        let width = max(100, content.bounds.width - 36)
+        for (buttons, heights) in zip(choiceButtons, choiceHeights) {
+            for (button, height) in zip(buttons, heights) {
+                let title = NSAttributedString(string: button.title, attributes: [.font: button.font!])
+                let bounds = title.boundingRect(with: NSSize(width: width, height: .greatestFiniteMagnitude), options: [.usesLineFragmentOrigin, .usesFontLeading])
+                height.constant = max(22, ceil(bounds.height) + 4)
+            }
+        }
+        panel.contentView?.layoutSubtreeIfNeeded()
     }
 
     private func updateScrollHint() {
@@ -252,20 +336,34 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
 
     func windowDidResize(_ notification: Notification) {
         panel.contentView?.layoutSubtreeIfNeeded()
+        layoutChoices()
         updateScrollHint()
     }
 
-    @objc private func optionChosen(_ picker: NSPopUpButton) {
-        guard answerFields.indices.contains(picker.tag), picker.indexOfSelectedItem > 0 else { return }
-        let field = answerFields[picker.tag]
-        field.string = picker.titleOfSelectedItem ?? ""
-        panel.makeFirstResponder(field)
+    @objc private func optionChosen(_ sender: NSButton) {
+        guard !busy, let index = choiceButtons.firstIndex(where: { $0.contains(where: { $0 === sender }) }),
+              session.pending.indices.contains(index),
+              let option = choiceButtons[index].firstIndex(where: { $0 === sender }) else { return }
+        selectedOptions[index] = option
+        for button in choiceButtons[index] { button.state = button === sender ? .on : .off }
+        let custom = option == session.pending[index].question.options.count
+        answerFields[index].enclosingScrollView?.isHidden = !custom
+        updateKeyLoop()
+        panel.contentView?.layoutSubtreeIfNeeded()
+        updateScrollHint()
+        focusQuestion(index)
     }
 
     private func collectAnswers() throws {
         guard !session.pending.isEmpty else { return }
-        try session.answer(answerFields.map(\.string), provider: provider)
+        let answers = session.pending.enumerated().map { index, item -> String in
+            guard !item.question.options.isEmpty else { return answerFields[index].string }
+            guard let selected = selectedOptions[index] else { return "" }
+            return selected < item.question.options.count ? item.question.options[selected] : answerFields[index].string
+        }
+        try session.answer(answers, provider: provider)
         for field in answerFields { field.isEditable = false }
+        for button in choiceButtons.flatMap({ $0 }) { button.isEnabled = false }
         answerFields = []
     }
 

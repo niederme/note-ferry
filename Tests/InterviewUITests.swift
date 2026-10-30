@@ -47,12 +47,24 @@ import AppKit
         check(panel.defaultButtonCell === primary.cell, "Interview has no native primary action")
         check(primary.bezelColor == NSColor.controlAccentColor, "Primary action loses accent treatment while editing")
         let views = descendants(panel.contentView!)
-        let picker = views.compactMap { $0 as? NSPopUpButton }.first!
-        picker.selectItem(at: 1)
-        NSApp.sendAction(picker.action!, to: picker.target, from: picker)
+        check(!views.contains { $0 is NSPopUpButton }, "Multiple-choice questions still use dropdowns")
         let field = views.compactMap { $0 as? NSTextView }.first!
-        check(field.string == "The proposal", "Suggestion did not populate editable answer")
+        check(field.enclosingScrollView!.isHidden, "Choice question showed free text before Something else")
+        let proposal = button("The proposal", in: panel)
+        let schedule = button("The schedule", in: panel)
+        let custom = button("Something else", in: panel)
+        check([proposal, schedule, custom].allSatisfy { $0.state == .off }, "A factual answer was preselected")
+        proposal.performClick(nil)
+        check(proposal.state == .on && schedule.state == .off && field.enclosingScrollView!.isHidden, "Preset selection revealed free text or selected multiple answers")
+        schedule.performClick(nil)
+        check(proposal.state == .off && schedule.state == .on, "Radio choices are not mutually exclusive")
+        custom.performClick(nil)
+        check(!field.enclosingScrollView!.isHidden && panel.firstResponder === field, "Something else did not reveal and focus the text field")
         field.string = "The proposal, but this was an offer, not a commitment."
+        proposal.performClick(nil)
+        check(field.enclosingScrollView!.isHidden, "Choosing a preset did not hide custom text")
+        custom.performClick(nil)
+        check(field.string.contains("offer"), "Switching choices discarded the custom draft")
         panel.contentView!.layoutSubtreeIfNeeded()
         if let bitmap = panel.contentView!.bitmapImageRepForCachingDisplay(in: panel.contentView!.bounds) {
             panel.contentView!.cacheDisplay(in: panel.contentView!.bounds, to: bitmap)
@@ -101,16 +113,36 @@ import AppKit
         threePanel.contentView!.layoutSubtreeIfNeeded()
         let threeViews = descendants(threePanel.contentView!)
         let threeFields = threeViews.compactMap { $0 as? NSTextView }
+        check(threeFields[0].enclosingScrollView!.isHidden && !threeFields[1].enclosingScrollView!.isHidden && threeFields[2].enclosingScrollView!.isHidden, "Free-text-only question is hidden or multiple-choice field is exposed")
+        let firstChoice = button("The proposal", in: threePanel)
+        firstChoice.performClick(nil)
+        check(threePanel.firstResponder === firstChoice, "Selected radio choice cannot receive keyboard focus")
+        press(firstChoice, keyCode: 125, characters: "\u{f701}")
+        check(button("The schedule", in: threePanel).state == .on && firstChoice.state == .off, "Arrow key did not change the radio selection")
+        press(button("The schedule", in: threePanel), keyCode: 48, characters: "\t")
+        check(threePanel.firstResponder === threeFields[1], "Tab from a radio group did not reach the next question")
+        let longChoice = threeViews.compactMap { $0 as? NSButton }.first { $0.title.count > 100 }!
+        check(longChoice.frame.height > 22 && longChoice.cell?.wraps == true, "Long radio label is clipped instead of wrapping")
+        let customChoices = threeViews.compactMap { $0 as? NSButton }.filter { $0.title == "Something else" }
+        for choice in customChoices { choice.performClick(nil) }
+        check(customChoices.allSatisfy { $0.state == .on }, "Selecting one question changed another question's radio group")
+        threePanel.contentView!.layoutSubtreeIfNeeded()
         check(threeFields.count == 3 && threeFields.allSatisfy { $0.frame.height >= 60 }, "Multiple answer fields collapsed")
         let threeScroll = threeViews.compactMap { $0 as? NSScrollView }.first!
         check(threeScroll.documentView!.frame.height > threeScroll.contentSize.height, "Long interview cannot scroll")
         check(threeScroll.scrollerStyle == .legacy && !threeScroll.autohidesScrollers, "Question scrolling has no persistent scrollbar")
         check(threeFields.allSatisfy { $0.enclosingScrollView?.scrollerStyle == .legacy && $0.enclosingScrollView?.autohidesScrollers == false }, "Answer scrolling has no persistent scrollbar")
         check(threeViews.compactMap { $0 as? NSTextField }.contains { $0.stringValue.contains("Scroll down for more questions") }, "Long interview has no scrolling hint")
-        func press(_ field: NSTextView, keyCode: UInt16, characters: String, modifiers: NSEvent.ModifierFlags = []) {
+        func press(_ field: NSResponder, keyCode: UInt16, characters: String, modifiers: NSEvent.ModifierFlags = []) {
             let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: modifiers, timestamp: 0, windowNumber: threePanel.windowNumber, context: nil, characters: characters, charactersIgnoringModifiers: characters, isARepeat: false, keyCode: keyCode)!
             field.keyDown(with: event)
         }
+        threePanel.makeFirstResponder(threeFields[0])
+        press(threeFields[0], keyCode: 48, characters: "\u{19}", modifiers: [.shift])
+        check(threePanel.firstResponder === customChoices[0], "Custom answer cannot return to its radio choices with Shift-Tab")
+        press(customChoices[0], keyCode: 126, characters: "\u{f700}")
+        check(threeFields[0].enclosingScrollView!.isHidden, "Arrowing from Something else did not hide custom input")
+        customChoices[0].performClick(nil)
         threeFields[0].string = "First answer"
         threePanel.makeFirstResponder(threeFields[0])
         press(threeFields[0], keyCode: 48, characters: "\t")
@@ -131,6 +163,17 @@ import AppKit
         threePanel.selectPreviousKeyView(nil)
         check(threePanel.firstResponder === threeFields[2], "Backtab from the primary action did not return to the last answer")
         button("Cancel", in: threePanel).performClick(nil)
+        pump { parent.attachedSheet == nil }
+
+        setenv("NF_TEST_MODE", "interview", 1)
+        let preset = make()
+        finished = nil
+        preset.onFinish = { values, _ in finished = values }
+        preset.start(on: parent)
+        pump { preset.session.pending.count == 1 }
+        button("The proposal", in: parent.attachedSheet!).performClick(nil)
+        button("Finish & summarize", in: parent.attachedSheet!).performClick(nil)
+        check(finished?.first?.answer == "The proposal", "Selected radio answer was not submitted")
         pump { parent.attachedSheet == nil }
 
         setenv("NF_TEST_MODE", "malformed", 1)

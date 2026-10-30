@@ -48,7 +48,7 @@ case "${NF_TEST_MODE:-success}" in
        case "$NF_TEST_MODE" in
          interview) printf '%s' '{"questions":[{"question":"What does Jamie mean by it?","excerpt":"Jamie: I can send it Friday.","options":["The proposal","The schedule"]}]}' > "$DEST" ;;
          interview_followup) printf '%s' '{"questions":[{"question":"Which Friday is intended?","excerpt":"Jamie: I can send it Friday.","options":[]}]}' > "$DEST" ;;
-         interview_three) printf '%s' '{"questions":[{"question":"What does Jamie mean by it?","excerpt":"Jamie: I can send it Friday.","options":["The proposal","The schedule"]},{"question":"Which Friday is intended?","excerpt":"Jamie: I can send it Friday.","options":[]},{"question":"Who should review the proposal?","excerpt":"Alex: We still need to review the proposal before deciding what to share with the project team.","options":["The project team","Alex"]}]}' > "$DEST" ;;
+         interview_three) printf '%s' '{"questions":[{"question":"What does Jamie mean by it?","excerpt":"Jamie: I can send it Friday.","options":["The proposal","The schedule"]},{"question":"Which Friday is intended?","excerpt":"Jamie: I can send it Friday.","options":[]},{"question":"Who should review the proposal?","excerpt":"Alex: We still need to review the proposal before deciding what to share with the project team.","options":["The project team","Alex, after checking the proposal with the project team and confirming which details should be included before sharing it with the reviewers."]}]}' > "$DEST" ;;
          interview_empty) printf '%s' '{"questions":[]}' > "$DEST" ;;
        esac
        printf '%s\n' '{"type":"turn.completed","usage":{"input_tokens":100,"output_tokens":20}}' ;;
