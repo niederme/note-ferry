@@ -420,12 +420,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         contextEditor.isSelectable = true
         contextEditor.allowsTranscriptPaste = !showingResult
         contextEditor.textColor = showingResult ? .secondaryLabelColor : .textColor
-        contextEditor.drawsBackground = !showingResult
-        contextEditor.textContainerInset = showingResult ? NSSize(width: 0, height: 2) : NSSize(width: 10, height: 10)
-        contextEditor.textContainer?.lineFragmentPadding = showingResult ? 0 : 5
-        contextEditor.enclosingScrollView?.borderType = showingResult ? .noBorder : .bezelBorder
-        contextEditor.enclosingScrollView?.drawsBackground = !showingResult
-        contextEditor.enclosingScrollView?.contentView.drawsBackground = !showingResult
+        contextEditor.drawsBackground = true
+        contextEditor.textContainerInset = NSSize(width: 10, height: 10)
+        contextEditor.textContainer?.lineFragmentPadding = 5
+        contextEditor.enclosingScrollView?.borderType = .bezelBorder
+        contextEditor.enclosingScrollView?.drawsBackground = true
+        contextEditor.enclosingScrollView?.contentView.drawsBackground = true
         contextHint.isHidden = showingResult
         copyContextButton.isHidden = !showingResult
         contextEditor.setAccessibilityLabel(showingResult ? "Context used for this summary, read only" : "Context for this summary")
