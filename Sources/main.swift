@@ -262,7 +262,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         buttonSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
         buttonSpacer.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         let buttons = actionButtons
-        for view in [copyButton, formatButton, summarizeButton, providerPicker, providerInfoButton, restoreButton, cancelButton, buttonSpacer, newButton] { buttons.addArrangedSubview(view) }
+        for view in [copyButton, summarizeButton, formatButton, providerPicker, providerInfoButton, restoreButton, cancelButton, buttonSpacer, newButton] { buttons.addArrangedSubview(view) }
         buttons.orientation = .horizontal; buttons.alignment = .centerY; buttons.spacing = 10
         buttons.setCustomSpacing(4, after: providerPicker)
         root.addArrangedSubview(buttons)
@@ -464,13 +464,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         }
         preview.placeholder = "Paste your text here (⌘V)."
         let hasText = !preview.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        formatButton.isHidden = false; formatButton.isEnabled = hasText; formatButton.keyEquivalent = "\r"
-        summarizeButton.isHidden = false; summarizeButton.isEnabled = hasText; summarizeButton.keyEquivalent = ""
+        formatButton.isHidden = false; formatButton.isEnabled = hasText; formatButton.keyEquivalent = ""
+        summarizeButton.isHidden = false; summarizeButton.isEnabled = hasText; summarizeButton.keyEquivalent = "\r"
         summarizeButton.toolTip = "Summarize with \(selectedProvider.displayName), then format and copy the result."
         providerPicker.isHidden = false; providerPicker.isEnabled = true
         providerPicker.selectItem(withTag: SummaryProvider.allCases.firstIndex(of: selectedProvider) ?? 0)
         copyButton.isHidden = true; copyButton.keyEquivalent = ""
-        window.defaultButtonCell = formatButton.cell as? NSButtonCell
+        window.defaultButtonCell = summarizeButton.cell as? NSButtonCell
         newButton.isHidden = false; newButton.isEnabled = hasText || !contextEditor.string.isEmpty
         restoreButton.isHidden = true; cancelButton.isHidden = true
     }
