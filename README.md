@@ -9,7 +9,7 @@ Summarize a transcript or format writing you already want to keep, then paste it
 <p align="center"><strong>Start with messy text → Ready for Apple Notes</strong></p>
 <p align="center">
   <a href="docs/images/2.1-hero-source.png"><img src="docs/images/2.1-hero-source.png" width="49%" alt="Before: a fictional NOVA conversation in Note Ferry’s editable text field"></a>
-  <a href="docs/images/2.0-apple-notes.png"><img src="docs/images/2.0-apple-notes.png" width="49%" alt="After: the same conversation organized into action items and decisions in Apple Notes"></a>
+  <a href="docs/images/2.1-hero-notes.png"><img src="docs/images/2.1-hero-notes.png" width="49%" alt="After: the same conversation organized into action items and decisions in Apple Notes"></a>
 </p>
 
 *From conversation to clear notes, ready for Apple Notes. Fictional example; click either window for a closer look.*
