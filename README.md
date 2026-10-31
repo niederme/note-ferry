@@ -26,7 +26,7 @@ Runtime testing has been on Apple silicon with macOS 27; Intel hardware and olde
 
 1. **Paste your text.** Bring a transcript, an AI reply, or your own notes. Add optional context for names, terminology, or background.
 2. **Summarize or format.** Choose **Summarize & format** for takeaways, action items, and topic notes. Choose **Format only** to preserve your wording and format locally, without AI or an account.
-3. **When the result is ready, paste into Apple Notes with ⌘V.** Use normal Paste to keep the formatting. Review important details in AI-generated summaries.
+3. **When the result is ready and copied, paste into Apple Notes with ⌘V.** Use normal Paste to keep the formatting. Review important details in AI-generated summaries.
 
 <img src="docs/images/2.0-input.jpg" width="860" alt="Source text and optional context above the Summarize & format and Format only actions">
 
@@ -52,7 +52,7 @@ The interview is on by default. Turn off **Ask clarifying questions before summa
 
 Change providers in Settings or beside **Summarize & format**. [Setup instructions](docs/USER_GUIDE.md#choose-a-summarizer).
 
-Note Ferry keeps no transcript library. If you copy something else while it works, it protects your newer clipboard. [Privacy details](docs/PRIVACY.md).
+Note Ferry keeps no transcript library. If you copy something else while it works, it protects your newer clipboard. Choose **Copy summary** or **Copy formatted text** when you’re ready. [Privacy details](docs/PRIVACY.md).
 
 ## More
 

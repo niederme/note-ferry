@@ -14,10 +14,13 @@ Version 2.0 adds optional context and adaptive clarification interviews to Apple
 
 Subscription access and API billing must be clearly distinguished. A subscription must not be described as including API credits. Use providers' supported sign-in flows and integrations; do not extract or repurpose session tokens. Keep API keys in macOS Keychain. Show whether a selected connection uses a subscription or separately billed API usage before a request starts.
 
-## Provider selection
+## Provider selection: shipped
 
-- **Settings:** save a preferred provider. Existing Codex users retain their choice. New installs preselect Apple Intelligence and explain when it is unavailable. Codex supports an optional model ID in Settings; broader model selection can be considered later.
+- **Settings:** save a preferred provider. Saved provider choices are retained. New installs preselect Apple Intelligence and explain when it is unavailable. Codex supports an optional model ID in Settings; broader model selection can be considered later.
 - **Main window:** a compact provider picker beside Summarize lets someone override their default for this transcript. Changing it does not run a request or change the saved default.
+
+## Planned: compare results
+
 - **Try another result:** retain the original source in memory so another provider can summarize the same transcript. Keep the previous result available in the current session for comparison, and identify which provider and model produced each result. This does not introduce a persistent transcript library.
 - **Clipboard:** a comparison run should leave the current clipboard alone until the user chooses Copy summary for the result they want. Preserve the existing automatic copy for the first summary and its protection against overwriting newer clipboard content.
 - **Availability:** show why a provider is unavailable and how to enable it. If a chosen provider fails or reaches a limit, offer available alternatives. Do not silently send the transcript to another service or switch to API billing.
@@ -30,11 +33,11 @@ The on-device summarizer splits text into roughly 4,000-character portions, make
 
 ## Claude subscription feasibility
 
-Evaluate invoking the user's unmodified Claude Code installation with their own login. Anthropic currently describes subscription usage for `claude -p` and the Agent SDK, while its integration rules require provider-owned authentication and restrict third-party handling of subscription credentials. Recheck supported usage, applicable terms, and billing before implementation. Direct Anthropic API access remains a distinct integration option. [Subscription usage](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan), [integration and authentication rules](https://code.claude.com/docs/en/legal-and-compliance)
+Investigate whether a supported third-party integration can invoke the user's Claude Code installation with their own login. Verify current authentication rules, permitted usage, and billing before implementation; do not assume a subscription grants API access. Direct Anthropic API access remains the shipped connection. Start with Anthropic's [integration and authentication rules](https://code.claude.com/docs/en/legal-and-compliance).
 
 ## Next validation steps
 
-1. Evaluate Apple Intelligence summaries with short and long transcripts, checking attribution, action items, and missing detail before considering it release-ready.
+1. Continue evaluating the shipped Apple Intelligence option with short and long transcripts, checking attribution, action items, and missing detail.
 2. Review Claude summaries against their source transcripts, and test key replacement, failure recovery, and the first-use confirmation in the built app.
 3. Test the first-run chooser, Settings, and per-transcript picker on a clean install and on an existing Codex setup.
 4. Add session-only result comparison and consider direct OpenAI API access separately.
@@ -43,7 +46,7 @@ All providers should use the same output structure and Apple Notes formatting. R
 
 ## Clarification interview: shipped in 2.0
 
-An optional interview now runs before the final summary. It is on by default, with **Ask clarifying questions before summarizing** in Settings. The model checks the source in the background as part of summarizing; an interview appears only when there are useful questions. Users can skip those questions with **Finish & summarize**. The source may be a transcript, rough notes, or other text; clear material should need no questions.
+An optional interview now runs before the final summary. It is on by default, with **Ask clarifying questions before summarizing** in Settings. The model checks the source in the background as part of summarizing; an interview appears if the model returns questions. Users can skip those questions with **Finish & summarize**. The source may be a transcript, rough notes, or other text; clear material should need no questions.
 
 Each round offers up to three material questions, exact source excerpts when useful, evidence-supported suggestions, and free text. Three is a batch size, not a total limit. Follow-ups use prior answers; users can correct the question’s premise, leave answers blank, or choose **Finish & summarize** at any time. Answers are separate from original source evidence, and missing answers never imply agreement. The app checks quoted excerpts against the original text.
 

@@ -33,7 +33,7 @@ For an organization-wide key, Note Ferry selects the Default workspace when Anth
 
 Before writing a summary, Note Ferry can interview you about meaningful ambiguities in a transcript, rough notes, or other text. The interview is on by default. When you choose **Summarize & format**, the selected model first checks the text in the background. If the model returns questions, the interview appears. Otherwise, summarization continues automatically. Leave answers blank and choose **Finish & summarize** to skip the questions. In **Settings**, turn off **Ask clarifying questions before summarizing** to always go straight to summarization.
 
-Questions arrive in small batches, with exact source excerpts when useful and visible radio-button suggestions when supported. Selecting **Something else** reveals a free-text field; questions without suggestions show that field immediately. Answer what you can, including corrections to a question’s premise. **Continue interview** lets the model ask useful follow-ups; **Finish & summarize** uses your answers immediately. There is no fixed three-question total.
+Questions arrive in small batches, with exact source excerpts when useful and visible radio-button suggestions when supported. Selecting **Something else** reveals a free-text field; questions without suggestions show that field immediately. Answer what you can, including corrections to a question’s premise. **Continue interview** lets the model ask useful follow-ups; **Finish & summarize** uses your answers immediately. Each round has up to three questions; there is no fixed three-question total. **Cancel** discards the unfinished interview and returns to your source. Submitted answers remain available to retry a failed final summary until you edit the input.
 
 Interviews use more tokens and time, and Claude API requests can cost more. Requests stay with the provider you selected. Apple Intelligence has a smaller context budget and may ask you to shorten answers or finish earlier; nothing is silently truncated. Answers remain in memory for the current text and appear under **Context used** with the result. The clipboard stays unchanged throughout the interview, and a newer clipboard is protected when the summary finishes.
 
@@ -69,7 +69,7 @@ Summaries include key takeaways, action items, and detailed topic sections, with
 - **Clear** empties the window and leaves your clipboard alone. You can also select all (**⌘A**) and paste another text selection.
 - If you copy something else while processing, the app preserves your newer clipboard. Your summary waits in the window until you choose **Copy summary**.
 - **Cancel** stops processing. Your transcript remains available to edit or retry.
-- **Restore clipboard**, when available, restores what was on the clipboard when you started, provided you have not copied something else since the summary was copied.
+- **Restore clipboard** restores the content Note Ferry replaced, provided the clipboard still contains its last copy. Repeated copies from Note Ferry keep the same backup. If you copy something else and then use a Note Ferry copy button, that newer content becomes the backup.
 
 Leave the app open throughout the day if you like. It does not monitor your clipboard or start processing on launch, reopening, or paste. Processing begins only when you choose **Format only** or **Summarize & format**.
 
@@ -81,8 +81,12 @@ Choose **Note Ferry → Check for Updates…** whenever you want to check. On th
 
 ## Troubleshooting and limits
 
+If the initial clarification check fails, the app returns to your input with an error. Retry, or turn off the interview in Settings to summarize without that check.
+
 If Codex is missing or signed out, install it and run `codex login` in Terminal. If Claude rejects a key, create a new one in Anthropic Console and replace it in Settings. If Apple Intelligence is unavailable, check its status in System Settings or choose another provider. Failed or cancelled requests leave your clipboard intact.
 
-Text to summarize must contain at least 100 characters. Codex and Claude accept up to 400 KB; Apple Intelligence currently accepts up to 100 KB. Larger input is rejected rather than cut off. Codex and Claude requests time out after ten minutes.
+Each interview answer is limited to 2,000 characters. The combined answered questions and answers, including their labels and separators, must fit within 24,000 characters for Codex/Claude or 1,800 for Apple Intelligence. Apple’s interview history has an additional context limit. If a limit is reached, shorten answers or finish with the accepted answers; the app does not silently truncate them.
+
+Text to summarize must contain at least 100 characters. Codex and Claude accept up to 400 KB; Apple Intelligence currently accepts up to 100 KB. Larger input is rejected rather than cut off. Each Codex or Claude request times out after ten minutes; an interview can involve several requests.
 
 [Report a problem](https://github.com/niederme/note-ferry/issues), including your macOS version, selected summarizer, and a small fictional example. Please leave private transcripts and credentials out of reports.

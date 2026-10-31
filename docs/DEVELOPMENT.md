@@ -1,6 +1,6 @@
 # Development
 
-[Back to Note Ferry](../README.md) · [Roadmap](../ROADMAP.md)
+[Back to Note Ferry](../README.md) · [User guide](USER_GUIDE.md) · [Roadmap](../ROADMAP.md)
 
 Build, test, and contribute to Note Ferry. See the [download instructions](../README.md#download) for release availability.
 
@@ -28,7 +28,7 @@ codex --version
 codex login
 ```
 
-See the [official Codex documentation](https://developers.openai.com/codex/) for installation and account setup. Then build and install:
+See the [official Codex documentation](https://developers.openai.com/codex/) for installation and account setup. For development alongside an open Note Ferry session, use the [separate preview build](#preview-without-a-model-call) instead of installing over it. To install:
 
 ```sh
 make install
@@ -40,7 +40,7 @@ Spotlight indexing may take a little time. Open the app directly from your home 
 
 On first launch, **Choose a summarizer** opens over the main window. Apple Intelligence is the initial default on a new install; if it is unavailable, choose Codex or Claude to summarize. **Done** completes onboarding. The same controls remain available in **Note Ferry → Settings…**, and the picker beside **Summarize & format** changes the provider for the current text without changing your default. **Format only** never calls a model.
 
-For a one-paste setup, create a Claude key scoped to the Default workspace, then choose **Paste from clipboard** in Settings. That button saves and checks the key in one click. You can also paste an existing `sk-ant-` key into the ordinary text field and choose **Save key**. The field is visible while editing and cleared after saving. Saving checks the format, stores the key in Note Ferry’s Keychain item, leaves the clipboard unchanged, and checks access through Anthropic’s Models API without a transcript. For organization-wide keys, the verifier uses Anthropic’s List Workspaces API to find the active Default workspace and verifies the key again with that ID. It stores the ID and Default name in app preferences. If Default cannot be found or verified, Settings reveals a manual `wrkspc_` field and a help link; the saved key does not need to be pasted again. Settings lets you replace the key, change its workspace, or remove it. A format check alone is not proof that Anthropic will accept the key. The first Claude summary asks for confirmation before sending text and the key. Do not put a real API key in source files, issues, or test fixtures.
+For Claude key and workspace setup, see the [user guide](USER_GUIDE.md#claude). The verifier checks access without sending a transcript; a format check alone does not prove the key will work. Do not put a real API key in source files, issues, or test fixtures.
 
 Source builds target your Mac’s architecture and are ad-hoc signed for local use. The first build downloads the pinned Sparkle distribution. A release download must be separately signed and notarized before publication. Source builds point to the official Note Ferry update feed.
 
@@ -70,11 +70,13 @@ iconutil -c icns .build/AppIcon.iconset -o Resources/AppIcon.icns
 ## Build and test
 
 ```sh
-make build     # Build build/Note Ferry.app
+make build     # Rebuild build/Note Ferry.app; use BUILD_APP_PATH below if it is running
 make test      # Run the automated checks
 ./scripts/test-interview-ui.sh  # Exercise the interview sheet with synthetic model responses
 make install   # Build and install in ~/Applications
 ```
+
+The build script replaces its target bundle. If that app is running or contains a session you want to keep, set a separate absolute `BUILD_APP_PATH` as shown below. `make install` uses the default `build/Note Ferry.app` path; do not combine it with a custom `BUILD_APP_PATH`.
 
 The default ad-hoc `make build` marks the local app as **Development** in its window title and About panel while retaining the base version number. Developer ID release builds do not receive this label.
 
@@ -88,6 +90,9 @@ The default ad-hoc `make build` marks the local app as **Development** in its wi
 | `Sources/ClaudeRunner.swift` | Anthropic Messages API request, response validation, and cancellation |
 | `Sources/ProviderSettings.swift` | Default provider and Claude API key in macOS Keychain |
 | `Sources/SettingsWindow.swift` | First-run provider chooser and Settings |
+| `Sources/Interview.swift` | Interview contracts, validation, answer budgets, and token aggregation |
+| `Sources/InterviewWindow.swift` | Interview sheet, controls, keyboard navigation, and request lifecycle |
+| `Resources/Interview.schema.json` | Structured interview-output contract |
 | `Resources/SummaryPrompt.txt` | Instructions for detailed, source-faithful summaries |
 | `Resources/Summary.schema.json` | Structured model-output contract |
 | `Resources/AppIcon.svg` | Approved vector icon, with outlined lettering |
@@ -110,13 +115,14 @@ The interview uses `Sources/Interview.swift` for the request contract, stable qu
 
 ### Preview without a model call
 
-Quit any running copy of Note Ferry first, then launch the synthetic example:
+Use a separate preview bundle and launch a new instance so an existing session can stay open:
 
 ```sh
-open 'build/Note Ferry.app' --args --preview "$PWD/Tests/fixture.json"
+BUILD_APP_PATH="$PWD/.build/docs-preview/Note Ferry.app" make build
+open -n "$PWD/.build/docs-preview/Note Ferry.app" --args --preview "$PWD/Tests/fixture.json"
 ```
 
-This opens a preview without changing your clipboard. **Copy summary** explicitly copies the result.
+This opens a synthetic preview without changing your clipboard. **Copy summary** explicitly copies the result. Close only the preview when finished. If this preview bundle is already running, use a different output path before rebuilding. Separate instances still share app preferences and Keychain identity.
 
 ### Format Markdown without a model or clipboard change
 
@@ -125,16 +131,16 @@ This opens a preview without changing your clipboard. **Copy summary** explicitl
   --format-file Tests/format-fixture.md "$PWD/local-output/formatted"
 ```
 
-This writes `formatted.rtf` and `formatted.txt`. No model is called. Blank input and input over 400,000 UTF-8 bytes are rejected; the transcript minimum length does not apply. These explicit exports persist until you delete them.
+This writes `formatted.rtf` and `formatted.txt`. No model is called. Blank input and input over 400,000 UTF-8 bytes are rejected; the transcript minimum length does not apply. Exports remain on disk after the app exits. Exporting to the same folder again replaces files with the same names.
 
 The local formatter uses Apple's inline Markdown parser plus block handling for ATX and setext headings, paragraphs, lists, checklists, nested quotes, thematic dividers, fenced code, and indented code. A standalone bold line becomes a section heading. The `codex-prompt` blocks exported by ChatGPT Meetings become spaced native action-item bullets; their clickable behavior does not carry over to Notes. It recognizes whole-answer chat code fences containing clear Markdown structure, including mislabeled `vbnet` fences and longer outer fences wrapping headings and action blocks.
 
 Markdown tables become `NSTextTable` grids with bold headers, column alignment, proportional widths, wrapped cells, and borders. Escaped pipes and empty cells are preserved; extra cells in ragged rows expand the grid rather than dropping content. Table results include both RTF and HTML clipboard representations, plus a tab-separated plain-text fallback. Destination apps determine whether pasted tables become their own editable table objects. Checklist states use visible checkbox symbols, not native Notes checklist objects. Image descriptions become links without downloading the image. Inline `<br>` tags become soft line breaks; code remains literal.
 
-For a visual preview of the mixed-pattern fixture without changing the clipboard or calling a model:
+After building the separate preview bundle above, preview the mixed-pattern fixture without changing the clipboard or calling a model:
 
 ```sh
-open 'build/Note Ferry.app' --args --preview-markdown "$PWD/Tests/markdown-patterns.md"
+open -n "$PWD/.build/docs-preview/Note Ferry.app" --args --preview-markdown "$PWD/Tests/markdown-patterns.md"
 ```
 
 Other raw HTML and Markdown extensions outside these patterns remain text; the formatter does not execute or load them.
@@ -148,7 +154,7 @@ The table-capable preview displays list markers separately from the underlying n
   --summarize-file /absolute/path/to/transcript.md "$PWD/local-output/example"
 ```
 
-This sends the source to Codex and saves `summary.json`, `summary.rtf`, and `summary.txt` in the chosen folder. These explicit exports persist until you delete them. The suggested `local-output/` directory is excluded from Git.
+This sends the source to Codex and saves `summary.json`, `summary.rtf`, and `summary.txt` in the chosen folder. Exports remain on disk after the app exits. Exporting to the same folder again replaces files with the same names. The suggested `local-output/` directory is excluded from Git.
 
 ### Verification
 
@@ -167,16 +173,17 @@ Xcode's **Archive** action uses the Release configuration, which enables Hardene
 Build both architectures with a Developer ID Application identity installed in your Keychain:
 
 ```sh
-BUILD_ARCHS='arm64 x86_64' \
+BUILD_APP_PATH="$PWD/.build/release/Note Ferry.app" \
+  BUILD_ARCHS='arm64 x86_64' \
   SIGNING_IDENTITY='Developer ID Application: Your Name (TEAMID)' \
   ./scripts/build.sh
 ```
 
-The build targets macOS 14, embeds Sparkle with symlinks preserved, signs its helpers and framework before the host app, enables the hardened runtime for Developer ID signing, requests secure timestamps, and verifies the signature. Submit a ZIP of the app using `xcrun notarytool` with credentials saved in Keychain. Once Apple accepts it, review the notarization log, staple the ticket to the app with `xcrun stapler`, and verify with both `stapler validate` and `spctl --assess --type execute`. Create the final download ZIP **after** stapling, and generate its SHA-256 checksum.
+The build targets macOS 14, embeds Sparkle with symlinks preserved, signs its helpers and framework before the host app, enables the hardened runtime for Developer ID signing, requests secure timestamps, and verifies the signature. Submit a ZIP of the app using `xcrun notarytool` with a configured authentication method, such as a Keychain profile or App Store Connect API key. Once Apple accepts it, review the notarization log, staple the ticket to the app with `xcrun stapler`, and verify with both `stapler validate` and `spctl --assess --type execute`. Create the final download ZIP **after** stapling, and generate its SHA-256 checksum.
 
 Sparkle uses the public EdDSA key in the app’s Info.plist. The matching private key is in the release owner’s login Keychain under the `note-ferry` account; never export or commit it. For each new release, increment `CFBundleVersion`, sign and notarize the app, upload the final ZIP to GitHub Releases, then generate the appcast with the pinned Sparkle tools and the final ZIP. Include the release notes in the appcast, verify its signature, and publish the appcast to the `main` branch only after the ZIP is reachable. The `SUFeedURL` in the app points at the raw `main` version of `appcast.xml`. New builds require an EdDSA-signed archive and feed because verification before extraction and signed-feed checks are enabled. Keep the appcast update process in the release PR so reviewers can check the exact URL, version, and signature.
 
-Version 1.0 did not include Sparkle. Users must install 1.1 manually once; subsequent updates can use the app menu. A source build also points to the official feed, so fork maintainers should change the URL and public key to their own before distributing their app. Never commit signing keys or notarization credentials.
+Version 1.0 did not include Sparkle. Those users must manually install a current release once; subsequent updates can use the app menu. A source build also points to the official feed, so fork maintainers should change the URL and public key to their own before distributing their app. Never commit signing keys or notarization credentials.
 
 ## Rendering for Apple Notes
 
