@@ -18,7 +18,7 @@ Requires macOS 14 or later. Includes Apple silicon and Intel versions. Unzip and
 
 Runtime testing has been on Apple silicon with macOS 27; Intel hardware and older macOS versions have not been tested. [Release notes and checksum](https://github.com/niederme/note-ferry/releases/tag/v2.0).
 
-<img src="docs/images/2.0-apple-notes.jpg" width="860" alt="A fictional NOVA project summary pasted into Apple Notes, with bold headings, spaced bullets, and action items">
+<img src="docs/images/2.0-apple-notes.png" width="860" alt="A fictional NOVA project summary pasted into Apple Notes, with bold headings, spaced bullets, and action items">
 
 *Your finished notes, pasted into Apple Notes. All screenshot examples are fictional.*
 
@@ -28,7 +28,7 @@ Runtime testing has been on Apple silicon with macOS 27; Intel hardware and olde
 2. **Summarize or format.** Choose **Summarize & format** for takeaways, action items, and topic notes. Choose **Format only** to preserve your wording and format locally, without AI or an account.
 3. **When the result is ready and copied, paste into Apple Notes with ⌘V.** Use normal Paste to keep the formatting. Review important details in AI-generated summaries.
 
-<img src="docs/images/2.0-input.jpg" width="860" alt="Source text and optional context above the Summarize & format and Format only actions">
+<img src="docs/images/2.0-input.png" width="860" alt="Source text and optional context above the Summarize & format and Format only actions">
 
 *Nothing runs merely because you paste. Choose when to begin.*
 
@@ -38,7 +38,7 @@ The model can ask about unclear details before writing the summary. If it has no
 
 The interview is on by default. Turn off **Ask clarifying questions before summarizing** in Settings to skip it entirely. Interviews take extra time and tokens, and Claude API requests can cost more.
 
-<img src="docs/images/2.0-interview.jpg" width="840" alt="Clarification questions with source excerpts, radio choices, Something else, and Finish & summarize">
+<img src="docs/images/2.0-interview.png" width="840" alt="Clarification questions with source excerpts, radio choices, Something else, and Finish & summarize">
 
 *Use the source excerpts to check the question’s premise.*
 
