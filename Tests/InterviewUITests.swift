@@ -227,6 +227,9 @@ import AppKit
         setenv("NF_TEST_MODE", "malformed", 1)
         button("Continue interview", in: followupPanel).performClick(nil)
         pump { descendants(followupPanel.contentView!).compactMap { $0 as? NSButton }.contains { $0.title == "Retry questions" } }
+        let historyButton = button("Answers…", in: followupPanel)
+        check(!historyButton.isHidden, "Follow-up failure hides the answers already submitted")
+        check(historyButton.previousKeyView === button("Cancel", in: followupPanel), "Answer review is missing from the recovery keyboard loop")
         button("Cancel", in: followupPanel).performClick(nil)
         pump { parent.attachedSheet == nil }
         print("Passed \(checks) interview UI checks. No real model calls or clipboard writes.")

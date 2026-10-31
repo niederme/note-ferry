@@ -398,6 +398,7 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
             return selected < item.question.options.count ? item.question.options[selected] : answerFields[index].string
         }
         try session.answer(answers, provider: provider)
+        historyButton.isHidden = session.history.isEmpty
         for field in answerFields { field.isEditable = false }
         for button in choiceButtons.flatMap({ $0 }) { button.isEnabled = false }
         answerFields = []
@@ -469,6 +470,7 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
             status.stringValue = "Your clipboard is unchanged."
             nextButton.title = "Retry questions"
             finishButton.title = "Continue to summary"
+            updateKeyLoop()
         }
     }
 
