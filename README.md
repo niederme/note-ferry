@@ -2,136 +2,60 @@
 
 # Note Ferry
 
-**Turn your text into notes worth keeping (with a summary if you want one).**
+**Turn your text into notes worth keeping.**
 
-Note Ferry is a small native macOS app that formats text for Apple Notes and puts the result on your clipboard as rich text. Bring an AI reply, your own writing, or any plain text or Markdown you want to keep. For longer material, such as a meeting transcript from [Nook](https://www.common-tools.co/nook) or [Granola](https://www.granola.ai/), you can create a detailed, scannable summary first.
+Note Ferry turns text into formatted notes you can paste into Apple Notes. Summarize a transcript or format writing you already want to keep.
 
 You choose where to paste. Note Ferry never creates or edits an Apple Note.
 
-<img src="docs/images/2.0-summary.jpg" width="860" alt="Note Ferry 2.0 showing a fictional project summary with key takeaways, action items, and the context used">
-
-*Your text becomes structured notes, ready to paste into Apple Notes. All examples below are fictional.*
-
-## New in 2.0
-
-**Clear up confusing details before they become notes.** Note Ferry can ask focused questions about unclear names, dates, ownership, or commitments before it finishes a summary. The model checks in the background and asks only when clarification would help. You can answer, skip the questions, or turn the interview off in Settings.
-
-**Add the context the transcript is missing.** Supply names, terminology, or background once for the current text. Context and your interview answers stay separate from the original source, and remain visible with the result.
-
-**Keep the workflow quick.** Summarize & format is now the primary action. Larger, resizable windows, visible scrollbars, radio choices, and keyboard navigation make the interview easier to work through. Format only still runs locally without AI.
-
-## Why Note Ferry?
-
-You may already have a way to record and transcribe calls, and prefer to keep your finished notes in Apple Notes. Note Ferry handles the step in between: turn the full transcript into detailed topic notes and action items, then copy them with bold headings, native bullets, and enough space to read comfortably after pasting. It can also format existing Markdown without changing its wording.
-
-The original workflow was recording with Nook, sometimes using Granola, and copying transcripts into an AI chat to summarize them. Getting the detail and Apple Notes formatting right took extra work. This app makes that repeatable without writing to your notes or keeping another meeting library.
-
-[Nook](https://www.common-tools.co/nook) records and transcribes meetings on your Mac and already produces local summaries and Markdown files. You can keep using it for capture and bring its full transcript here when you want another summary formatted for Apple Notes. [Granola](https://www.granola.ai/) combines meeting transcription, enhanced notes, and calendar features. Note Ferry is useful when you want this particular output in Apple Notes or use transcripts from several tools.
-
-Note Ferry is free and open source, with no app subscription. **Format only** runs on your Mac without an account. For **Summarize & format**, choose Apple Intelligence on a compatible Mac, your signed-in Codex account, or your own Claude API key. Codex sends text to OpenAI; Claude sends it to Anthropic. Apple Intelligence summarizes on your Mac.
-
-## Format existing text
-
-**Format only** is for writing you already want to keep: AI replies, your own notes, or any Markdown text. It converts headings, bold and italic text, links, and lists into rich text for Apple Notes, without rewriting or summarizing the words. It runs locally and needs no account or internet connection.
-
-Paste your text and click **Format only**. Paste into Apple Notes with **⌘V**. **Copy formatted text** copies it again. Choose **Summarize & format** when you want your selected summarizer to turn a raw transcript into a summary first. Both actions sit below the text area, with **Clear** separated on the right. Nothing is processed or sent until you click one.
-
-Both options use spaced native lists, preserve a newer clipboard, and offer **Restore clipboard** after copying. Common Markdown is supported, including numbered and nested lists, checklists, quotes, divider lines, code blocks, and tables. Tables retain a grid with wrapped cells in rich text and HTML clipboard formats; how they paste depends on the receiving app. Checklist states remain visible checkbox symbols. Images become links using their description and are not downloaded. Formatting is not a complete Markdown publishing engine.
-
-## Clarify before summarizing
-
-Before writing a summary, Note Ferry can interview you about meaningful ambiguities in a transcript, rough notes, or other text. The interview is on by default. When you choose **Summarize & format**, the selected model first checks the text in the background. The interview appears only if it returns useful questions; clear text goes straight to the summary. Leave answers blank and choose **Finish & summarize** to skip the questions. In **Settings**, turn off **Ask clarifying questions before summarizing** to always go straight to summarization.
-
-Questions arrive in small batches, with exact source excerpts when useful and visible radio-button suggestions when supported. Selecting **Something else** reveals a free-text field; questions without suggestions show that field immediately. Answer what you can, including corrections to a question’s premise. **Continue interview** lets the model ask useful follow-ups; **Finish & summarize** uses your answers immediately. There is no fixed three-question total. A clear source proceeds directly to the summary without questions.
-
-Interviews use more tokens and time, and Claude API requests can cost more. Requests stay with the provider you selected. Apple Intelligence has a smaller context budget and may ask you to shorten answers or finish earlier; nothing is silently truncated. Answers remain in memory for the current text and appear under **Context used** with the result. The clipboard stays unchanged throughout the interview, and a newer clipboard is protected when the summary finishes.
-
-<img src="docs/images/2.0-interview.jpg" width="840" alt="Note Ferry clarification interview with source excerpts, radio-button answers, Something else, and a primary Continue interview button">
-
-*The interview appears only when the model has useful questions. Choose an answer, write your own, or finish with unanswered details left uncertain.*
-
 ## Download
-
-Download Note Ferry 2.0 (build 11), signed with Developer ID and notarized by Apple:
 
 **[Download Note Ferry 2.0 for Mac](https://github.com/niederme/note-ferry/releases/download/v2.0/Note-Ferry-2.0-universal.zip)**
 
-Unzip the download and move **Note Ferry.app** to Applications, replacing an earlier copy. If you already have Note Ferry installed, you can instead choose **Note Ferry → Check for Updates…**. The universal app includes Apple silicon and Intel versions. Xcode is not required.
+Free and open source. No app subscription. Signed with Developer ID and notarized by Apple.
 
-**Apple Intelligence** needs macOS 26 or later, a compatible Mac, and Apple Intelligence enabled. **Codex** needs the [Codex CLI](https://developers.openai.com/codex/cli/), a signed-in Codex account, and internet access; run `codex login` in Terminal. **Claude** needs an Anthropic API key and internet access; API use is billed separately from a Claude subscription. **Format only** needs no account or internet connection.
+Requires macOS 14 or later. Includes Apple silicon and Intel versions. Unzip and move **Note Ferry.app** to Applications, or choose **Note Ferry → Check for Updates…** in an existing installation.
 
-The app requires macOS 14 or later. Runtime testing has been on Apple silicon with macOS 27; Intel hardware and older macOS versions have not been tested. See the [release notes and checksum](https://github.com/niederme/note-ferry/releases/tag/v2.0).
+Runtime testing has been on Apple silicon with macOS 27; Intel hardware and older macOS versions have not been tested. [Release notes and checksum](https://github.com/niederme/note-ferry/releases/tag/v2.0).
 
-## Updates
+<img src="docs/images/2.0-summary.jpg" width="860" alt="A fictional project summary with key takeaways, action items, and the context used">
 
-Choose **Note Ferry → Check for Updates…** whenever you want to check. On the second launch, Sparkle asks whether it may check automatically in the background. That choice is yours; automatic installation is off by default. Update checks use a signed feed on GitHub and do not send your text or transcript.
+*Detailed notes, ready for Apple Notes. All screenshot examples are fictional.*
 
-## How to use Note Ferry
+## How it works
 
-1. Copy the text you want to keep, such as an AI reply, your own notes, or a meeting transcript.
-2. Open Note Ferry, paste the text, and choose **Summarize & format** with the provider you want, or **Format only** to preserve the wording.
-3. If clarification questions appear, answer what you can and choose **Continue interview**, or **Finish & summarize** to proceed now.
-4. When the result is ready and copied, paste it into Apple Notes with **⌘V**.
+1. **Paste your text.** Bring a transcript, an AI reply, or your own notes. Add optional context for names, terminology, or background.
+2. **Summarize or format.** Choose **Summarize & format** for takeaways, action items, and topic notes. Choose **Format only** to preserve your wording and format locally, without AI or an account.
+3. **When the result is ready, paste into Apple Notes with ⌘V.** Use normal Paste to keep the formatting. Review important details in AI-generated summaries.
 
-<img src="docs/images/2.0-input.jpg" width="860" alt="Note Ferry input screen with fictional source text, optional context, and Summarize & format as the primary leftmost action">
+<img src="docs/images/2.0-input.jpg" width="860" alt="Source text and optional context above the Summarize & format and Format only actions">
 
-*Paste text, add optional context, and choose your summarizer. Nothing runs merely because you paste.*
+*Nothing runs merely because you paste. Choose when to begin.*
 
-Use normal Paste to keep the formatting. **Paste and Match Style** removes it.
+## New in 2.0: clarify before summarizing
 
-Summaries include key takeaways, action items, and detailed topic sections, with bold headings and spaced bullets. Open questions and unclear transcription details are called out when relevant. Review important details, since AI summaries can contain mistakes. **Format only** preserves the original wording and formats the structure already present in your text. Starting with 1.2.2, it keeps plain-text line breaks and adds a blank line between complete sentences or questions entered on separate lines. In Markdown documents, ordinary soft-wrapped lines continue to follow Markdown rules.
+The model can ask about unclear details before writing the summary. If it has no questions, it continues automatically. Questions can include relevant excerpts and suggested answers. Choose an answer, write your own, or leave it blank. **Continue interview** allows follow-ups; **Finish & summarize** proceeds with whatever you’ve answered, even if you leave every question blank.
 
-## Working with summaries
+The interview is on by default. Turn off **Ask clarifying questions before summarizing** in Settings to skip it entirely. Interviews take extra time and tokens, and Claude API requests can cost more.
 
-- Before summarizing, use the small **Context (optional)** field beneath the transcript to supply names, terminology, or background. It is open by default and can be collapsed. For example: “NOVA is our planning tool. Jamie leads the project.” Context is limited to 1,000 characters and applies to this summary only. It works with Apple Intelligence, Codex, and Claude. **Format only** ignores it.
-- Context stays available after cancellation or an error. Collapsing the field keeps it included; empty the field to omit it. **Clear**, pasting new text over a result, or quitting discards it. It is not saved as a glossary.
-- **Copy summary** copies the formatted result again.
-- When context or interview answers were supplied, **Context used** stays visible beneath the summary. It is read-only and selectable. **Copy context** copies it separately; it is never appended to **Copy summary**.
-- Completed summaries show elapsed time and provider-reported input/output token counts when available. Usage includes reported interview requests, instructions, context, and summary generation. Complete totals are unavailable when a request is cancelled or a provider does not report usage. Apple Intelligence reports usage on macOS 27 or later, summed across portions and overview passes; on macOS 26, usage is unavailable. These counts are not costs or remaining subscription limits.
-- **Copy formatted text** copies a locally formatted result again.
-- **Clear** empties the window and leaves your clipboard alone. You can also select all (**⌘A**) and paste another text selection.
-- If you copy something else while processing, the app preserves your newer clipboard. Your summary waits in the window until you choose **Copy summary**.
-- **Cancel** stops processing. Your transcript remains available to edit or retry.
-- **Restore clipboard**, when available, restores what was on the clipboard when you started, provided you have not copied something else since the summary was copied.
+<img src="docs/images/2.0-interview.jpg" width="840" alt="Clarification questions with source excerpts, radio choices, Something else, and Finish & summarize">
 
-Leave the app open throughout the day if you like. It does not monitor your clipboard or start processing on launch, reopening, or paste. Processing begins only when you choose **Format only** or **Summarize & format**.
-
-Closing the window lets processing continue. Quitting cancels it and discards the in-memory transcript, summary, and clipboard backup. The app does not save a transcript library.
-
-## Privacy
-
-Apple Intelligence summarizes on your Mac. Codex sends text to OpenAI, and Claude sends text to Anthropic after a first-use confirmation. Formatting happens on your Mac with every option. Note Ferry never creates or edits an Apple Note.
-
-The app normally removes its temporary model output when processing finishes; an interrupted shutdown can leave a temporary file behind. Clipboard managers may retain copied content. [Read the data-handling details](docs/PRIVACY.md).
-
-## Help
-
-If Codex is missing or signed out, install it and run `codex login` in Terminal. If Claude rejects a key, create a new one in Anthropic Console and replace it in Settings. If Apple Intelligence is unavailable, check its status in System Settings or choose another provider. Failed or cancelled requests leave your clipboard intact.
-
-Text to summarize must contain at least 100 characters. Codex and Claude accept up to 400 KB; Apple Intelligence currently accepts up to 100 KB. Larger input is rejected rather than cut off. Codex and Claude requests time out after ten minutes.
-
-[Report a problem](https://github.com/niederme/note-ferry/issues), including your macOS version, selected summarizer, and a small fictional example. Please leave private transcripts and credentials out of reports.
+*Use the source excerpts to check the question’s premise.*
 
 ## Choose a summarizer
 
-On first launch, **Choose a summarizer** asks for a default. Apple Intelligence is preselected on a new install, even if it is unavailable on that Mac; choose Codex or Claude instead if needed. Change your default later in **Note Ferry → Settings…**, or use the picker beside **Summarize & format** for one piece of text. The picker never starts processing by itself. **Format only** stays local regardless of the selected summarizer.
+| Provider | What you need | Where text goes |
+| --- | --- | --- |
+| **Apple Intelligence** | A compatible Mac with macOS 26+ and Apple Intelligence enabled | Stays on your Mac |
+| **Codex** | The Codex CLI, a signed-in account, and internet access | OpenAI, using your Codex account |
+| **Claude** | Your Anthropic API key and internet access; API billing is separate from a Claude subscription | Anthropic |
 
-Codex uses your signed-in account and lets the CLI choose its built-in default model. To use another model available to your account, enter its ID in **Settings → Codex model**. Note Ferry does not force a reasoning-effort setting or silently switch models if your selected model is unavailable. It keeps requests isolated from your personal CLI configuration and tools.
+Change providers in Settings or beside **Summarize & format**. [Setup instructions](docs/USER_GUIDE.md#choose-a-summarizer).
 
-For a one-paste Claude setup, create an API key scoped to Anthropic’s **Default workspace**, then choose **Paste from clipboard** in Settings. That button saves and checks the key in one click. You can also paste into the field and choose **Save key**. The key is visible while editing, cleared from the field after saving, and stored in this Mac’s Keychain. The clipboard is left unchanged. Note Ferry checks the key with Anthropic without sending a transcript. For an organization-wide key, Note Ferry selects the Default workspace when Anthropic makes it available. If Default cannot be determined, Settings asks for a workspace ID and links to the workspace list. The key remains saved, so you only enter the workspace ID. Your first Claude summary asks you to confirm sending the text and key to Anthropic.
+Note Ferry keeps no transcript library. If you copy something else while it works, it protects your newer clipboard. [Privacy details](docs/PRIVACY.md).
 
-## What’s next
+## More
 
-The [roadmap](ROADMAP.md) covers evaluation of on-device summary quality, comparing results from different providers, and possible additional connection options. No date is promised for the next release.
+[User guide](docs/USER_GUIDE.md) · [Report a problem](https://github.com/niederme/note-ferry/issues) · [Development](docs/DEVELOPMENT.md) · [Roadmap](ROADMAP.md)
 
-## Build or contribute
-
-See the [development guide](docs/DEVELOPMENT.md) for source installation, architecture, tests, and release builds.
-
-## Author and license
-
-Created by **John Niedermeyer**, with AI-assisted development.
-
-Released under the [MIT License](LICENSE). You may use, modify, and redistribute the software, including commercially, as long as you retain the copyright and license notice in copies or substantial portions. MIT does not require visible in-app credit or publication of your modifications.
-
-The license covers this project's code and documentation. Sparkle is bundled under its [own license](Resources/Sparkle.LICENSE). The project license does not grant rights to other third-party tools, services, or trademarks, or change their terms. This is an independent project, not affiliated with Apple, OpenAI, Nook, or Granola.
+Created by **John Niedermeyer**, with AI-assisted development. [MIT License](LICENSE). Sparkle has its [own license](Resources/Sparkle.LICENSE).
