@@ -6,6 +6,27 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <channel>
         <title>Note Ferry</title>
         <item>
+            <title>2.1</title>
+            <pubDate>Sat, 31 Oct 2026 10:44:32 -0400</pubDate>
+            <link>https://github.com/niederme/note-ferry/releases/tag/v2.1</link>
+            <sparkle:version>13</sparkle:version>
+            <sparkle:shortVersionString>2.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description sparkle:format="markdown"><![CDATA[Note Ferry 2.1 makes getting started, editing, and recovering from errors feel more at home on your Mac.
+
+- **An editing interface with room to work.** Softly shaded text fields separate editable text from the result. Clear, the summarizer picker, Format only, and the primary action stay in a fixed bar at the bottom of the window.
+- **A welcome you can revisit.** Start with local formatting or set up a summarizer. Run Setup Again in Settings walks through the same flow without clearing saved connections or preferences. Claude keys are masked by default, and setup only shows controls for your selected provider.
+- **More control over clarification.** Skip a pending question check with Summarize now, continue without questions if that check fails, and review submitted answers with Answers… during an interview. Keep the interview preference in Settings.
+- **Clearer recovery and results.** Errors offer relevant recovery actions. Failed follow-ups keep your submitted answers accessible, and Retry connection rechecks a saved Claude key without another paste. Results keep context collapsed until you need it; processing details and reported usage are available from the information button.
+- **Familiar Mac behavior.** Standard File, Edit, Window, and Help commands, Redo, keyboard shortcuts, saved window size, and scrolling Settings content make the app easier to use with a keyboard or a smaller window.
+
+Format only still runs locally without AI. Note Ferry protects newer clipboard content and never creates or edits an Apple Note. Review important details in AI-generated summaries.
+
+Version 2.1 is build 13. The universal app supports Apple silicon and Intel Macs and requires macOS 14 or later. Apple Intelligence requires a compatible Mac running macOS 26 or later with Apple Intelligence enabled. Runtime testing has been on Apple silicon with macOS 27; Intel hardware and older macOS versions remain untested.
+]]></description>
+            <enclosure url="https://github.com/niederme/note-ferry/releases/download/v2.1/Note-Ferry-2.1-universal.zip" length="1993898" type="application/octet-stream" sparkle:edSignature="f5UdGJjgmhBGt/n66hkXlFqhPNmIBwFthx/OsNUA38vLyN6UliAxe9+hWS9/WOIxyV8KST2nPl1Ohh1+M4fmCw=="/>
+        </item>
+        <item>
             <title>2.0</title>
             <pubDate>Fri, 30 Oct 2026 17:42:49 -0400</pubDate>
             <link>https://github.com/niederme/note-ferry/releases/tag/v2.0</link>
@@ -147,6 +168,6 @@ The rest of the app still formats text locally or summarizes it with your Codex 
     </channel>
 </rss>
 <!-- sparkle-signatures:
-edSignature: XKMHnIEmJvfzcsYgVZ3UMEE1h6nBuvZ85DaLmTUwrmQJ1FLcnNTJeiRRYGfcinJX13DCCkj4GcnYgXHAUaIoDQ==
-length: 13679
+edSignature: Qg4FAgwhHPSd8+yn49w8vfu29dXEGFnZKJebNhuT8whILEnMNikafgHnnjGCcYM0ZYkM7M6prIMLzUSLotLkBQ==
+length: 16379
 -->
