@@ -2,7 +2,7 @@
 
 [Back to Note Ferry](../README.md)
 
-In version 2.0, **Summarize & format** uses the provider you select: Apple Intelligence on a compatible Mac, Codex through OpenAI, or Claude through Anthropic. Rich-text formatting happens locally. **Format only** runs entirely on your Mac; it does not call a model, load linked pages or images, or require an account.
+In version 2.1, **Summarize & format** uses the provider you select: Apple Intelligence on a compatible Mac, Codex through OpenAI, or Claude through Anthropic. Rich-text formatting happens locally. **Format only** runs entirely on your Mac; it does not call a model, load linked pages or images, or require an account.
 
 Apple Intelligence uses Apple's on-device Foundation Models framework on eligible Macs. Claude uses your own Anthropic API key. The chosen provider is shown before you summarize; failure never silently switches providers. Apple Intelligence may need to download its model before it is available.
 
@@ -18,7 +18,7 @@ Apple Intelligence uses Apple's on-device Foundation Models framework on eligibl
 - Clipboard managers and system clipboard services may retain or synchronize copied content according to their own settings.
 
 
-For Claude, you paste an API key into the Settings text field and choose **Connect**, or choose **Paste & connect** to save and check the clipboard key in one click. The key is masked while editing unless you choose **Show key**, and cleared from both editing fields after saving. Note Ferry stores it in its own macOS Keychain item and leaves the system clipboard unchanged. Saving sends the key over HTTPS to Anthropic’s Models API to check access without a transcript. If Anthropic requires a workspace, Note Ferry also calls Anthropic’s List Workspaces API to find Default and checks access to it. The selected workspace ID and name are stored in app preferences. No setup check sends a transcript or makes a Messages API request.
+For Claude, you paste an API key into the Settings text field and choose **Connect**, or choose **Paste & connect** to save and check the clipboard key in one click. The key is masked while editing unless you choose **Show key**, and cleared from both editing fields after saving. Note Ferry stores it in its own macOS Keychain item and leaves the system clipboard unchanged. Saving sends the key over HTTPS to Anthropic’s Models API to check access without a transcript. If Anthropic requires a workspace, Note Ferry also calls Anthropic’s List Workspaces API to find Default and checks access to it. The selected workspace ID and name are stored in app preferences. **Retry connection** repeats the access check using the saved key. No setup check sends a transcript or makes a Messages API request.
 
 When you choose Claude and click **Summarize & format**, the app asks for confirmation on first use, then sends the selected text, context, interview answers when present, and the key over HTTPS directly to Anthropic's Messages API. The key is used for authentication and is not placed in the transcript or a temporary file. API usage is billed separately from a Claude subscription. A failed or cancelled summary request leaves the clipboard unchanged; the app does not automatically retry with another provider.
 

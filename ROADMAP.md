@@ -2,7 +2,7 @@
 
 [Back to Note Ferry](README.md) · [Development guide](docs/DEVELOPMENT.md)
 
-Version 2.0 adds optional context and adaptive clarification interviews to Apple Intelligence, Codex, and Claude API summarization, with a first-run chooser, a default in Settings, and a per-text provider picker. **Format only** stays local. Other plans have no promised release dates. Keep the core workflow simple: paste text, choose an action, and paste into Apple Notes.
+Version 2.0 adds optional context and adaptive clarification interviews to Apple Intelligence, Codex, and Claude API summarization, with a default in Settings and a per-text provider picker. Version 2.1 adds a repeatable welcome/setup flow, a fixed bottom action bar, and clearer recovery controls. **Format only** stays local. Other plans have no promised release dates. Keep the core workflow simple: paste text, choose an action, and paste into Apple Notes.
 
 ## More ways to summarize
 
@@ -16,7 +16,7 @@ Subscription access and API billing must be clearly distinguished. A subscriptio
 
 ## Provider selection: shipped
 
-- **Settings:** save a preferred provider. Saved provider choices are retained. New installs preselect Apple Intelligence and explain when it is unavailable. Codex supports an optional model ID in Settings; broader model selection can be considered later.
+- **Settings:** save a preferred provider. Saved provider choices are retained. The welcome flow offers local formatting or provider-specific setup; Apple Intelligence is initially selected, with its availability explained. Codex supports an optional model ID in Settings; broader model selection can be considered later.
 - **Main window:** a compact provider picker beside Summarize lets someone override their default for this transcript. Changing it does not run a request or change the saved default.
 
 ## Planned: compare results
@@ -39,7 +39,7 @@ Investigate whether a supported third-party integration can invoke the user's Cl
 
 1. Continue evaluating the shipped Apple Intelligence option with short and long transcripts, checking attribution, action items, and missing detail.
 2. Review Claude summaries against their source transcripts, and test key replacement, failure recovery, and the first-use confirmation in the built app.
-3. Test the first-run chooser, Settings, and per-transcript picker on a clean install and on an existing Codex setup.
+3. Continue testing the welcome/setup flow, Settings, and per-transcript picker on a clean install and on an existing Codex setup.
 4. Add session-only result comparison and consider direct OpenAI API access separately.
 
 All providers should use the same output structure and Apple Notes formatting. Retain explicit user-triggered processing, cancellation, clipboard protection, and the rule that the app never creates or edits notes.
