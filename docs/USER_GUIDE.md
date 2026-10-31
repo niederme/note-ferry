@@ -25,7 +25,7 @@ Install the [Codex CLI](https://developers.openai.com/codex/cli/) and run `codex
 
 ### Claude
 
-For a one-paste Claude setup, create an API key scoped to Anthropic’s **Default workspace**, then choose **Paste from clipboard** in Settings. That button saves and checks the key in one click. You can also paste into the field and choose **Save key**. The key is visible while editing, cleared from the field after saving, and stored in this Mac’s Keychain. The clipboard is left unchanged. Note Ferry checks the key with Anthropic without sending a transcript. 
+For a one-paste Claude setup, create an API key scoped to Anthropic’s **Default workspace**, then choose **Paste from clipboard** in Settings. That button saves and checks the key in one click. You can also paste into the field and choose **Save key**. The key is visible while editing, cleared from the field after saving, and stored in this Mac’s Keychain. The clipboard is left unchanged. Note Ferry checks the key with Anthropic without sending a transcript.
 
 For an organization-wide key, Note Ferry selects the Default workspace when Anthropic makes it available. If Default cannot be determined, Settings asks for a workspace ID and links to the workspace list. The key remains saved, so you only enter the workspace ID. Your first Claude summary asks you to confirm sending the text and key to Anthropic.
 
