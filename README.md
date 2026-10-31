@@ -32,9 +32,9 @@ Start with **Use Format Only** or **Set Up Summaries**. Revisit **Settings → R
 2. **Summarize or format.** Choose **Summarize & format** for takeaways and action items, or **Format only** to preserve your wording locally, without AI or an account.
 3. **Paste the copied result into Apple Notes with ⌘V.** Review important details in AI-generated summaries.
 
-<img src="docs/images/2.1-input.png" width="860" alt="Source text and optional context above the Summarize & format and Format only actions">
+<img src="docs/images/2.1-summary-dark.png" width="860" alt="Note Ferry in dark mode showing a fictional NOVA pilot summary with key takeaways, action items, and Copy summary in the bottom action bar">
 
-*The action bar stays at the bottom while you work. Nothing runs merely because you paste.*
+*A finished summary, ready to paste into Apple Notes. The action bar stays at the bottom while you work.*
 
 ## Clarify before summarizing
 
