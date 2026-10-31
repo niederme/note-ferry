@@ -2,7 +2,7 @@
 
 [Back to Note Ferry](../README.md)
 
-Setup, clarification questions, formatting, and clipboard behavior. For an overview and the download, see the [README](../README.md). For data handling, see [Privacy](PRIVACY.md).
+Setup, clarification questions, formatting, and clipboard behavior for Note Ferry 2.1. For an overview and the download, see the [README](../README.md). For data handling, see [Privacy](PRIVACY.md).
 
 ## How to use Note Ferry
 
@@ -25,15 +25,15 @@ Install the [Codex CLI](https://developers.openai.com/codex/cli/) and run `codex
 
 ### Claude
 
-For a one-paste Claude setup, create an API key scoped to Anthropic’s **Default workspace**, then choose **Paste & connect** in Settings. That button saves and checks the key in one click. You can also paste into the field and choose **Connect**. The key is masked while editing unless you choose **Show key**, cleared from the field after saving, and stored in this Mac’s Keychain. The clipboard is left unchanged. Note Ferry checks the key with Anthropic without sending a transcript.
+For a one-paste Claude setup, create an API key scoped to Anthropic’s **Default workspace**, then choose **Paste & connect** in Settings. That button saves and checks the key in one click. You can also paste into the field and choose **Connect**. The key is masked while editing unless you choose **Show key**, cleared from the field after saving, and stored in this Mac’s Keychain. The clipboard is left unchanged. Note Ferry checks the key with Anthropic without sending a transcript. If that check fails, **Retry connection** checks the saved key again without another paste.
 
 For an organization-wide key, Note Ferry selects the Default workspace when Anthropic makes it available. If Default cannot be determined, Settings asks for a workspace ID and links to the workspace list. The key remains saved, so you only enter the workspace ID. Your first Claude summary asks you to confirm sending the text and key to Anthropic.
 
 ## Clarify before summarizing
 
-Before writing a summary, Note Ferry can interview you about meaningful ambiguities in a transcript, rough notes, or other text. The interview is on by default. When you choose **Summarize & format**, the selected model first checks the text in the background. If the model returns questions, the interview appears. Otherwise, summarization continues automatically. Choose **Summarize now** while the check is running. If the initial check fails, **Continue without questions** goes straight to the summary. Leave answers blank and choose **Finish & summarize** to skip the questions. In **Settings**, turn off **Ask clarifying questions before summarizing** to always go straight to summarization.
+Before writing a summary, Note Ferry can interview you about meaningful ambiguities in a transcript, rough notes, or other text. The interview is on by default. When you choose **Summarize & format**, the selected model first checks the text in the background. If the model returns questions, the interview appears. Otherwise, summarization continues automatically. Choose **Summarize now** while the check is running to skip waiting for questions. If the initial check fails, **Continue without questions** goes straight to the summary. Leave answers blank and choose **Finish & summarize** to skip the questions. In **Settings**, turn off **Ask clarifying questions before summarizing** to always go straight to summarization.
 
-Questions arrive in small batches, with exact source excerpts when useful and visible radio-button suggestions when supported. Selecting **Something else** reveals a free-text field; questions without suggestions show that field immediately. Answer what you can, including corrections to a question’s premise. **Continue interview** lets the model ask useful follow-ups; **Finish & summarize** uses your answers immediately. **Answers…** lets you review earlier submitted answers. Each round has up to three questions; there is no fixed three-question total. **Cancel** discards the unfinished interview and returns to your source. Submitted answers remain available to retry a failed final summary until you edit the input.
+Questions arrive in small batches, with exact source excerpts when useful and visible radio-button suggestions when supported. Selecting **Something else** reveals a free-text field; questions without suggestions show that field immediately. Answer what you can, including corrections to a question’s premise. **Continue interview** lets the model ask useful follow-ups; **Finish & summarize** uses your answers immediately. **Answers…** lets you review earlier submitted answers, including after a follow-up request fails. Each round has up to three questions; there is no fixed three-question total. **Cancel** discards the unfinished interview and returns to your source. Submitted answers remain available to retry a failed final summary until you edit the input.
 
 Interviews use more tokens and time, and Claude API requests can cost more. Requests stay with the provider you selected. Apple Intelligence has a smaller context budget and may ask you to shorten answers or finish earlier; nothing is silently truncated. Answers remain in memory for the current text and appear under **Context used** with the result. The clipboard stays unchanged throughout the interview, and a newer clipboard is protected when the summary finishes.
 
@@ -83,7 +83,7 @@ Choose **Note Ferry → Check for Updates…** whenever you want to check. On th
 
 ## Troubleshooting and limits
 
-If the initial clarification check fails, the app returns to your input with an error. Retry, or turn off the interview in Settings to summarize without that check.
+If the initial clarification check fails, the app returns to your input with an error. Retry or choose **Continue without questions**. If a later round fails, **Answers…** keeps submitted answers available; choose **Retry questions** or **Continue to summary**. Turn off the interview in Settings to skip future checks.
 
 If Codex is missing or signed out, install it and run `codex login` in Terminal. If Claude rejects a key, create a new one in Anthropic Console and replace it in Settings. If Apple Intelligence is unavailable, check its status in System Settings or choose another provider. Failed or cancelled requests leave your clipboard intact.
 

@@ -4,11 +4,25 @@ private final class SettingsContentView: NSView {
     override var isFlipped: Bool { true }
 }
 
+protocol ClaudeCredentialStore {
+    func hasClaudeAPIKey() throws -> Bool
+    func loadClaudeAPIKey() throws -> String?
+    func saveClaudeAPIKey(_ key: String, workspaceID: String) throws
+    func deleteClaudeAPIKey() throws
+}
+
+extension ProviderSettings: ClaudeCredentialStore {}
+
 final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
     var onChange: (() -> Void)?
     private let settings: ProviderSettings
-    init(settings: ProviderSettings = .shared) {
+    private let credentials: ClaudeCredentialStore
+    private let keyVerifier: ClaudeKeyVerifier
+    init(settings: ProviderSettings = .shared, credentials: ClaudeCredentialStore? = nil,
+         keyVerifier: ClaudeKeyVerifier = ClaudeKeyVerifier()) {
         self.settings = settings
+        self.credentials = credentials ?? settings
+        self.keyVerifier = keyVerifier
         super.init()
     }
     private var window: NSWindow?
@@ -50,7 +64,6 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
     private let heading = NSTextField(labelWithString: "")
     private let welcomeBrand = NSStackView()
     private let intro = NSTextField(wrappingLabelWithString: "")
-    private let keyVerifier = ClaudeKeyVerifier()
     private var keyCheckGeneration = 0
     private var workspaceRequired = false
     private var pendingKeyForVerification: String?
@@ -279,14 +292,14 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
         codexSection.isHidden = chosen != .codex || !advancedExpanded
         claudeSection.isHidden = chosen != .claude
         if chosen == .claude {
-            let hasKey = (try? settings.hasClaudeAPIKey()) ?? false
+            let hasKey = (try? credentials.hasClaudeAPIKey()) ?? false
             keyStatus.stringValue = hasKey ? "Key saved" : "Connect Claude"
             if let name = settings.claudeWorkspaceName, hasKey { keyStatus.stringValue += " · \(name) workspace" }
             keyInstructions.stringValue = "Enter the Default workspace ID. Your key is already saved."
             keyInstructions.isHidden = !workspaceRequired || !hasKey
             keyFields.isHidden = workspaceRequired && hasKey
             pasteKeyButton.isHidden = workspaceRequired && hasKey
-            saveKeyButton.title = workspaceRequired && hasKey ? "Connect workspace" : (hasKey ? "Update connection" : "Connect")
+            saveKeyButton.title = workspaceRequired && hasKey ? "Connect workspace" : (hasKey ? (connectionFailed ? "Retry connection" : "Update connection") : "Connect")
             removeKeyButton.isHidden = !hasKey; getKeyButton.isHidden = hasKey
             workspaceLabel.isHidden = !workspaceRequired; workspaceField.isHidden = !workspaceRequired
             workspaceHelpButton.isHidden = !workspaceRequired
@@ -365,16 +378,13 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
             let keyForVerification: String?
             if replacingKey {
                 keyForVerification = try ProviderSettings.validatedClaudeAPIKey(enteredKey)
-                try settings.saveClaudeAPIKey(enteredKey)
+                try credentials.saveClaudeAPIKey(enteredKey, workspaceID: "")
                 if workspaceRequired { settings.claudeNeedsWorkspaceID = true }
                 pendingKeyForVerification = keyForVerification
             } else {
                 keyForVerification = pendingKeyForVerification
-                guard try settings.hasClaudeAPIKey() else {
+                guard try credentials.hasClaudeAPIKey() else {
                     throw AppError.message("Paste a Claude API key to continue.")
-                }
-                guard workspaceRequired else {
-                    throw AppError.message("Paste a new key to replace the saved one.")
                 }
             }
             keyCheckGeneration += 1
@@ -389,7 +399,7 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
     private func checkSavedKey(key suppliedKey: String? = nil, workspaceID candidateWorkspaceID: String? = nil,
                                savedMessage: String? = nil) {
         do {
-            guard let key = try suppliedKey ?? settings.loadClaudeAPIKey() else {
+            guard let key = try suppliedKey ?? credentials.loadClaudeAPIKey() else {
                 showFeedback("Save a Claude API key first.", isError: true)
                 refresh()
                 return
@@ -453,7 +463,7 @@ final class ProviderSettingsWindow: NSObject, NSWindowDelegate {
 
     @objc private func removeKey() {
         do {
-            try settings.deleteClaudeAPIKey()
+            try credentials.deleteClaudeAPIKey()
             keyCheckGeneration += 1
             clearKeyFields()
             workspaceField.stringValue = ""

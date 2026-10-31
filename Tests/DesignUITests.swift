@@ -1,4 +1,27 @@
 // AppKit interaction checks appended to an isolated copy of main.swift by test-design-ui.sh.
+final class DesignTestCredentials: ClaudeCredentialStore {
+    var value: String?
+    var saveCount = 0
+    var loadCount = 0
+    func hasClaudeAPIKey() throws -> Bool { value != nil }
+    func loadClaudeAPIKey() throws -> String? { loadCount += 1; return value }
+    func saveClaudeAPIKey(_ key: String, workspaceID: String) throws { saveCount += 1; value = key }
+    func deleteClaudeAPIKey() throws { value = nil }
+}
+final class DesignVerificationProtocol: URLProtocol {
+    static var statusCode = 503
+    static var requests = 0
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+    override func startLoading() {
+        Self.requests += 1
+        let response = HTTPURLResponse(url: request.url!, statusCode: Self.statusCode, httpVersion: nil, headerFields: nil)!
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: Data("{}".utf8))
+        client?.urlProtocolDidFinishLoading(self)
+    }
+    override func stopLoading() {}
+}
 var designChecks = 0
 func verify(_ condition: @autoclosure () -> Bool, _ message: String) {
     designChecks += 1
@@ -10,6 +33,13 @@ func button(_ title: String, in window: NSWindow) -> NSButton {
 }
 func visible(_ view: NSView) -> Bool {
     !view.isHidden && (view.superview.map(visible) ?? true)
+}
+func waitForDesignState(_ condition: () -> Bool) {
+    let deadline = Date().addingTimeInterval(3)
+    while !condition() && Date() < deadline {
+        RunLoop.main.run(until: Date().addingTimeInterval(0.01))
+    }
+    verify(condition(), "The mocked connection check did not finish")
 }
 func capture(_ window: NSWindow, _ name: String) throws {
     window.contentView!.layoutSubtreeIfNeeded()
@@ -74,7 +104,13 @@ let settings = ProviderSettings(defaults: preferences, bundleIdentifier: suite)
 settings.defaultProvider = .codex
 try settings.saveCodexModel("example-model")
 settings.clarificationInterviewEnabled = false
-let settingsController = ProviderSettingsWindow(settings: settings)
+let testCredentials = DesignTestCredentials()
+let verificationConfig = URLSessionConfiguration.ephemeral
+verificationConfig.protocolClasses = [DesignVerificationProtocol.self]
+let verificationSession = URLSession(configuration: verificationConfig)
+defer { verificationSession.invalidateAndCancel() }
+let settingsController = ProviderSettingsWindow(settings: settings, credentials: testCredentials,
+    keyVerifier: ClaudeKeyVerifier(session: verificationSession))
 settingsController.show(onboarding: true)
 let setup = NSApp.windows.first { $0.title == "Set Up Note Ferry" }!
 try capture(setup, "setup-welcome")
@@ -106,5 +142,19 @@ verify(setup.contentView!.bounds.contains(footerButton.convert(footerButton.boun
 let settingsScroll = descendants(setup.contentView!).compactMap { $0 as? NSScrollView }.first!
 verify(settingsScroll.documentView!.frame.height > settingsScroll.contentSize.height, "Long setup cannot scroll")
 try capture(setup, "setup-compact")
+testCredentials.value = "synthetic-test-key"
+settingsController.show(onboarding: true)
+button("Set Up Summaries", in: setup).performClick(nil)
+button("Update connection", in: setup).performClick(nil)
+waitForDesignState {
+    descendants(setup.contentView!).compactMap { $0 as? NSButton }.contains { $0.title == "Retry connection" }
+}
+verify(!button("Get Started", in: setup).isEnabled, "Failed verification allows onboarding to finish")
+verify(secure.stringValue.isEmpty, "Saved-key verification exposed the key in the entry field")
+DesignVerificationProtocol.statusCode = 200
+button("Retry connection", in: setup).performClick(nil)
+waitForDesignState { button("Get Started", in: setup).isEnabled }
+verify(DesignVerificationProtocol.requests == 2 && testCredentials.loadCount == 2, "Retry did not recheck the saved key")
+verify(testCredentials.saveCount == 0, "Retry unexpectedly replaced the saved credential")
 setup.orderOut(nil)
-print("Passed \(designChecks) design UI checks. No model requests or general clipboard writes.")
+print("Passed \(designChecks) design UI checks. No network, Keychain writes, model requests, or general clipboard writes.")

@@ -54,7 +54,7 @@ Discovery reads the filesystem only: it does not run shell startup files, load n
 
 Note Ferry lets Codex choose its built-in default model unless you enter a model ID in **Note Ferry → Settings… → Model options**. Enterprise accounts can enter a model available to their workspace instead of relying on a fixed model name. Clear the field to restore the CLI default. The choice is stored in Note Ferry preferences; it does not change your Codex account or CLI configuration. Note Ferry passes no fixed reasoning-effort setting. If a model is unavailable, the request fails with a Settings instruction, without silently switching models or providers.
 
-The runner keeps `--ignore-user-config`: it does not inherit your Terminal model preference, custom tools, hooks, or integrations. See the [official CLI reference](https://developers.openai.com/codex/developer-commands) for the model override and config-isolation flags. Version 2.0 also offers on-device Apple Intelligence on supported Macs running macOS 26 or later, plus Claude through a separately billed Anthropic API key stored in the app's Keychain item. A first-run chooser, Settings default, and per-transcript picker select the provider. No provider silently falls back to another.
+The runner keeps `--ignore-user-config`: it does not inherit your Terminal model preference, custom tools, hooks, or integrations. See the [official CLI reference](https://developers.openai.com/codex/developer-commands) for the model override and config-isolation flags. Note Ferry also offers on-device Apple Intelligence on supported Macs running macOS 26 or later, plus Claude through a separately billed Anthropic API key stored in the app's Keychain item. The welcome/setup flow, Settings default, and per-text picker select the provider. No provider silently falls back to another.
 
 ## Build in Xcode
 
@@ -90,7 +90,7 @@ The default ad-hoc `make build` marks the local app as **Development** in its wi
 | `Sources/LocalSummarizer.swift` | On-device Apple Intelligence summarizer and text chunking |
 | `Sources/ClaudeRunner.swift` | Anthropic Messages API request, response validation, and cancellation |
 | `Sources/ProviderSettings.swift` | Default provider and Claude API key in macOS Keychain |
-| `Sources/SettingsWindow.swift` | First-run provider chooser and Settings |
+| `Sources/SettingsWindow.swift` | Repeatable welcome/provider setup and Settings |
 | `Sources/Interview.swift` | Interview contracts, validation, answer budgets, and token aggregation |
 | `Sources/InterviewWindow.swift` | Interview sheet, controls, keyboard navigation, and request lifecycle |
 | `Resources/Interview.schema.json` | Structured interview-output contract |
