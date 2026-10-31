@@ -31,10 +31,6 @@ Start with **Use Format Only** or **Set Up Summaries**. Revisit **Settings → R
 2. **Summarize or format.** Choose **Summarize & format** for takeaways and action items, or **Format only** to preserve your wording locally, without AI or an account.
 3. **Paste the copied result into Apple Notes with ⌘V.** Review important details in AI-generated summaries.
 
-<img src="docs/images/2.1-summary-dark.png" width="860" alt="Note Ferry in dark mode showing a fictional NOVA pilot summary with key takeaways, action items, and Copy summary in the bottom action bar">
-
-*A finished summary, ready to paste into Apple Notes. The action bar stays at the bottom while you work.*
-
 ## Clarify before summarizing
 
 The model asks about unclear details when needed, using source excerpts and suggested answers. Choose an answer, write your own, or leave it blank. **Continue interview** allows follow-ups; **Finish & summarize** proceeds now. **Answers…** reviews earlier responses; **Summarize now** skips a pending check.
