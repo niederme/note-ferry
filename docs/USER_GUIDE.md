@@ -19,6 +19,8 @@ Apple Intelligence requires a compatible Mac with macOS 26 or later and Apple In
 
 On first launch, choose **Set Up Summaries** for provider-specific setup, or **Use Format Only** to start without an account. Setup shows whether the selected provider is available and never silently switches providers. Reopen the same flow with **Note Ferry → Settings… → Run Setup Again…**; saved connections and preferences are preserved. Change your default in Settings, or use the bottom-bar picker for the current text. **Format only** stays local regardless of the summarizer.
 
+<img src="images/2.1-welcome.png" width="660" alt="Note Ferry welcome with the ferry icon and choices to use local formatting or set up summaries">
+
 ### Codex
 
 Install the [Codex CLI](https://developers.openai.com/codex/cli/) and run `codex login` in Terminal. Codex uses your signed-in account and lets the CLI choose its built-in default model. To use another model available to your account, enter its ID in **Settings → Model options**. Note Ferry does not force a reasoning-effort setting or silently switch models if your selected model is unavailable. It keeps requests isolated from your personal CLI configuration and tools.

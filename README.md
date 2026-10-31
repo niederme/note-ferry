@@ -4,9 +4,15 @@
 
 **Turn your text into notes worth keeping.**
 
-Summarize a transcript or format writing you already want to keep, then paste it into Apple Notes.
+Summarize a transcript or format writing you already want to keep, then paste it into Apple Notes. You choose where to paste. Note Ferry never creates or edits an Apple Note.
 
-You choose where to paste. Note Ferry never creates or edits an Apple Note.
+<p align="center"><strong>Start with messy text → Ready for Apple Notes</strong></p>
+<p align="center">
+  <a href="docs/images/2.1-hero-source.png"><img src="docs/images/2.1-hero-source.png" width="49%" alt="Before: a fictional NOVA conversation in Note Ferry’s editable text field"></a>
+  <a href="docs/images/2.0-apple-notes.png"><img src="docs/images/2.0-apple-notes.png" width="49%" alt="After: the same conversation organized into action items and decisions in Apple Notes"></a>
+</p>
+
+*From conversation to clear notes, ready for Apple Notes. Fictional example; click either window for a closer look.*
 
 ## Download
 
@@ -18,15 +24,9 @@ Requires macOS 14+. Universal for Apple silicon and Intel. Unzip into Applicatio
 
 Tested on Apple silicon with macOS 27; Intel and older macOS versions remain untested. [Release notes and checksum](https://github.com/niederme/note-ferry/releases/tag/v2.1).
 
-<img src="docs/images/2.0-apple-notes.png" width="860" alt="A fictional NOVA project summary pasted into Apple Notes, with bold headings, spaced bullets, and action items">
-
-*Your finished notes, pasted into Apple Notes. All screenshot examples are fictional.*
-
 ## How it works
 
 Start with **Use Format Only** or **Set Up Summaries**. Revisit **Settings → Run Setup Again…** without losing preferences.
-
-<img src="docs/images/2.1-welcome.png" width="660" alt="Note Ferry welcome with the ferry icon and choices to use local formatting or set up summaries">
 
 1. **Paste your text.** Bring a transcript, AI reply, or notes. Add optional context for names or background.
 2. **Summarize or format.** Choose **Summarize & format** for takeaways and action items, or **Format only** to preserve your wording locally, without AI or an account.
