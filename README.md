@@ -18,9 +18,9 @@ Requires macOS 14 or later. Includes Apple silicon and Intel versions. Unzip and
 
 Runtime testing has been on Apple silicon with macOS 27; Intel hardware and older macOS versions have not been tested. [Release notes and checksum](https://github.com/niederme/note-ferry/releases/tag/v2.0).
 
-<img src="docs/images/2.0-summary.jpg" width="860" alt="A fictional project summary with key takeaways, action items, and the context used">
+<img src="docs/images/2.0-apple-notes.jpg" width="860" alt="A fictional NOVA project summary pasted into Apple Notes, with bold headings, spaced bullets, and action items">
 
-*Detailed notes, ready for Apple Notes. All screenshot examples are fictional.*
+*Your finished notes, pasted into Apple Notes. All screenshot examples are fictional.*
 
 ## How it works
 
