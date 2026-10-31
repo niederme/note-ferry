@@ -45,7 +45,7 @@ import AppKit
         check(panel.styleMask.contains(.resizable), "Interview cannot be resized")
         let primary = button("Continue interview", in: panel)
         check(panel.defaultButtonCell === primary.cell, "Interview has no native primary action")
-        check(primary.bezelColor == NSColor.controlAccentColor, "Primary action loses accent treatment while editing")
+        check(primary.contentTintColor == nil, "Primary action overrides the system text color")
         let views = descendants(panel.contentView!)
         check(!views.contains { $0 is NSPopUpButton }, "Multiple-choice questions still use dropdowns")
         let field = views.compactMap { $0 as? NSTextView }.first!
@@ -85,6 +85,7 @@ import AppKit
         let continueKey = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [.command], timestamp: 0, windowNumber: panel.windowNumber, context: nil, characters: "\r", charactersIgnoringModifiers: "\r", isARepeat: false, keyCode: 36)!
         check(panel.performKeyEquivalent(with: continueKey), "Command-Return did not activate primary action while editing")
         pump { active.session.round == 2 }
+        check(!button("Answers…", in: panel).isHidden, "Earlier answers cannot be reviewed")
         check(active.session.history.count == 1 && active.session.history[0].answer.contains("offer"), "Follow-up lost earlier answer")
         button("Finish & summarize", in: panel).performClick(nil)
         check(finished?.count == 2 && finished?.last?.answer == "", "Finish did not retain answered and unanswered history")
@@ -130,8 +131,8 @@ import AppKit
         check(threeFields.count == 3 && threeFields.allSatisfy { $0.frame.height >= 60 }, "Multiple answer fields collapsed")
         let threeScroll = threeViews.compactMap { $0 as? NSScrollView }.first!
         check(threeScroll.documentView!.frame.height > threeScroll.contentSize.height, "Long interview cannot scroll")
-        check(threeScroll.scrollerStyle == .legacy && !threeScroll.autohidesScrollers, "Question scrolling has no persistent scrollbar")
-        check(threeFields.allSatisfy { $0.enclosingScrollView?.scrollerStyle == .legacy && $0.enclosingScrollView?.autohidesScrollers == false }, "Answer scrolling has no persistent scrollbar")
+        check(threeScroll.hasVerticalScroller, "Question scrolling is unavailable")
+        check(threeFields.allSatisfy { $0.enclosingScrollView?.hasVerticalScroller == true }, "Answer scrolling is unavailable")
         check(threeViews.compactMap { $0 as? NSTextField }.contains { $0.stringValue.contains("Scroll down for more questions") }, "Long interview has no scrolling hint")
         func press(_ field: NSResponder, keyCode: UInt16, characters: String, modifiers: NSEvent.ModifierFlags = []) {
             let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: modifiers, timestamp: 0, windowNumber: threePanel.windowNumber, context: nil, characters: characters, charactersIgnoringModifiers: characters, isARepeat: false, keyCode: keyCode)!
@@ -198,6 +199,17 @@ import AppKit
         check(cancelled && finished == nil, "Cancellation started an unwanted summary")
         RunLoop.main.run(until: Date().addingTimeInterval(0.3))
         check(pending.session.pending.isEmpty && !pendingPresented, "Late result opened cancelled interview")
+
+        setenv("NF_TEST_MODE", "hang", 1)
+        let earlyFinish = make()
+        finished = nil
+        earlyFinish.onFinish = { finished = $0; totals = $1 }
+        earlyFinish.start(on: parent)
+        earlyFinish.finish()
+        check(finished != nil && finished!.isEmpty, "Summarize now did not bypass the initial question check")
+        check(totals?.tokens == nil, "Cancelled question check reported complete token usage")
+        RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+        check(parent.attachedSheet == nil, "A late question appeared after Summarize now")
 
         setenv("NF_TEST_MODE", "interview", 1)
         let skipped = make()

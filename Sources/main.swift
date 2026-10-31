@@ -61,7 +61,7 @@ final class TranscriptTextView: NSTextView {
     }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTextViewDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTextViewDelegate, NSMenuItemValidation {
     enum Mode { case input, processing, result }
     enum Operation { case format, local, codex, claude }
     var operation: Operation = .format
@@ -73,6 +73,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     let rootStack = NSStackView()
     let actionButtons = NSStackView()
     var actionButtonsWidth: NSLayoutConstraint?
+    let skipInterviewButton = NSButton(title: "Summarize now", target: nil, action: nil)
+    let retryButton = NSButton(title: "Retry", target: nil, action: nil)
+    let recoverySettingsButton = NSButton(title: "Settings…", target: nil, action: nil)
+    var continueWithoutQuestions: (() -> Void)?
+    let commandBar = NSStackView()
+    let primaryButton = NSButton(title: "Summarize & format", target: nil, action: nil)
     let updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
     let heading = NSTextField(labelWithString: "Note Ferry")
     let detail = NSTextField(wrappingLabelWithString: "")
@@ -109,7 +115,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     }()
     let copyButton = NSButton(title: "Copy summary", target: nil, action: nil)
     let newButton = NSButton(title: "Clear", target: nil, action: nil)
-    let restoreButton = NSButton(title: "Restore clipboard", target: nil, action: nil)
+    let restoreButton = NSButton(title: "Restore previous clipboard", target: nil, action: nil)
     let cancelButton = NSButton(title: "Cancel", target: nil, action: nil)
     var runner: CodexRunner?
     var claudeRunner: ClaudeRunner?
@@ -143,14 +149,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         window.delegate = self
         window.isReleasedWhenClosed = false
         window.center()
+        window.setFrameAutosaveName("NoteFerryMainWindow")
+        window.setFrameUsingName("NoteFerryMainWindow")
         let root = rootStack
         root.orientation = .vertical; root.alignment = .leading; root.spacing = 20
-        root.edgeInsets = NSEdgeInsets(top: 25, left: 28, bottom: 22, right: 28)
+        root.edgeInsets = NSEdgeInsets(top: 25, left: 28, bottom: 0, right: 28)
         root.translatesAutoresizingMaskIntoConstraints = false
         window.contentView!.addSubview(root)
-        NSLayoutConstraint.activate([root.leadingAnchor.constraint(equalTo: window.contentView!.leadingAnchor), root.trailingAnchor.constraint(equalTo: window.contentView!.trailingAnchor), root.topAnchor.constraint(equalTo: window.contentView!.topAnchor), root.bottomAnchor.constraint(equalTo: window.contentView!.bottomAnchor)])
+        commandBar.translatesAutoresizingMaskIntoConstraints = false
+        window.contentView!.addSubview(commandBar)
+        NSLayoutConstraint.activate([root.leadingAnchor.constraint(equalTo: window.contentView!.leadingAnchor), root.trailingAnchor.constraint(equalTo: window.contentView!.trailingAnchor), root.topAnchor.constraint(equalTo: window.contentView!.topAnchor), root.bottomAnchor.constraint(equalTo: commandBar.topAnchor, constant: -16)])
         let headerText = NSStackView(views: [heading, detail])
-        headerText.orientation = .vertical; headerText.alignment = .leading; headerText.spacing = 6
+        headerText.orientation = .vertical; headerText.alignment = .leading; headerText.spacing = 2
         let icon = NSImageView()
         if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns") {
             icon.image = NSImage(contentsOf: iconURL)
@@ -175,8 +185,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         sourceLabel.font = .systemFont(ofSize: 13, weight: .medium)
         root.addArrangedSubview(sourceLabel)
         root.setCustomSpacing(8, after: sourceLabel)
-        let scroll = NSScrollView()
-        scroll.hasVerticalScroller = true; scroll.borderType = .bezelBorder
+        let scroll = EditorScrollView()
         preview.delegate = self
         preview.copyFormattedSelection = { [weak self] in self?.copySelection() ?? false }
         preview.prepareForPaste = { [weak self] in
@@ -187,6 +196,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             self.preview.typingAttributes = self.inputAttributes
         }
         preview.isEditable = true; preview.isSelectable = true; preview.isRichText = true
+        preview.drawsBackground = false
+        preview.setAccessibilityLabel("Transcript or text")
+        preview.setAccessibilityHelp("Paste or type text. Command-Return summarizes; Command-Shift-Return formats without AI.")
         preview.allowsUndo = true
         preview.isAutomaticLinkDetectionEnabled = false
         preview.isAutomaticQuoteSubstitutionEnabled = false
@@ -217,8 +229,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         contextSection.addArrangedSubview(contextHeader)
         contextHeader.widthAnchor.constraint(equalTo: contextSection.widthAnchor).isActive = true
         contextBody.orientation = .vertical; contextBody.alignment = .leading; contextBody.spacing = 6
-        let contextScroll = NSScrollView()
-        contextScroll.hasVerticalScroller = true; contextScroll.borderType = .bezelBorder
+        let contextScroll = EditorScrollView()
+        contextEditor.drawsBackground = false
         contextEditor.delegate = self
         contextEditor.copyFormattedSelection = { [weak self] in
             guard let self, self.mode == .result else { return false }
@@ -249,8 +261,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         privacy.font = .systemFont(ofSize: 11); privacy.textColor = .secondaryLabelColor
         resultInfoButton.image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: nil)
         resultInfoButton.isBordered = false; resultInfoButton.contentTintColor = .secondaryLabelColor
-        resultInfoButton.widthAnchor.constraint(equalToConstant: 18).isActive = true
-        resultInfoButton.heightAnchor.constraint(equalToConstant: 18).isActive = true
+        resultInfoButton.widthAnchor.constraint(equalToConstant: 28).isActive = true
+        resultInfoButton.heightAnchor.constraint(equalToConstant: 28).isActive = true
         resultInfoButton.target = self; resultInfoButton.action = #selector(showResultProviderInfo)
         resultInfoButton.setAccessibilityLabel("How this summary was processed")
         let attributionSpacer = NSView()
@@ -262,13 +274,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         buttonSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
         buttonSpacer.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         let buttons = actionButtons
-        for view in [copyButton, summarizeButton, formatButton, providerPicker, providerInfoButton, restoreButton, cancelButton, buttonSpacer, newButton] { buttons.addArrangedSubview(view) }
+        for view in [restoreButton, retryButton, recoverySettingsButton, skipInterviewButton, buttonSpacer, cancelButton] { buttons.addArrangedSubview(view) }
         buttons.orientation = .horizontal; buttons.alignment = .centerY; buttons.spacing = 10
-        buttons.setCustomSpacing(4, after: providerPicker)
         root.addArrangedSubview(buttons)
         actionButtonsWidth = buttons.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56)
         actionButtonsWidth?.isActive = true
-        for button in [formatButton, summarizeButton, copyButton, newButton, restoreButton, cancelButton] { button.bezelStyle = .rounded; button.target = self }
+        for button in [formatButton, summarizeButton, copyButton, newButton, restoreButton, cancelButton, skipInterviewButton, retryButton, recoverySettingsButton] { button.bezelStyle = .rounded; button.target = self }
         formatButton.action = #selector(formatInput)
         formatButton.toolTip = "Keep the wording, format locally, and copy the result. No AI required."
         summarizeButton.action = #selector(summarizeInput)
@@ -282,8 +293,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         providerInfoButton.image = NSImage(systemSymbolName: "info.circle", accessibilityDescription: nil)
         providerInfoButton.isBordered = false
         providerInfoButton.contentTintColor = .secondaryLabelColor
-        providerInfoButton.widthAnchor.constraint(equalToConstant: 22).isActive = true
-        providerInfoButton.heightAnchor.constraint(equalToConstant: 22).isActive = true
+        providerInfoButton.widthAnchor.constraint(equalToConstant: 28).isActive = true
+        providerInfoButton.heightAnchor.constraint(equalToConstant: 28).isActive = true
         providerInfoButton.target = self; providerInfoButton.action = #selector(showProviderInfo)
         providerInfoPopover.behavior = .transient
         copyButton.action = #selector(copySummary)
@@ -291,8 +302,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         newButton.action = #selector(newTranscript)
         newButton.toolTip = "Clear this window so you can paste new text."
         restoreButton.action = #selector(restoreClipboard)
+        skipInterviewButton.action = #selector(skipInterview)
+        retryButton.action = #selector(summarizeInput)
+        recoverySettingsButton.action = #selector(openSettings)
+        skipInterviewButton.isHidden = true; retryButton.isHidden = true; recoverySettingsButton.isHidden = true
         cancelButton.action = #selector(cancel); cancelButton.keyEquivalent = "\u{1b}"
         for view in [header, progress, spinner, sourceLabel, scroll, contextSection, providerAttribution] { view.widthAnchor.constraint(equalTo: root.widthAnchor, constant: -56).isActive = true }
+        configureCommandBar()
         newTranscript()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -325,18 +341,65 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         appMenu.addItem(withTitle: "Check for Updates…", action: #selector(SPUStandardUpdaterController.checkForUpdates(_:)), keyEquivalent: "").target = updaterController
         appMenu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Clear", action: #selector(newTranscript), keyEquivalent: "n").target = self
+        appMenu.addItem(withTitle: "Hide Note Ferry", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        let hideOthers = appMenu.addItem(withTitle: "Hide Others", action: #selector(NSApplication.hideOtherApplications(_:)), keyEquivalent: "h")
+        hideOthers.keyEquivalentModifierMask = [.command, .option]
+        appMenu.addItem(withTitle: "Show All", action: #selector(NSApplication.unhideAllApplications(_:)), keyEquivalent: "")
         appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "Quit Note Ferry", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
+        let fileItem = NSMenuItem(title: "File", action: nil, keyEquivalent: ""), fileMenu = NSMenu(title: "File")
+        fileMenu.addItem(withTitle: "Clear", action: #selector(newTranscript), keyEquivalent: "n").target = self
+        fileMenu.addItem(withTitle: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        fileItem.submenu = fileMenu; menu.addItem(fileItem)
         let editItem = NSMenuItem(title: "Edit", action: nil, keyEquivalent: ""), editMenu = NSMenu(title: "Edit")
         editMenu.addItem(withTitle: "Undo", action: Selector(("undo:")), keyEquivalent: "z")
+        let redo = editMenu.addItem(withTitle: "Redo", action: Selector(("redo:")), keyEquivalent: "z")
+        redo.keyEquivalentModifierMask = [.command, .shift]
         editMenu.addItem(.separator())
         editMenu.addItem(withTitle: "Cut", action: #selector(NSText.cut(_:)), keyEquivalent: "x")
         editMenu.addItem(withTitle: "Copy", action: #selector(NSText.copy(_:)), keyEquivalent: "c")
         editMenu.addItem(withTitle: "Paste", action: #selector(NSText.paste(_:)), keyEquivalent: "v")
         editMenu.addItem(withTitle: "Select All", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a")
-        editItem.submenu = editMenu; menu.addItem(editItem); NSApp.mainMenu = menu
+        editItem.submenu = editMenu; menu.addItem(editItem)
+        let textItem = NSMenuItem(title: "Text", action: nil, keyEquivalent: ""), textMenu = NSMenu(title: "Text")
+        textMenu.addItem(withTitle: "Summarize & Format", action: #selector(primaryAction), keyEquivalent: "\r").target = self
+        let format = textMenu.addItem(withTitle: "Format Only", action: #selector(formatInput), keyEquivalent: "\r")
+        format.target = self; format.keyEquivalentModifierMask = [.command, .shift]
+        textMenu.addItem(.separator())
+        textMenu.addItem(withTitle: "Copy Context", action: #selector(copyContext), keyEquivalent: "").target = self
+        textMenu.addItem(withTitle: "Restore Previous Clipboard", action: #selector(restoreClipboard), keyEquivalent: "").target = self
+        textMenu.addItem(withTitle: "Show Context", action: #selector(toggleContext), keyEquivalent: "").target = self
+        textItem.submenu = textMenu; menu.addItem(textItem)
+        let windowItem = NSMenuItem(title: "Window", action: nil, keyEquivalent: ""), windowMenu = NSMenu(title: "Window")
+        windowMenu.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        windowMenu.addItem(withTitle: "Zoom", action: #selector(NSWindow.performZoom(_:)), keyEquivalent: "")
+        windowMenu.addItem(.separator())
+        windowMenu.addItem(withTitle: "Bring All to Front", action: #selector(NSApplication.arrangeInFront(_:)), keyEquivalent: "")
+        windowItem.submenu = windowMenu; menu.addItem(windowItem); NSApp.windowsMenu = windowMenu
+        let helpItem = NSMenuItem(title: "Help", action: nil, keyEquivalent: ""), helpMenu = NSMenu(title: "Help")
+        helpMenu.addItem(withTitle: "Note Ferry User Guide", action: #selector(openUserGuide), keyEquivalent: "").target = self
+        helpItem.submenu = helpMenu; menu.addItem(helpItem); NSApp.helpMenu = helpMenu
+        NSApp.mainMenu = menu
+    }
+    func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        let hasText = !preview.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        switch item.action {
+        case #selector(primaryAction):
+            item.title = mode == .result ? (operation == .format ? "Copy Formatted Text" : "Copy Summary") : "Summarize & Format"
+            return mode == .result || (mode == .input && summaryBlockReason == nil)
+        case #selector(formatInput): return mode == .input && hasText
+        case #selector(newTranscript): return mode != .processing && (hasText || !contextEditor.string.isEmpty)
+        case #selector(copyContext): return mode == .result && !resultContext.isEmpty && operation != .format
+        case #selector(restoreClipboard): return mode == .result && snapshot != nil && lastWrite == NSPasteboard.general.changeCount
+        case #selector(toggleContext):
+            item.title = contextExpanded ? "Hide Context" : "Show Context"
+            return mode != .processing && !contextSection.isHidden
+        default: return true
+        }
+    }
+    @objc func openUserGuide() {
+        NSWorkspace.shared.open(URL(string: "https://github.com/niederme/note-ferry/blob/main/docs/USER_GUIDE.md")!)
     }
     @objc func about() {
         if let aboutWindow {
@@ -427,12 +490,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         contextEditor.isSelectable = true
         contextEditor.allowsTranscriptPaste = !showingResult
         contextEditor.textColor = showingResult ? .secondaryLabelColor : .textColor
-        contextEditor.drawsBackground = true
+        contextEditor.drawsBackground = false
         contextEditor.textContainerInset = NSSize(width: 10, height: 10)
         contextEditor.textContainer?.lineFragmentPadding = 5
-        contextEditor.enclosingScrollView?.borderType = .bezelBorder
-        contextEditor.enclosingScrollView?.drawsBackground = true
-        contextEditor.enclosingScrollView?.contentView.drawsBackground = true
+        (contextEditor.enclosingScrollView as? EditorScrollView)?.showsEditingBackground = !showingResult
         contextHint.isHidden = showingResult
         copyContextButton.isHidden = !showingResult
         contextEditor.setAccessibilityLabel(showingResult ? "Context used for this summary, read only" : "Context for this summary")
@@ -442,6 +503,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
     }
     func showInputControls() {
         mode = .input
+        clearRecovery()
+        preview.setAccessibilityLabel("Transcript or text")
+        (preview.enclosingScrollView as? EditorScrollView)?.showsEditingBackground = true
         positionActionButtons(forResult: false)
         resultContext = ""
         progress.isHidden = true
@@ -473,18 +537,70 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         window.defaultButtonCell = summarizeButton.cell as? NSButtonCell
         newButton.isHidden = false; newButton.isEnabled = hasText || !contextEditor.string.isEmpty
         restoreButton.isHidden = true; cancelButton.isHidden = true
+        refreshCommandBar()
     }
     func positionActionButtons(forResult: Bool) {
-        guard let currentIndex = rootStack.arrangedSubviews.firstIndex(where: { $0 === actionButtons }),
-              let contextIndex = rootStack.arrangedSubviews.firstIndex(where: { $0 === contextSection }) else { return }
-        if forResult && currentIndex == contextIndex - 1 { return }
-        if !forResult && currentIndex == rootStack.arrangedSubviews.count - 1 { return }
-        actionButtonsWidth?.isActive = false
-        rootStack.removeArrangedSubview(actionButtons)
-        if forResult, let index = rootStack.arrangedSubviews.firstIndex(where: { $0 === contextSection }) {
-            rootStack.insertArrangedSubview(actionButtons, at: index)
-        } else { rootStack.addArrangedSubview(actionButtons) }
-        actionButtonsWidth?.isActive = true
+        // Session commands remain pinned to the bottom in every state.
+    }
+    func configureCommandBar() {
+        let spacer = NSView()
+        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        spacer.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        let providerGroup = NSStackView(views: [providerPicker, providerInfoButton])
+        providerGroup.spacing = 2
+        commandBar.orientation = .horizontal
+        commandBar.alignment = .centerY
+        commandBar.spacing = 10
+        for view in [newButton, spacer, providerGroup, formatButton, primaryButton] {
+            commandBar.addArrangedSubview(view)
+        }
+        primaryButton.bezelStyle = .rounded
+        primaryButton.target = self
+        primaryButton.action = #selector(primaryAction)
+        primaryButton.keyEquivalent = "\r"
+        primaryButton.widthAnchor.constraint(equalToConstant: 168).isActive = true
+        NSLayoutConstraint.activate([
+            commandBar.leadingAnchor.constraint(equalTo: window.contentView!.leadingAnchor, constant: 28),
+            commandBar.trailingAnchor.constraint(equalTo: window.contentView!.trailingAnchor, constant: -28),
+            commandBar.bottomAnchor.constraint(equalTo: window.contentView!.bottomAnchor, constant: -20)
+        ])
+    }
+    func refreshCommandBar() {
+        let hasText = !preview.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        primaryButton.title = mode == .result ? copyButton.title : "Summarize & format"
+        primaryButton.isEnabled = mode == .result || (mode == .input && summaryBlockReason == nil)
+        primaryButton.toolTip = mode == .result ? "Copy the result (⌘Return)" : (summaryBlockReason ?? "Summarize with \(selectedProvider.displayName) (⌘Return)")
+        window.defaultButtonCell = primaryButton.cell as? NSButtonCell
+        formatButton.isHidden = false
+        formatButton.isEnabled = mode == .input && hasText
+        newButton.isHidden = false
+        newButton.isEnabled = mode != .processing && (hasText || !contextEditor.string.isEmpty)
+        providerPicker.isHidden = false; providerPicker.isEnabled = mode == .input
+        providerInfoButton.isHidden = false; providerInfoButton.isEnabled = mode == .input
+    }
+    var summaryBlockReason: String? {
+        do {
+            try Transcript.validate(preview.string)
+            try SummaryContext.validate(contextEditor.string)
+        } catch { return error.localizedDescription }
+        if selectedProvider == .apple {
+            if let message = LocalModelAvailability.message { return message }
+            if preview.string.utf8.count > 100_000 { return "On-device summaries support up to 100 KB. Choose another summarizer or shorten the text." }
+        }
+        return nil
+    }
+    func clearRecovery() {
+        retryButton.isHidden = true; recoverySettingsButton.isHidden = true
+        skipInterviewButton.isHidden = true
+        skipInterviewButton.title = "Summarize now"
+        continueWithoutQuestions = nil
+    }
+    @objc func primaryAction() {
+        if mode == .result { copySummary() } else { summarizeInput() }
+    }
+    @objc func skipInterview() {
+        if let interview { interview.finish() }
+        else if let continuation = continueWithoutQuestions { clearRecovery(); continuation() }
     }
     func refreshProviderControls() {
         if mode == .input { showInputControls() }
@@ -614,12 +730,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             contextEditor.isEditable = false
             showProcessing(action, text: text)
             sheet.onPresent = { [weak self] in self?.stopInterviewProgress() }
-            sheet.onInitialFailure = { [weak self] error in
+            sheet.onInitialFailure = { [weak self, weak sheet] error in
                 guard let self else { return }
+                let failedInterviewUsage = sheet?.usage ?? InterviewUsage()
                 self.interview = nil
                 self.stopInterviewProgress()
                 self.showInputControls()
                 self.showError(error)
+                self.skipInterviewButton.title = "Continue without questions"
+                self.skipInterviewButton.isHidden = false
+                self.continueWithoutQuestions = { [weak self] in
+                    self?.beginSummary(action, text: text, context: context, clarifications: [], interviewUsage: failedInterviewUsage, initialClipboard: initialClipboard, claudeKey: claudeKey, claudeWorkspaceID: claudeWorkspaceID, codexModel: model)
+                }
             }
             sheet.onFinish = { [weak self] answers, usage in
                 guard let self else { return }
@@ -646,9 +768,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         spinner.stopAnimation(nil); spinner.isHidden = true
         progress.isHidden = true
         cancelButton.isHidden = true
+        skipInterviewButton.isHidden = true
     }
 
     func showProcessing(_ action: Operation, text: String) {
+        clearRecovery()
         providerInfoPopover.close(); providerInfoButton.isHidden = true
         window.makeFirstResponder(preview)
         contextSection.isHidden = true
@@ -660,11 +784,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         case .codex: detail.stringValue = "Summarizing with Codex. Your clipboard will update when it’s ready."
         case .claude: detail.stringValue = "Summarizing with Claude. Your clipboard will update when it’s ready."
         }
+        if interview != nil { detail.stringValue = "Checking for questions with \(selectedProvider.displayName)…" }
+        skipInterviewButton.isHidden = interview == nil
         progress.stringValue = "\(words.formatted()) words · 0:00 elapsed"; progress.isHidden = false
         spinner.isHidden = false; spinner.startAnimation(nil)
         formatButton.isHidden = true; summarizeButton.isHidden = true; providerPicker.isHidden = true
         copyButton.isHidden = true; newButton.isHidden = true; restoreButton.isHidden = true
         cancelButton.isHidden = false; cancelButton.isEnabled = true
+        refreshCommandBar()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             guard let self else { return }
             let elapsed = Int(Date().timeIntervalSince(self.started))
@@ -736,7 +863,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             let tokens = interviewUsage.including(usage).map { "\($0.input.formatted()) input / \($0.output.formatted()) output tokens" } ?? "Complete token usage unavailable"
             progress.stringValue = "\(words.formatted()) words · \(elapsed / 60):\(String(format: "%02d", elapsed % 60)) elapsed · \(tokens)"
             progress.toolTip = "Provider-reported usage includes interview requests, instructions, context, and the summary. Elapsed time covers summary generation only. Cancelled or unreported requests make the total unavailable. For on-device summaries, counts include all portions and overview passes. Token counts are not prices or remaining account limits."
-            progress.isHidden = false
+            providerExplanation += "\n\n" + progress.stringValue + "\nElapsed time covers summary generation only. Token counts include reported interview usage."
+            progress.isHidden = true
             copyWhenReady()
             NSSound(named: "Glass")?.play(); NSApp.requestUserAttention(.informationalRequest)
         case .failure(let error):
@@ -747,18 +875,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             showInputControls()
             if error is CancellationError { detail.stringValue = "Cancelled. Your transcript is still here and your clipboard is unchanged." }
             else if operation == .local && !(error is AppError) {
-                detail.stringValue = "Apple Intelligence couldn't complete the summary. Your text and clipboard were kept. Try again or choose Codex."
+                showError(AppError.message("Apple Intelligence couldn’t finish. Your text and clipboard were kept. Try again or choose another summarizer."))
             } else {
                 showError(error)
-                if operation == .claude {
-                    let alert = NSAlert()
-                    alert.messageText = "Claude couldn’t summarize"
-                    alert.informativeText = error.localizedDescription
-                    alert.alertStyle = .warning
-                    alert.addButton(withTitle: "OK")
-                    alert.beginSheetModal(for: window)
-                    NSApp.requestUserAttention(.informationalRequest)
-                }
+
             }
         }
     }
@@ -771,9 +891,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             let copied = try ClipboardOutput.write(rich, to: .general, expectedChange: snapshot?.changeCount)
             if copied {
                 lastWrite = NSPasteboard.general.changeCount; restoreButton.isHidden = false
-                detail.stringValue = "Your \(resultName) is on the clipboard. Paste it into Apple Notes with ⌘V."
+                detail.stringValue = "Copied. Paste into Apple Notes with ⌘V."
             } else {
-                detail.stringValue = "Your \(resultName) is ready. Your newer clipboard was kept. Choose \(copyButton.title) when you’re ready."
+                detail.stringValue = "Ready. Your newer clipboard was kept. Choose \(copyButton.title) to copy."
             }
         } catch { showError(error) }
     }
@@ -783,6 +903,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         providerAttribution.isHidden = false
         resultInfoButton.isHidden = operation == .format
         preview.isEditable = false
+        clearRecovery()
+        (preview.enclosingScrollView as? EditorScrollView)?.showsEditingBackground = false
         rich = rendered
         switch operation {
         case .format:
@@ -800,6 +922,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         }
         copyButton.title = operation == .format ? "Copy formatted text" : "Copy summary"
         sourceLabel.stringValue = operation == .format ? "Formatted text" : "Summary"
+        preview.setAccessibilityLabel(sourceLabel.stringValue + ", read only")
         let screen = NSMutableAttributedString(attributedString: NoteRenderer.previewText(rich!))
         screen.addAttribute(.foregroundColor, value: NSColor.textColor, range: NSRange(location: 0, length: screen.length))
         updatingText = true
@@ -814,7 +937,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         contextSection.isHidden = operation == .format || resultContext.isEmpty
         if !contextSection.isHidden {
             contextEditor.string = resultContext
-            contextExpanded = true
+            contextExpanded = false
         }
         refreshContextControls()
         formatButton.isHidden = true; formatButton.keyEquivalent = ""
@@ -823,8 +946,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         summarizeButton.isHidden = true; summarizeButton.keyEquivalent = ""
         window.defaultButtonCell = copyButton.cell as? NSButtonCell
         newButton.isHidden = false; newButton.isEnabled = true
+        refreshCommandBar()
+        NSAccessibility.post(element: preview, notification: .valueChanged)
     }
-    func showError(_ error: Error) { detail.stringValue = error.localizedDescription }
+    func showError(_ error: Error) {
+        detail.stringValue = error.localizedDescription
+        if mode == .input {
+            retryButton.isHidden = preview.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            retryButton.action = operation == .format ? #selector(formatInput) : #selector(summarizeInput)
+            recoverySettingsButton.isHidden = operation == .format
+        }
+        NSAccessibility.post(element: detail, notification: .announcementRequested,
+            userInfo: [.announcement: error.localizedDescription, .priority: NSAccessibilityPriorityLevel.high.rawValue])
+    }
     @objc func copyContext() { copyContextText(selectionOnly: false) }
     func copyContextText(selectionOnly: Bool) {
         guard mode == .result, operation != .format, !resultContext.isEmpty else { return }
@@ -862,7 +996,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
             }
             snapshot = backup
             lastWrite = NSPasteboard.general.changeCount; restoreButton.isHidden = snapshot == nil
-            detail.stringValue = "Your \(resultName) is on the clipboard. Paste it into Apple Notes with ⌘V."
+            detail.stringValue = "Copied. Paste into Apple Notes with ⌘V."
         } catch { showError(error) }
     }
     func copySelection() -> Bool {
@@ -890,7 +1024,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTe
         }
         if snapshot.restore(to: .general) {
             lastWrite = nil; restoreButton.isHidden = true
-            detail.stringValue = "Previous clipboard restored. Choose \(copyButton.title) to copy the result again."
+            detail.stringValue = "Previous clipboard restored."
         } else { detail.stringValue = "Couldn't restore the clipboard. The result is still available here." }
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
