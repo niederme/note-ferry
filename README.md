@@ -36,7 +36,7 @@ Runtime testing has been on Apple silicon with macOS 27; Intel hardware and olde
 
 The model can ask about unclear details before writing the summary. If it has no questions, it continues automatically. Questions can include relevant excerpts and suggested answers. Choose an answer, write your own, or leave it blank. **Continue interview** allows follow-ups; **Finish & summarize** proceeds with whatever you’ve answered, even if you leave every question blank.
 
-The interview is on by default. Turn off **Ask clarifying questions before summarizing** in Settings to skip it entirely. Interviews take extra time and tokens, and Claude API requests can cost more.
+The interview is on by default. Turn off **Ask clarifying questions before summarizing** in Settings to skip the interview. Interviews take extra time and tokens, and Claude API requests can cost more.
 
 <img src="docs/images/2.0-interview.jpg" width="840" alt="Clarification questions with source excerpts, radio choices, Something else, and Finish & summarize">
 

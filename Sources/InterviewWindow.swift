@@ -1,5 +1,36 @@
 import AppKit
 
+/// A quiet editing surface. The text system still owns selection, focus and scrolling.
+final class EditorScrollView: NSScrollView {
+    var showsEditingBackground = true { didSet { updateSurface() } }
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        borderType = .noBorder
+        hasVerticalScroller = true
+        autohidesScrollers = true
+        wantsLayer = true
+        layer?.cornerRadius = 12
+        layer?.masksToBounds = true
+        updateSurface()
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        updateSurface()
+    }
+    private func updateSurface() {
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            backgroundColor = showsEditingBackground
+                ? (NSColor.textBackgroundColor.blended(withFraction: 0.035, of: .labelColor) ?? .textBackgroundColor)
+                : .textBackgroundColor
+            drawsBackground = true
+            contentView.backgroundColor = backgroundColor
+            (documentView as? NSTextView)?.drawsBackground = false
+        }
+    }
+}
+
 enum AppWindowSizing {
     static func contentSize(preferred: NSSize, visibleFrame: NSRect, styleMask: NSWindow.StyleMask) -> NSSize {
         let available = NSWindow.contentRect(forFrameRect: visibleFrame.insetBy(dx: 24, dy: 24), styleMask: styleMask)
@@ -81,6 +112,8 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
     private let nextButton = NSButton(title: "Continue interview", target: nil, action: nil)
     private let finishButton = NSButton(title: "Skip interview", target: nil, action: nil)
     private let cancelButton = NSButton(title: "Cancel", target: nil, action: nil)
+    private let historyButton = NSButton(title: "Answers…", target: nil, action: nil)
+    private let historyPopover = NSPopover()
     private let spinner = NSProgressIndicator()
     private var answerFields: [NSTextView] = []
     private var choiceButtons: [[NSButton]] = []
@@ -134,7 +167,7 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
         content.edgeInsets = NSEdgeInsets(top: 4, left: 0, bottom: 12, right: 12)
         content.translatesAutoresizingMaskIntoConstraints = false
         scroll.contentView = InterviewClipView()
-        scroll.hasVerticalScroller = true; scroll.autohidesScrollers = false; scroll.scrollerStyle = .legacy
+        scroll.hasVerticalScroller = true; scroll.autohidesScrollers = true
         scroll.borderType = .noBorder
         scroll.drawsBackground = false; scroll.documentView = content
         content.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor).isActive = true
@@ -144,7 +177,7 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
         root.addArrangedSubview(status)
         spinner.style = .spinning; spinner.controlSize = .small; spinner.isDisplayedWhenStopped = false
         let spacer = NSView(); spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        let footer = NSStackView(views: [cancelButton, spinner, spacer, finishButton, nextButton])
+        let footer = NSStackView(views: [cancelButton, historyButton, spinner, spacer, finishButton, nextButton])
         footer.orientation = .horizontal; footer.spacing = 10
         root.addArrangedSubview(footer)
         for view in [heading, detail, scroll, status, footer] {
@@ -154,14 +187,16 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
         nextButton.action = #selector(next)
         panel.defaultButtonCell = nextButton.cell as? NSButtonCell
         panel.primaryButton = nextButton
-        nextButton.bezelColor = .controlAccentColor
-        nextButton.contentTintColor = .white
         nextButton.keyEquivalent = "\r"
         nextButton.keyEquivalentModifierMask = [.command]
         nextButton.toolTip = "Submit your answers and continue (⌘Return)."
         finishButton.action = #selector(finish)
         cancelButton.action = #selector(cancel)
         cancelButton.keyEquivalent = "\u{1b}"
+        historyButton.target = self; historyButton.action = #selector(reviewAnswers)
+        historyButton.bezelStyle = .rounded
+        historyButton.toolTip = "Review answers already submitted in this interview"
+        historyPopover.behavior = .transient
     }
 
     private func presentQuestions() {
@@ -194,6 +229,7 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
 
     private func renderQuestions() {
         clearContent()
+        historyButton.isHidden = session.history.isEmpty
         heading.stringValue = "Let’s clarify a few things"
         detail.stringValue = "Round \(session.round) · Answer what you can. Correct any mistaken assumptions. Blank answers stay uncertain."
         for (index, item) in session.pending.enumerated() {
@@ -252,9 +288,8 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
             field.autoresizingMask = [.width]; field.textContainer?.widthTracksTextView = true
             field.allowsUndo = true
             field.setAccessibilityLabel("Your answer to question \(index + 1): \(item.question.question)")
-            let fieldScroll = NSScrollView()
-            fieldScroll.borderType = .bezelBorder; fieldScroll.hasVerticalScroller = true
-            fieldScroll.autohidesScrollers = false; fieldScroll.scrollerStyle = .legacy
+            let fieldScroll = EditorScrollView()
+            field.drawsBackground = false
             fieldScroll.documentView = field
             fieldScroll.isHidden = !item.question.options.isEmpty
             content.addArrangedSubview(fieldScroll)
@@ -309,6 +344,7 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
             if field.enclosingScrollView?.isHidden == false { controls.append(field) }
         }
         controls += [nextButton, finishButton, cancelButton]
+        if !historyButton.isHidden { controls.append(historyButton) }
         for (index, control) in controls.enumerated() {
             control.nextKeyView = controls[(index + 1) % controls.count]
         }
@@ -373,7 +409,7 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
         busy = true; nextButton.isEnabled = false
         spinner.startAnimation(nil)
         if presented {
-            status.stringValue = ""
+            status.stringValue = "Checking for follow-up questions…"
             finishButton.title = "Finish & summarize"
         }
         generation += 1
@@ -436,12 +472,31 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
         }
     }
 
-    @objc private func finish() {
+    @objc func finish() {
         guard !closed else { return }
         do { try collectAnswers() } catch { status.stringValue = error.localizedDescription; return }
         if busy { usage.record(nil) } // Cancelled requests may still have consumed tokens.
         close()
         onFinish?(session.history, usage)
+    }
+    @objc private func reviewAnswers() {
+        if historyPopover.isShown { historyPopover.close(); return }
+        let text = NSTextView()
+        text.isEditable = false; text.isSelectable = true; text.isRichText = false
+        text.font = .systemFont(ofSize: 13)
+        text.textContainerInset = NSSize(width: 14, height: 14)
+        text.string = session.history.enumerated().map { index, answer in
+            "\(index + 1). \(answer.question.question)\n\(answer.answer.isEmpty ? "Unanswered" : answer.answer)"
+        }.joined(separator: "\n\n")
+        text.setAccessibilityLabel("Submitted clarification answers, read only")
+        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 420, height: 280))
+        scroll.hasVerticalScroller = true; scroll.autohidesScrollers = true
+        text.isVerticallyResizable = true; text.autoresizingMask = [.width]
+        text.textContainer?.widthTracksTextView = true
+        scroll.documentView = text
+        let controller = NSViewController(); controller.view = scroll
+        historyPopover.contentViewController = controller
+        historyPopover.show(relativeTo: historyButton.bounds, of: historyButton, preferredEdge: .maxY)
     }
     @objc func cancel() {
         guard !closed else { return }
@@ -454,6 +509,7 @@ final class InterviewWindow: NSObject, NSWindowDelegate {
     }
     private func close() {
         closed = true; generation += 1
+        historyPopover.close()
         codex?.cancel(); claude?.cancel(); local?.cancel()
         panel.sheetParent?.endSheet(panel)
         panel.orderOut(nil)

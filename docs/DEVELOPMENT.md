@@ -38,7 +38,7 @@ This installs `~/Applications/Note Ferry.app` and registers it with Launch Servi
 
 Spotlight indexing may take a little time. Open the app directly from your home folder’s Applications directory if needed. Raycast may need its application list refreshed. No Service, Shortcut, or keyboard shortcut setup is required.
 
-On first launch, **Choose a summarizer** opens over the main window. Apple Intelligence is the initial default on a new install; if it is unavailable, choose Codex or Claude to summarize. **Done** completes onboarding. The same controls remain available in **Note Ferry → Settings…**, and the picker beside **Summarize & format** changes the provider for the current text without changing your default. **Format only** never calls a model.
+On first launch, the welcome flow offers **Set Up Summaries** or **Use Format Only**. Provider-specific setup checks availability; the same flow can be reopened from **Settings → Run Setup Again…** without resetting saved preferences. Settings controls the default provider; the bottom-bar picker selects the provider for the current text. **Format only** never calls a model.
 
 For Claude key and workspace setup, see the [user guide](USER_GUIDE.md#claude). The verifier checks access without sending a transcript; a format check alone does not prove the key will work. Do not put a real API key in source files, issues, or test fixtures.
 
@@ -52,7 +52,7 @@ Codex discovery checks absolute entries in the app's inherited `PATH`, `~/.local
 
 Discovery reads the filesystem only: it does not run shell startup files, load nvm aliases, or read npm configuration. Relative and empty PATH entries are ignored. For a custom npm prefix or nvm root outside these locations, its bin directory must be in the app's inherited PATH (or its root in `NVM_DIR`); Finder does not inherit Terminal-only shell configuration. Executable paths are not currently configurable in the app.
 
-Note Ferry lets Codex choose its built-in default model unless you enter a model ID in **Note Ferry → Settings… → Codex model**. Enterprise accounts can enter a model available to their workspace instead of relying on a fixed model name. Clear the field to restore the CLI default. The choice is stored in Note Ferry preferences; it does not change your Codex account or CLI configuration. Note Ferry passes no fixed reasoning-effort setting. If a model is unavailable, the request fails with a Settings instruction, without silently switching models or providers.
+Note Ferry lets Codex choose its built-in default model unless you enter a model ID in **Note Ferry → Settings… → Model options**. Enterprise accounts can enter a model available to their workspace instead of relying on a fixed model name. Clear the field to restore the CLI default. The choice is stored in Note Ferry preferences; it does not change your Codex account or CLI configuration. Note Ferry passes no fixed reasoning-effort setting. If a model is unavailable, the request fails with a Settings instruction, without silently switching models or providers.
 
 The runner keeps `--ignore-user-config`: it does not inherit your Terminal model preference, custom tools, hooks, or integrations. See the [official CLI reference](https://developers.openai.com/codex/developer-commands) for the model override and config-isolation flags. Version 2.0 also offers on-device Apple Intelligence on supported Macs running macOS 26 or later, plus Claude through a separately billed Anthropic API key stored in the app's Keychain item. A first-run chooser, Settings default, and per-transcript picker select the provider. No provider silently falls back to another.
 
@@ -73,6 +73,7 @@ iconutil -c icns .build/AppIcon.iconset -o Resources/AppIcon.icns
 make build     # Rebuild build/Note Ferry.app; use BUILD_APP_PATH below if it is running
 make test      # Run the automated checks
 ./scripts/test-interview-ui.sh  # Exercise the interview sheet with synthetic model responses
+./scripts/test-design-ui.sh     # Check setup, bottom actions, recovery, and compact layouts
 make install   # Build and install in ~/Applications
 ```
 
@@ -111,7 +112,7 @@ The model supplies structured content. The app owns typography, lists, spacing, 
 BUILD_APP_PATH="$PWD/.build/interview-preview/Note Ferry.app" make build
 ```
 
-The interview uses `Sources/Interview.swift` for the request contract, stable question/answer state, validation, and token aggregation, and `Sources/InterviewWindow.swift` for its session-only sheet. `Resources/Interview.schema.json` is bundled by both build paths. Backend tests cover opt-out persistence, multiple rounds, unanswered questions, source provenance, invalid excerpts, provider payloads, cancellation, and usage totals. The UI harness uses a mock Codex executable, makes no real model calls, and does not copy or paste. Command-line `--summarize-file` exports remain non-interactive and bypass the interview.
+The interview uses `Sources/Interview.swift` for the request contract, stable question/answer state, validation, and token aggregation, and `Sources/InterviewWindow.swift` for its session-only sheet. `Resources/Interview.schema.json` is bundled by both build paths. Backend tests cover opt-out persistence, multiple rounds, unanswered questions, source provenance, invalid excerpts, provider payloads, cancellation, and usage totals. The interview UI harness uses a mock Codex executable, makes no real model calls, and does not copy or paste. The design harness uses an isolated bundle identity and preferences, disables its updater, and captures synthetic input/result/setup layouts under `.build/design-ui/`. It does not connect a provider or write the general clipboard. Command-line `--summarize-file` exports remain non-interactive and bypass the interview.
 
 ### Preview without a model call
 
